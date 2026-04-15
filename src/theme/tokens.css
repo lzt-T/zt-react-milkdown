@@ -1,0 +1,20 @@
+:root {
+  --zt-font: 'IBM Plex Sans', 'Noto Sans SC', 'PingFang SC', sans-serif;
+  --zt-radius: 14px;
+}
+
+.zt-md-light {
+  --zt-bg: #fcfbf8;
+  --zt-fg: #1f2933;
+  --zt-muted: #7a869a;
+  --zt-border: #d9e2ec;
+  --zt-primary: #0b6e4f;
+}
+
+.zt-md-dark {
+  --zt-bg: #171c24;
+  --zt-fg: #f0f4f8;
+  --zt-muted: #9fb3c8;
+  --zt-border: #243b53;
+  --zt-primary: #57d9a3;
+}

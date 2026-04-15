@@ -1,0 +1,24 @@
+# Dependencies and package manager caches
+node_modules/
+.pnpm-store/
+.npm-cache/
+
+# Build and test outputs
+dist/
+coverage/
+.vite/
+*.tsbuildinfo
+
+# Logs and packed artifacts
+*.log
+*.tgz
+
+# Environment files
+.env*
+!.env.example
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
