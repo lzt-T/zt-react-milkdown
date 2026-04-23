@@ -3,6 +3,7 @@ import { createReplaceAllExecutor } from './commands';
 import { resolvePresetPlugins } from '../plugins/preset-common';
 import { assertKey } from '../utils/guard';
 import { createMathBlockEditableNodeView } from '../plugins/custom/math-block-editable';
+import { math } from '../plugins/custom/math-plugin';
 
 /**
  * 创建并初始化 Milkdown 编辑器实例。
@@ -16,8 +17,6 @@ export const createEditor = async (options: CreateEditorOptions): Promise<Editor
   const commonmarkKit = (await import('@milkdown/kit/preset/commonmark')) as Record<string, unknown>;
   /** gfm 子模块导出。 */
   const gfmKit = (await import('@milkdown/kit/preset/gfm')) as Record<string, unknown>;
-  /** math 子模块导出。 */
-  const mathKit = (await import('@milkdown/plugin-math')) as Record<string, unknown>;
   /** utils 子模块导出。 */
   const utilsKit = (await import('@milkdown/kit/utils')) as Record<string, unknown>;
 
@@ -48,8 +47,6 @@ export const createEditor = async (options: CreateEditorOptions): Promise<Editor
   const commonmark = assertKey(commonmarkKit, 'commonmark');
   /** gfm 插件导出对象。 */
   const gfm = assertKey(gfmKit, 'gfm');
-  /** math 插件导出对象。 */
-  const math = assertKey(mathKit, 'math');
   /** replaceAll 命令导出对象。 */
   const replaceAll = assertKey(utilsKit, 'replaceAll');
 

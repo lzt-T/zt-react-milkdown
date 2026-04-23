@@ -119,7 +119,7 @@ async function setupCreateEditorMocks(): Promise<{
     };
   });
 
-  vi.doMock('@milkdown/plugin-math', () => {
+  vi.doMock('../../src/plugins/custom/math-plugin', () => {
     return {
       math: Symbol('mathPlugin')
     };
@@ -222,7 +222,7 @@ describe('createEditor', () => {
       };
     });
 
-    vi.doMock('@milkdown/plugin-math', () => {
+    vi.doMock('../../src/plugins/custom/math-plugin', () => {
       return {
         math: Symbol('mathPlugin')
       };
