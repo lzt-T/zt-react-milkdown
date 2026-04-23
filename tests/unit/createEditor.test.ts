@@ -40,11 +40,15 @@ async function setupCreateEditorMocks(): Promise<{
   listenerManager: {
     markdownUpdated: (handler: (ctx: unknown, markdown: string) => void) => void;
   };
+  nodeViewCtxSymbol: symbol;
+  ctxSet: ReturnType<typeof vi.fn>;
   markdownUpdatedSpy: ReturnType<typeof vi.fn>;
   replaceAll: ReturnType<typeof vi.fn>;
 }> {
-  // 上下文 set 调用桩函数。
-  const ctxSet = vi.fn();
+  // listenerCtx 上下文符号。
+  const listenerCtxSymbol = Symbol('listenerCtx');
+  // nodeViewCtx 上下文符号。
+  const nodeViewCtxSymbol = Symbol('nodeViewCtx');
   // markdownUpdated 调用桩函数。
   const markdownUpdatedSpy = vi.fn((handler: (ctx: unknown, markdown: string) => void) => {
     return handler;
@@ -55,12 +59,21 @@ async function setupCreateEditorMocks(): Promise<{
   } = {
     markdownUpdated: markdownUpdatedSpy as (handler: (ctx: unknown, markdown: string) => void) => void
   };
+  // 上下文取值表。
+  const ctxValueMap = new Map<unknown, unknown>([
+    [listenerCtxSymbol, listenerManager],
+    [nodeViewCtxSymbol, []]
+  ]);
+  // 上下文 set 调用桩函数。
+  const ctxSet = vi.fn((key: unknown, value: unknown) => {
+    ctxValueMap.set(key, value);
+  });
   // 编辑器实例桩对象。
   const editor: MockEditor = {
     config: vi.fn((handler: (ctx: unknown) => void) => {
       handler({
         set: ctxSet,
-        get: () => listenerManager
+        get: (key: unknown) => ctxValueMap.get(key)
       });
 
       return editor;
@@ -82,13 +95,14 @@ async function setupCreateEditorMocks(): Promise<{
       },
       rootCtx: Symbol('rootCtx'),
       defaultValueCtx: Symbol('defaultValueCtx'),
-      editorViewOptionsCtx: Symbol('editorViewOptionsCtx')
+      editorViewOptionsCtx: Symbol('editorViewOptionsCtx'),
+      nodeViewCtx: nodeViewCtxSymbol
     };
   });
 
   vi.doMock('@milkdown/kit/plugin/listener', () => {
     return {
-      listenerCtx: Symbol('listenerCtx'),
+      listenerCtx: listenerCtxSymbol,
       listener: Symbol('listenerPlugin')
     };
   });
@@ -124,6 +138,8 @@ async function setupCreateEditorMocks(): Promise<{
     createEditor: createEditorModule.createEditor,
     editor,
     listenerManager,
+    nodeViewCtxSymbol,
+    ctxSet,
     markdownUpdatedSpy,
     replaceAll
   };
@@ -147,6 +163,18 @@ describe('createEditor', () => {
     expect(testContext.editor.use).toHaveBeenCalledTimes(4);
     expect(testContext.listenerManager.markdownUpdated).toHaveBeenCalledTimes(1);
     expect(onChange).toHaveBeenCalledWith('# after-init');
+
+    // nodeViewCtx 的 set 调用参数。
+    const nodeViewSetCall = testContext.ctxSet.mock.calls.find((call) => {
+      return call[0] === testContext.nodeViewCtxSymbol;
+    });
+
+    expect(nodeViewSetCall).toBeTruthy();
+    expect(nodeViewSetCall?.[1]).toEqual(
+      expect.arrayContaining([
+        ['math_block', expect.any(Function)]
+      ])
+    );
   });
 
   it('setMarkdown 会通过 replaceAll 下发编辑命令', async () => {

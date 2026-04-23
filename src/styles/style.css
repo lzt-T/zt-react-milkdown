@@ -1,9 +1,74 @@
-@import '../theme/tokens.css';
-@import '../theme/light.css';
-@import '../theme/dark.css';
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+@import "tw-animate-css";
+@import "../theme/tokens.css";
+@import "../theme/light.css";
+@import "../theme/dark.css";
+@import "./modules/math-block.css";
 
-@tailwind components;
-@tailwind utilities;
+@source "../**/*.{ts,tsx}";
+
+@theme inline {
+  --font-sans: var(--zt-font);
+  --color-zt-bg: var(--zt-bg);
+  --color-zt-fg: var(--zt-fg);
+  --color-zt-muted: var(--zt-muted);
+  --color-zt-border: var(--zt-border);
+  --color-zt-primary: var(--zt-primary);
+  --radius-zt: var(--zt-radius);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+}
+
+@layer base {
+  .zt-md {
+    --background: var(--zt-bg);
+    --foreground: var(--zt-fg);
+    --card: var(--zt-bg);
+    --card-foreground: var(--zt-fg);
+    --popover: var(--zt-bg);
+    --popover-foreground: var(--zt-fg);
+    --primary: var(--zt-primary);
+    --primary-foreground: oklch(0.985 0 0);
+    --secondary: color-mix(in srgb, var(--zt-fg) 8%, var(--zt-bg));
+    --secondary-foreground: var(--zt-fg);
+    --muted: color-mix(in srgb, var(--zt-muted) 22%, var(--zt-bg));
+    --muted-foreground: var(--zt-muted);
+    --accent: color-mix(in srgb, var(--zt-primary) 12%, var(--zt-bg));
+    --accent-foreground: var(--zt-fg);
+    --destructive: oklch(0.577 0.245 27.325);
+    --border: var(--zt-border);
+    --input: var(--zt-border);
+    --ring: color-mix(in srgb, var(--zt-primary) 45%, var(--zt-border));
+    --radius: var(--zt-radius);
+  }
+
+  .zt-md-dark {
+    --primary-foreground: oklch(0.205 0 0);
+    --destructive: oklch(0.704 0.191 22.216);
+  }
+}
 
 @layer components {
   .zt-md {

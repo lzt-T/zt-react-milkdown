@@ -1,0 +1,26 @@
+@layer components {
+  .zt-md-editor .zt-md-math-block {
+    @apply my-3 overflow-hidden rounded-zt border border-zt-border bg-zt-bg;
+  }
+
+  .zt-md-editor .zt-md-math-block-source {
+    @apply border-b border-zt-border bg-zt-bg px-3 py-2;
+  }
+
+  .zt-md-editor .zt-md-math-block-textarea {
+    @apply min-h-[84px] w-full resize-y border-0 bg-transparent font-mono text-sm leading-6 text-zt-fg outline-none;
+  }
+
+  .zt-md-editor .zt-md-math-block-preview {
+    @apply px-3 py-4;
+  }
+
+  .zt-md-editor .zt-md-math-block-error {
+    @apply mt-2 text-xs text-red-500;
+  }
+
+  .zt-md-editor .zt-md-math-block-editing {
+    border-color: color-mix(in srgb, var(--zt-primary) 45%, var(--zt-border));
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--zt-primary) 12%, transparent);
+  }
+}

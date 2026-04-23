@@ -2,6 +2,7 @@ import type { CreateEditorOptions, EditorController } from '../types/editor';
 import { createReplaceAllExecutor } from './commands';
 import { resolvePresetPlugins } from '../plugins/preset-common';
 import { assertKey } from '../utils/guard';
+import { createMathBlockEditableNodeView } from '../plugins/custom/math-block-editable';
 
 /**
  * 创建并初始化 Milkdown 编辑器实例。
@@ -37,6 +38,8 @@ export const createEditor = async (options: CreateEditorOptions): Promise<Editor
   const defaultValueCtx = assertKey(coreKit, 'defaultValueCtx');
   /** editorViewOptionsCtx 导出对象。 */
   const editorViewOptionsCtx = assertKey(coreKit, 'editorViewOptionsCtx');
+  /** nodeViewCtx 导出对象。 */
+  const nodeViewCtx = assertKey(coreKit, 'nodeViewCtx');
   /** listenerCtx 导出对象。 */
   const listenerCtx = assertKey(listenerKit, 'listenerCtx');
   /** listener 插件导出对象。 */
@@ -67,6 +70,12 @@ export const createEditor = async (options: CreateEditorOptions): Promise<Editor
     ctx.set(editorViewOptionsCtx, {
       editable: () => options.editable
     });
+    /** 当前 nodeView 注册列表。 */
+    const currentNodeViews = (ctx.get(nodeViewCtx) ?? []) as Array<[string, unknown]>;
+    ctx.set(nodeViewCtx, [
+      ...currentNodeViews,
+      ['math_block', createMathBlockEditableNodeView()]
+    ]);
 
     /** 监听器管理器。 */
     const listenerManager = ctx.get(listenerCtx);
