@@ -1,16 +1,13 @@
 import katex from 'katex';
 import type { Node as ProseNode } from '@milkdown/kit/prose/model';
 import type { EditorView, NodeView, NodeViewConstructor } from '@milkdown/kit/prose/view';
+import type { EditorI18nMessages } from '../../types/editor';
+import { resolveEditorMessages } from '../../local/i18n';
 
 /**
  * math_block 节点类型名。
  */
 const MATH_BLOCK_NODE_NAME = 'math_block';
-
-/**
- * 渲染失败时展示的默认错误文案。
- */
-const DEFAULT_RENDER_ERROR_TEXT = '公式渲染失败，请检查公式语法。';
 
 /**
  * 解析 NodeView 的节点位置。
@@ -46,6 +43,8 @@ class MathBlockEditableNodeView implements NodeView {
   private readonly view: EditorView;
   // 节点位置获取器。
   private readonly getPos: boolean | (() => number);
+  // 编辑器文案。
+  private readonly messages: EditorI18nMessages;
   // 源码编辑容器。
   private readonly sourceContainer: HTMLDivElement;
   // 源码输入框。
@@ -58,13 +57,20 @@ class MathBlockEditableNodeView implements NodeView {
   /**
    * 初始化公式块视图。
    */
-  constructor(node: ProseNode, view: EditorView, getPos: boolean | (() => number)) {
+  constructor(
+    node: ProseNode,
+    view: EditorView,
+    getPos: boolean | (() => number),
+    messages: EditorI18nMessages
+  ) {
     // 初始节点快照。
     this.node = node;
     // 编辑器视图引用。
     this.view = view;
     // 节点位置获取器引用。
     this.getPos = getPos;
+    // 编辑器文案引用。
+    this.messages = messages;
 
     // 根容器。
     this.dom = document.createElement('div');
@@ -79,7 +85,7 @@ class MathBlockEditableNodeView implements NodeView {
     // 源码输入框。
     this.sourceTextarea = document.createElement('textarea');
     this.sourceTextarea.className = 'zt-md-math-block-textarea';
-    this.sourceTextarea.setAttribute('aria-label', 'Math block source');
+    this.sourceTextarea.setAttribute('aria-label', this.messages.mathBlockSourceAriaLabel);
     this.sourceTextarea.spellcheck = false;
 
     // 渲染结果容器。
@@ -167,12 +173,11 @@ class MathBlockEditableNodeView implements NodeView {
         throwOnError: true
       });
       this.previewContainer.appendChild(this.errorContainer);
-    } catch (error) {
+    } catch {
       // 渲染失败时仅显示错误提示，不中断输入流程。
-      const errorMessage = error instanceof Error ? error.message : DEFAULT_RENDER_ERROR_TEXT;
       this.previewContainer.textContent = source;
       this.errorContainer.hidden = false;
-      this.errorContainer.textContent = errorMessage || DEFAULT_RENDER_ERROR_TEXT;
+      this.errorContainer.textContent = this.messages.mathRenderError;
       this.previewContainer.appendChild(this.errorContainer);
     }
   }
@@ -254,8 +259,10 @@ class MathBlockEditableNodeView implements NodeView {
 /**
  * 创建 math_block 的 NodeView 构造器。
  */
-export const createMathBlockEditableNodeView = (): NodeViewConstructor => {
+export const createMathBlockEditableNodeView = (
+  messages: EditorI18nMessages = resolveEditorMessages()
+): NodeViewConstructor => {
   return (node, view, getPos) => {
-    return new MathBlockEditableNodeView(node, view, getPos);
+    return new MathBlockEditableNodeView(node, view, getPos, messages);
   };
 };

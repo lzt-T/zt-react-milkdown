@@ -24,6 +24,7 @@
   ],
   "scripts": {
     "dev": "npm run dev:example",
+    "dev:example": "pnpm --dir ./examples/react-playground dev",
     "dev:lib": "vite",
     "dev:reset": "node scripts/dev-reset.mjs && npm run setup:example && npm run build",
     "setup:example": "CI=true pnpm --dir ./examples/react-playground install --no-frozen-lockfile",
@@ -45,6 +46,7 @@
     "@tailwindcss/vite": "^4.2.4",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "i18next": "^26.0.8",
     "katex": "^0.16.22",
     "lucide-react": "^1.8.0",
     "radix-ui": "^1.4.3",

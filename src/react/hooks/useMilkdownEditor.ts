@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import type { EditorController } from '../../types/editor';
+import type { EditorController, EditorI18nMessages } from '../../types/editor';
 import { createEditor } from '../../core/createEditor';
 
 /**
@@ -12,6 +12,8 @@ export interface UseMilkdownEditorOptions {
   markdown: string;
   /** 当前是否可编辑。 */
   editable: boolean;
+  /** 编辑器文案。 */
+  messages?: EditorI18nMessages;
   /** 编辑器内容变更回调。 */
   onMarkdownChange: (markdown: string) => void;
   /** 编辑器初始化失败回调。 */
@@ -67,6 +69,7 @@ export const useMilkdownEditor = (options: UseMilkdownEditorOptions): void => {
           root: container,
           markdown: options.markdown,
           editable: options.editable,
+          messages: options.messages,
           onChange: (nextMarkdown) => {
             currentMarkdownRef.current = nextMarkdown;
             onMarkdownChangeRef.current(nextMarkdown);
@@ -100,7 +103,9 @@ export const useMilkdownEditor = (options: UseMilkdownEditorOptions): void => {
     };
   }, [
     options.container,
-    options.editable
+    options.editable,
+    options.messages?.mathBlockSourceAriaLabel,
+    options.messages?.mathRenderError
   ]);
 
   useEffect(() => {

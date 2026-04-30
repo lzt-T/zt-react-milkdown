@@ -6,6 +6,27 @@ import type { ReactNode } from 'react';
 export type EditorTheme = 'light' | 'dark';
 
 /**
+ * 定义编辑器支持的语言类型。
+ */
+export type EditorLocale = 'zh-CN' | 'en-US';
+
+/**
+ * 定义编辑器内置文案结构。
+ */
+export interface EditorI18nMessages {
+  /** 空内容占位提示。 */
+  placeholder: string;
+  /** 编辑器初始化失败提示。 */
+  initError: string;
+  /** 编辑器区域无障碍标签。 */
+  editorAriaLabel: string;
+  /** 公式块源码输入无障碍标签。 */
+  mathBlockSourceAriaLabel: string;
+  /** 公式渲染失败提示。 */
+  mathRenderError: string;
+}
+
+/**
  * 定义编辑器变更事件回调。
  */
 export type EditorChangeHandler = (markdown: string) => void;
@@ -22,6 +43,10 @@ export interface MilkdownEditorProps {
   onChange?: EditorChangeHandler;
   /** 主题模式。 */
   theme?: EditorTheme;
+  /** 编辑器语言。 */
+  locale?: EditorLocale;
+  /** 编辑器文案覆盖项。 */
+  messages?: Partial<EditorI18nMessages>;
   /** 容器样式类名。 */
   className?: string;
   /** 占位提示文案。 */
@@ -42,6 +67,8 @@ export interface CreateEditorOptions {
   markdown: string;
   /** 是否允许编辑。 */
   editable: boolean;
+  /** 编辑器文案。 */
+  messages?: EditorI18nMessages;
   /** Markdown 变化事件。 */
   onChange: EditorChangeHandler;
 }

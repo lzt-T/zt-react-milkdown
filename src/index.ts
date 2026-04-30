@@ -4,6 +4,8 @@ export { MilkdownEditor } from './react/components/MilkdownEditor';
 export type {
   EditorChangeHandler,
   EditorController,
+  EditorI18nMessages,
+  EditorLocale,
   EditorTheme,
   MilkdownEditorProps,
   CreateEditorOptions

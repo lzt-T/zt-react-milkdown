@@ -23,10 +23,23 @@ export default function Demo() {
       value={value}
       onChange={setValue}
       theme="light"
+      locale="zh-CN"
       placeholder="请输入 Markdown"
     />
   );
 }
+```
+
+### 覆盖内置文案
+
+```tsx
+<MilkdownEditor
+  locale="en-US"
+  messages={{
+    placeholder: 'Start writing...',
+    mathRenderError: 'Math preview failed.'
+  }}
+/>
 ```
 
 ## 公式支持
@@ -46,44 +59,11 @@ $$
 - `defaultValue?: string`
 - `onChange?: (markdown: string) => void`
 - `theme?: 'light' | 'dark'`
+- `locale?: 'zh-CN' | 'en-US'`
+- `messages?: Partial<EditorI18nMessages>`
 - `className?: string`
 - `placeholder?: string`
 - `editable?: boolean`
 - `headerSlot?: ReactNode`
 
-## 开发命令
-
-```bash
-npm run dev
-npm run dev:example
-npm run dev:lib
-npm run setup:example
-npm run build
-npm run typecheck
-npm run test
-npm run pack:check
-```
-
-`npm run dev` 默认启动 `examples/react-playground`，用于本地预览，不再触发根目录库模式的 404 页面。
-示例项目通过相对路径直接引用根目录 `src`，不再依赖 `link:../..` 本地包快照链路。
-示例项目使用独立的 `examples/react-playground/postcss.config.cjs`，避免继承根目录 Tailwind 构建链路而出现 `content` 警告。
-若修改了库源码后预览异常，先执行 `npm run build`，再执行 `npm run dev` 重新启动示例。
-
-### 本地联调推荐流程
-
-```bash
-npm run dev:reset
-npm run dev
-```
-
-### 联调排障
-
-- 若再次出现 `recentlyCreatedOwnerStacks`，优先执行 `npm run dev:reset` 清理 `examples/react-playground/node_modules/.vite` 后重启示例。
-
-## 发布
-
-```bash
-npm run build
-npm run pack:check
-npm publish --access public
-```
+`placeholder` 会覆盖 `messages.placeholder`，未传 `locale` 时默认使用 `zh-CN`。

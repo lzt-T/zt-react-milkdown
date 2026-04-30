@@ -4,6 +4,7 @@ import { resolvePresetPlugins } from '../plugins/preset-common';
 import { assertKey } from '../utils/guard';
 import { createMathBlockEditableNodeView } from '../plugins/custom/math-block-editable';
 import { math } from '../plugins/custom/math-plugin';
+import { resolveEditorMessages } from '../local/i18n';
 
 /**
  * 创建并初始化 Milkdown 编辑器实例。
@@ -60,6 +61,8 @@ export const createEditor = async (options: CreateEditorOptions): Promise<Editor
 
   /** 编辑器实例。 */
   const editor = Editor.make();
+  /** 编辑器文案。 */
+  const messages = options.messages ?? resolveEditorMessages();
 
   editor.config((ctx: any) => {
     ctx.set(rootCtx, options.root);
@@ -71,7 +74,7 @@ export const createEditor = async (options: CreateEditorOptions): Promise<Editor
     const currentNodeViews = (ctx.get(nodeViewCtx) ?? []) as Array<[string, unknown]>;
     ctx.set(nodeViewCtx, [
       ...currentNodeViews,
-      ['math_block', createMathBlockEditableNodeView()]
+      ['math_block', createMathBlockEditableNodeView(messages)]
     ]);
 
     /** 监听器管理器。 */
