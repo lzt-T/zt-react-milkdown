@@ -12,11 +12,16 @@
 @theme inline {
   --font-sans: var(--zt-font);
   --color-zt-bg: var(--zt-bg);
+  --color-zt-surface: var(--zt-surface);
+  --color-zt-elevated: var(--zt-elevated);
   --color-zt-fg: var(--zt-fg);
   --color-zt-muted: var(--zt-muted);
   --color-zt-border: var(--zt-border);
   --color-zt-primary: var(--zt-primary);
+  --color-zt-secondary: var(--zt-secondary);
+  --color-zt-glow: var(--zt-glow);
   --radius-zt: var(--zt-radius);
+  --radius-zt-lg: var(--zt-radius-lg);
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -45,17 +50,17 @@
   .zt-md {
     --background: var(--zt-bg);
     --foreground: var(--zt-fg);
-    --card: var(--zt-bg);
+    --card: var(--zt-surface);
     --card-foreground: var(--zt-fg);
-    --popover: var(--zt-bg);
+    --popover: var(--zt-surface);
     --popover-foreground: var(--zt-fg);
     --primary: var(--zt-primary);
     --primary-foreground: oklch(0.985 0 0);
-    --secondary: color-mix(in srgb, var(--zt-fg) 8%, var(--zt-bg));
+    --secondary: var(--zt-secondary);
     --secondary-foreground: var(--zt-fg);
-    --muted: color-mix(in srgb, var(--zt-muted) 22%, var(--zt-bg));
+    --muted: color-mix(in srgb, var(--zt-muted) 20%, var(--zt-surface));
     --muted-foreground: var(--zt-muted);
-    --accent: color-mix(in srgb, var(--zt-primary) 12%, var(--zt-bg));
+    --accent: color-mix(in srgb, var(--zt-primary) 14%, var(--zt-surface));
     --accent-foreground: var(--zt-fg);
     --destructive: oklch(0.577 0.245 27.325);
     --border: var(--zt-border);
@@ -72,32 +77,45 @@
 
 @layer components {
   .zt-md {
-    @apply relative w-full rounded-zt border border-zt-border bg-zt-bg font-sans text-zt-fg shadow-sm transition-[border-color,box-shadow] duration-200 ease-out;
+    @apply relative w-full overflow-hidden rounded-[var(--zt-radius-lg)] border border-zt-border bg-zt-surface font-sans text-zt-fg transition-[transform,border-color,box-shadow] duration-300 ease-out;
+    box-shadow:
+      inset 0 1px 0 color-mix(in srgb, white 36%, transparent),
+      0 18px 40px -26px color-mix(in srgb, var(--zt-primary) 20%, transparent);
+    transform: translateZ(0);
   }
 
   .zt-md:focus-within {
-    border-color: color-mix(in srgb, var(--zt-primary) 45%, var(--zt-border));
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--zt-primary) 20%, transparent);
+    border-color: var(--zt-border);
+    box-shadow:
+      inset 0 1px 0 color-mix(in srgb, white 36%, transparent),
+      0 18px 40px -26px color-mix(in srgb, var(--zt-primary) 20%, transparent);
   }
 
   .zt-md-header {
-    @apply border-b border-zt-border px-4 py-3 text-sm text-zt-muted;
+    @apply relative border-b border-zt-border px-5 py-4 text-sm text-zt-muted;
+    background: var(--zt-surface);
+    letter-spacing: 0.01em;
   }
 
   .zt-md-body {
-    @apply relative min-h-[220px];
+    @apply relative min-h-[240px];
+    background: var(--zt-surface);
   }
 
   .zt-md-placeholder {
-    @apply pointer-events-none absolute left-4 top-3 z-10 text-sm text-zt-muted;
+    @apply pointer-events-none absolute left-5 top-4 z-10 text-sm text-zt-muted;
+    letter-spacing: 0.01em;
   }
 
   .zt-md-error {
-    @apply absolute right-4 top-3 z-20 rounded-md border border-zt-border bg-zt-bg px-2 py-1 text-xs text-zt-muted;
+    @apply absolute right-4 top-4 z-20 rounded-md border border-zt-border px-2 py-1 text-xs;
+    background: color-mix(in srgb, var(--zt-surface) 84%, var(--zt-secondary));
+    color: color-mix(in srgb, var(--zt-fg) 72%, var(--zt-secondary));
   }
 
   .zt-md-editor {
-    @apply min-h-[220px] px-4 py-3 text-sm leading-7 outline-none;
+    @apply min-h-[240px] px-5 py-4 text-[15px] leading-8 outline-none;
+    position: relative;
   }
 
   .zt-md-editor:focus-visible {

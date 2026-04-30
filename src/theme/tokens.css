@@ -1,20 +1,30 @@
 :root {
   --zt-font: 'IBM Plex Sans', 'Noto Sans SC', 'PingFang SC', sans-serif;
+  --zt-font-display: 'DM Serif Display', 'Songti SC', 'Noto Serif SC', serif;
   --zt-radius: 14px;
+  --zt-radius-lg: 22px;
 }
 
 .zt-md-light {
-  --zt-bg: #fcfbf8;
-  --zt-fg: #1f2933;
-  --zt-muted: #7a869a;
-  --zt-border: #d9e2ec;
-  --zt-primary: #0b6e4f;
+  --zt-bg: #f6f8fc;
+  --zt-surface: #ffffff;
+  --zt-elevated: #f2f5fb;
+  --zt-fg: #162336;
+  --zt-muted: #5e7087;
+  --zt-border: #d4dde9;
+  --zt-primary: #0c6cc3;
+  --zt-secondary: #f27a1a;
+  --zt-glow: color-mix(in srgb, var(--zt-primary) 20%, transparent);
 }
 
 .zt-md-dark {
-  --zt-bg: #171c24;
-  --zt-fg: #f0f4f8;
-  --zt-muted: #9fb3c8;
-  --zt-border: #243b53;
-  --zt-primary: #57d9a3;
+  --zt-bg: #0c1220;
+  --zt-surface: #131d31;
+  --zt-elevated: #1a2740;
+  --zt-fg: #e8efff;
+  --zt-muted: #93a7c3;
+  --zt-border: #2f4366;
+  --zt-primary: #6eb4ff;
+  --zt-secondary: #ffab66;
+  --zt-glow: color-mix(in srgb, var(--zt-primary) 36%, transparent);
 }

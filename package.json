@@ -24,7 +24,6 @@
   ],
   "scripts": {
     "dev": "npm run dev:example",
-    "dev:example": "pnpm --dir ./examples/react-playground dev",
     "dev:lib": "vite",
     "dev:reset": "node scripts/dev-reset.mjs && npm run setup:example && npm run build",
     "setup:example": "CI=true pnpm --dir ./examples/react-playground install --no-frozen-lockfile",
