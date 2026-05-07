@@ -5,6 +5,7 @@ import { assertKey } from '../utils/guard';
 import { createMathBlockEditableNodeView } from '../plugins/custom/math-block-editable';
 import { math } from '../plugins/custom/math-plugin';
 import { createSlashMenuPlugin } from '../plugins/custom/slash-menu';
+import { taskListToggle } from '../plugins/custom/task-list-toggle';
 import { resolveEditorMessages } from '../local/i18n';
 // slash 菜单调试日志前缀。
 const SLASH_DEBUG_PREFIX = '[zt-md/slash-debug]';
@@ -68,6 +69,7 @@ export const createEditor = async (options: CreateEditorOptions): Promise<Editor
     commonmark,
     gfm,
     math,
+    taskListToggle,
     slash: slashPlugins.length > 0 ? slashPlugins : null
   });
   console.log(`${SLASH_DEBUG_PREFIX} PRESET_PLUGIN_NAMES`, {

@@ -12,6 +12,8 @@ export interface PresetPluginExports {
   gfm: unknown;
   /** math 插件实例（可为单个插件或插件数组）。 */
   math: unknown | unknown[];
+  /** 任务列表交互插件实例。 */
+  taskListToggle: unknown;
   /** slash 插件实例（可为 null 表示关闭）。 */
   slash?: unknown | null;
 }
@@ -45,6 +47,7 @@ export const resolvePresetPlugins = (pluginExports: PresetPluginExports): Editor
   appendPluginDescriptors(descriptors, 'commonmark', pluginExports.commonmark);
   appendPluginDescriptors(descriptors, 'gfm', pluginExports.gfm);
   appendPluginDescriptors(descriptors, 'math', pluginExports.math);
+  appendPluginDescriptors(descriptors, 'task-list-toggle', pluginExports.taskListToggle);
   if (pluginExports.slash) {
     appendPluginDescriptors(descriptors, 'slash', pluginExports.slash);
   }

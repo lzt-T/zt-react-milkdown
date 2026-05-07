@@ -22,6 +22,10 @@ export interface EditorI18nMessages {
   editorAriaLabel: string;
   /** 公式块源码输入无障碍标签。 */
   mathBlockSourceAriaLabel: string;
+  /** 公式块复制按钮无障碍标签。 */
+  mathBlockCopyAriaLabel: string;
+  /** 公式块删除按钮无障碍标签。 */
+  mathBlockDeleteAriaLabel: string;
   /** 公式渲染失败提示。 */
   mathRenderError: string;
 }
@@ -36,7 +40,8 @@ export type SlashMenuCommand =
   | 'bulletList'
   | 'orderedList'
   | 'taskList'
-  | 'blockquote';
+  | 'blockquote'
+  | 'mathBlock';
 
 /**
  * 定义 slash 菜单项结构。

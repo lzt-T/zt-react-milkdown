@@ -8,5 +8,7 @@ export const enUSMessages: EditorI18nMessages = {
   initError: 'Editor initialization failed. Please refresh the page and try again.',
   editorAriaLabel: 'Markdown editor',
   mathBlockSourceAriaLabel: 'Math block source',
+  mathBlockCopyAriaLabel: 'Copy math source',
+  mathBlockDeleteAriaLabel: 'Delete math block',
   mathRenderError: 'Formula rendering failed. Please check the formula syntax.'
 };

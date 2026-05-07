@@ -1,0 +1,84 @@
+@layer components {
+  .zt-md-editor ol,
+  .zt-md-editor ul {
+    padding-inline-start: 16px;
+  }
+
+  .zt-md-editor li[data-item-type="task"] {
+    position: relative;
+    list-style: none;
+    margin-inline-start: -16px;
+    padding-left: 1.45rem;
+  }
+
+  .zt-md-editor li[data-item-type="task"]::marker {
+    content: "";
+  }
+
+  .zt-md-editor li[data-item-type="task"]::before {
+    position: absolute;
+    left: 0.04rem;
+    top: 0.5em;
+    width: 0.95rem;
+    height: 0.95rem;
+    border: 1px solid var(--zt-border);
+    border-radius: min(var(--zt-radius), 0.25rem);
+    background: var(--zt-surface);
+    content: "";
+    cursor: pointer;
+  }
+
+  .zt-md-editor li[data-item-type="task"][data-checked="true"]::before {
+    border-color: var(--zt-primary);
+    background: var(--zt-primary);
+  }
+
+  .zt-md-editor li[data-item-type="task"][data-checked="true"]::after {
+    position: absolute;
+    left: 0.38rem;
+    top: 0.6em;
+    width: 0.26rem;
+    height: 0.5rem;
+    border: solid var(--zt-surface);
+    border-width: 0 2px 2px 0;
+    content: "";
+    pointer-events: none;
+    transform: rotate(45deg);
+  }
+
+  .zt-md-editor li[data-item-type="task"] > input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 0.95rem;
+    height: 0.95rem;
+    margin: 0 0.42rem 0 0.04rem;
+    border: 1px solid var(--zt-border);
+    border-radius: min(var(--zt-radius), 0.25rem);
+    background: var(--zt-surface);
+    display: inline-grid;
+    place-content: center;
+    vertical-align: text-bottom;
+    cursor: pointer;
+  }
+
+  .zt-md-editor li[data-item-type="task"] > input[type="checkbox"]::before {
+    width: 0.26rem;
+    height: 0.5rem;
+    border: solid var(--zt-surface);
+    border-width: 0 2px 2px 0;
+    content: "";
+    transform: rotate(45deg) scale(0);
+    transform-origin: center;
+    transition: transform 120ms ease-out;
+  }
+
+  .zt-md-editor li[data-item-type="task"] > input[type="checkbox"]:checked {
+    border-color: var(--zt-primary);
+    background: var(--zt-primary);
+    cursor: pointer;
+  }
+
+  .zt-md-editor li[data-item-type="task"] > input[type="checkbox"]:checked::before {
+    transform: rotate(45deg) scale(1);
+  }
+}

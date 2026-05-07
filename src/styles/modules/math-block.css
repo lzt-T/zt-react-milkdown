@@ -1,6 +1,6 @@
 @layer components {
   .zt-md-editor .zt-md-math-block {
-    @apply my-3 overflow-hidden rounded-zt border border-zt-border bg-zt-bg;
+    @apply relative my-3 overflow-hidden rounded-zt border border-zt-border bg-zt-bg;
   }
 
   .zt-md-editor .zt-md-math-block-source {
@@ -8,15 +8,60 @@
   }
 
   .zt-md-editor .zt-md-math-block-textarea {
-    @apply min-h-[84px] w-full resize-y border-0 bg-transparent font-mono text-sm leading-6 text-zt-fg outline-none;
+    @apply min-h-[64px] w-full resize-y border-0 bg-transparent font-mono text-sm leading-6 text-zt-fg outline-none;
   }
 
   .zt-md-editor .zt-md-math-block-preview {
-    @apply px-3 py-4;
+    /* 长公式改为横向滚动展示，避免被公式块容器裁切。 */
+    @apply overflow-x-auto overflow-y-hidden px-3 py-4;
+    /* 禁止预览区文本选中，避免拖动滚动时出现蓝色选区。 */
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  .zt-md-editor .zt-md-math-block-preview .katex-display {
+    @apply min-w-max;
   }
 
   .zt-md-editor .zt-md-math-block-error {
     @apply mt-2 text-xs text-red-500;
+  }
+
+  .zt-md-editor .zt-md-math-block-actions {
+    @apply absolute right-2 top-2 z-20 inline-flex gap-1 opacity-0 transition-opacity duration-150;
+    pointer-events: none;
+  }
+
+  .zt-md-editor .zt-md-math-block:hover .zt-md-math-block-actions,
+  .zt-md-editor .zt-md-math-block:focus-within .zt-md-math-block-actions {
+    @apply opacity-100;
+    pointer-events: auto;
+  }
+
+  .zt-md-editor .zt-md-math-block-action-button {
+    @apply inline-flex size-7 items-center justify-center rounded-md border border-zt-border bg-zt-surface text-zt-muted;
+    cursor: pointer;
+  }
+
+  .zt-md-editor .zt-md-math-block-action-button:hover {
+    background: color-mix(in srgb, var(--zt-primary) 10%, var(--zt-surface));
+    color: var(--zt-primary);
+  }
+
+  .zt-md-editor .zt-md-math-block-action-button[data-copied='true'] {
+    background: color-mix(in srgb, var(--zt-primary) 14%, var(--zt-surface));
+    color: var(--zt-primary);
+    border-color: color-mix(in srgb, var(--zt-primary) 45%, var(--zt-border));
+  }
+
+  .zt-md-editor .zt-md-math-block-action-button-danger:hover {
+    background: color-mix(in srgb, var(--destructive) 12%, var(--zt-surface));
+    color: var(--destructive);
+    border-color: color-mix(in srgb, var(--destructive) 35%, var(--zt-border));
+  }
+
+  .zt-md-editor .zt-md-math-block-action-button svg {
+    @apply size-4;
   }
 
   .zt-md-editor .zt-md-math-block-editing {

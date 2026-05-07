@@ -9,6 +9,7 @@
 @import "./modules/slash-menu.css";
 @import "./modules/math-block.css";
 @import "./modules/blockquote.css";
+@import "./modules/task-list.css";
 
 @source "../**/*.{ts,tsx}";
 
@@ -128,6 +129,10 @@
   .zt-md-editor .ProseMirror {
     outline: none;
     white-space: pre-wrap;
+  }
+
+  .zt-md-editor .ProseMirror p {
+    margin: 0;
   }
 
   .zt-md-editor .ProseMirror:focus,

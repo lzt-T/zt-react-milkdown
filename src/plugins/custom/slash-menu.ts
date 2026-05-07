@@ -20,7 +20,8 @@ const DEFAULT_SLASH_MENU_ITEMS: SlashMenuItem[] = [
   { id: 'bullet-list', label: '无序列表', group: '列表', command: 'bulletList' },
   { id: 'ordered-list', label: '有序列表', group: '列表', command: 'orderedList' },
   { id: 'task-list', label: '任务列表', group: '列表', command: 'taskList' },
-  { id: 'blockquote', label: '引用块', group: '插入', command: 'blockquote' }
+  { id: 'blockquote', label: '引用块', group: '插入', command: 'blockquote' },
+  { id: 'math-block', label: '公式块', group: '插入', command: 'mathBlock' }
 ];
 
 /**
@@ -215,6 +216,43 @@ const removeSlashQueryAtCursor = (view: any): boolean => {
 const runCommand = (command: EditorCommandExecutor, view: any): boolean => command(view.state, view.dispatch, view);
 
 /**
+ * 设置当前列表项的任务完成状态。
+ */
+const setCurrentListItemChecked = (view: any, checked: boolean): boolean => {
+  // 当前选区起点。
+  const from = view?.state?.selection?.$from;
+  if (!from || !view?.dispatch) {
+    return false;
+  }
+
+  for (let depth = from.depth; depth > 0; depth -= 1) {
+    // 当前层级节点。
+    const node = from.node(depth);
+    if (node?.type?.name !== 'list_item') {
+      continue;
+    }
+
+    // 当前列表项 attrs 定义。
+    const attrsSpec = node.type?.spec?.attrs as Record<string, unknown> | undefined;
+    if (!attrsSpec?.checked) {
+      return false;
+    }
+
+    // 当前列表项位置。
+    const itemPosition = from.before(depth);
+    view.dispatch(
+      view.state.tr.setNodeMarkup(itemPosition, undefined, {
+        ...node.attrs,
+        checked
+      })
+    );
+    return true;
+  }
+
+  return false;
+};
+
+/**
  * 计算当前菜单状态。
  */
 const resolveMenuState = (view: any, items: SlashMenuItem[]): SlashMenuState => {
@@ -311,8 +349,7 @@ const runSlashCommand = async (view: any, command: SlashMenuCommand): Promise<bo
   // 列表节点映射。
   const listTypeMap: Partial<Record<SlashMenuCommand, string>> = {
     bulletList: 'bullet_list',
-    orderedList: 'ordered_list',
-    taskList: 'task_list'
+    orderedList: 'ordered_list'
   };
 
   if (command in headingLevelMap) {
@@ -340,6 +377,74 @@ const runSlashCommand = async (view: any, command: SlashMenuCommand): Promise<bo
     // 引用包裹命令。
     const quoteCommand = (wrapIn as (type: unknown, attrs?: Record<string, unknown>) => EditorCommandExecutor)(quoteType);
     return runCommand(quoteCommand, view);
+  }
+
+  if (command === 'taskList') {
+    // 任务列表基于无序列表和 list_item checked 属性实现。
+    const listType = nodes.bullet_list;
+    if (!listType) {
+      return false;
+    }
+    // 无序列表包裹命令。
+    const listCommand = (wrapInList as (type: unknown, attrs?: Record<string, unknown>) => EditorCommandExecutor)(listType);
+    if (!runCommand(listCommand, view)) {
+      return false;
+    }
+    return setCurrentListItemChecked(view, false);
+  }
+
+  if (command === 'mathBlock') {
+    // 公式块节点类型。
+    const mathBlockType = nodes.math_block;
+    if (!mathBlockType) {
+      return false;
+    }
+    // 公式块转换命令（依赖 math_block 默认 attrs.value 为空字符串）。
+    const mathBlockCommand = (setBlockType as (type: unknown, attrs?: Record<string, unknown>) => EditorCommandExecutor)(
+      mathBlockType
+    );
+    // 是否成功转换为公式块。
+    const converted = runCommand(mathBlockCommand, view);
+    if (!converted) {
+      return false;
+    }
+
+    // prose state 模块导出集合。
+    const proseStateModule = (await import('@milkdown/prose/state')) as Record<string, unknown>;
+    // NodeSelection 构造器。
+    const NodeSelection = getObjectValue(proseStateModule, 'NodeSelection') as
+      | { create: (doc: unknown, from: number) => unknown }
+      | undefined;
+    if (!NodeSelection || typeof NodeSelection.create !== 'function') {
+      return true;
+    }
+
+    // 当前选区起点（转换后的选区解析对象）。
+    const from = view.state.selection?.$from;
+    if (!from) {
+      return true;
+    }
+
+    // 当前 math_block 节点在文档中的真实起始位置。
+    let mathBlockPosition: number | null = null;
+    for (let depth = from.depth; depth > 0; depth -= 1) {
+      // 当前层节点。
+      const currentNode = from.node(depth);
+      if (currentNode?.type?.name !== 'math_block') {
+        continue;
+      }
+      mathBlockPosition = from.before(depth);
+      break;
+    }
+
+    if (mathBlockPosition === null) {
+      return true;
+    }
+
+    // 选中公式块节点，触发 NodeView.selectNode -> enterEditMode -> textarea.focus。
+    const nodeSelection = NodeSelection.create(view.state.doc, mathBlockPosition);
+    view.dispatch(view.state.tr.setSelection(nodeSelection).scrollIntoView());
+    return true;
   }
 
   if (command in listTypeMap) {
@@ -489,6 +594,18 @@ export const createSlashMenuPlugin = async (config?: SlashMenuConfig): Promise<S
         return;
       }
       setMenuVisible(false);
+      if (item.command === 'mathBlock') {
+        // 菜单收起后补一次输入框级聚焦，避免浮层交互导致焦点丢失。
+        queueMicrotask(() => {
+          const sourceTextarea = currentView?.dom?.querySelector?.(
+            '.zt-md-math-block-editing .zt-md-math-block-textarea'
+          ) as HTMLTextAreaElement | null;
+          if (!sourceTextarea || document.activeElement === sourceTextarea) {
+            return;
+          }
+          sourceTextarea.focus();
+        });
+      }
     };
 
     // slash provider 实例。
