@@ -8,6 +8,19 @@
 npm install zt-react-milkdown
 ```
 
+## 本地开发（单包）
+
+```bash
+# 启动示例 playground
+npm run dev
+
+# 构建组件库
+npm run build
+
+# 类型检查
+npm run typecheck
+```
+
 ## 使用
 
 ```tsx

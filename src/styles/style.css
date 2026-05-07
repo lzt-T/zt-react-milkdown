@@ -5,8 +5,9 @@
 @import "../theme/tokens.css";
 @import "../theme/light.css";
 @import "../theme/dark.css";
-@import "./modules/math-block.css";
+/* @import "./modules/math-block.css"; */
 @import "./modules/slash-menu.css";
+@import "./modules/math-block.css";
 
 @source "../**/*.{ts,tsx}";
 

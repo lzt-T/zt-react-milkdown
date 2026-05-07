@@ -17,17 +17,18 @@ async function removeDir(targetPath) {
 }
 
 /**
- * 清理示例项目中与本地包联调相关的缓存目录。
+ * 清理单包模式下开发联调相关的缓存目录。
  */
 async function resetDevCaches() {
   // 使用当前工作目录作为路径基准，避免平台路径分隔符差异。
   const rootDir = process.cwd();
-  // 示例项目的 node_modules 目录。
-  const exampleNodeModulesDir = path.join(rootDir, 'examples', 'react-playground', 'node_modules');
-  // Vite 预构建缓存目录。
-  const viteCacheDir = path.join(exampleNodeModulesDir, '.vite');
+  // 根目录 Vite 预构建缓存目录（单包模式默认路径）。
+  const rootViteCacheDir = path.join(rootDir, 'node_modules', '.vite');
+  // 兼容清理历史多包结构遗留的示例目录缓存。
+  const legacyExampleViteCacheDir = path.join(rootDir, 'examples', 'react-playground', 'node_modules', '.vite');
 
-  await removeDir(viteCacheDir);
+  await removeDir(rootViteCacheDir);
+  await removeDir(legacyExampleViteCacheDir);
 }
 
 await resetDevCaches();

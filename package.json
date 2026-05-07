@@ -24,10 +24,9 @@
   ],
   "scripts": {
     "dev": "npm run dev:example",
-    "dev:example": "pnpm --dir ./examples/react-playground dev",
+    "dev:example": "cd ./examples/react-playground && vite --config ./vite.config.ts",
     "dev:lib": "vite",
-    "dev:reset": "node scripts/dev-reset.mjs && npm run setup:example && npm run build",
-    "setup:example": "CI=true pnpm --dir ./examples/react-playground install --no-frozen-lockfile",
+    "dev:reset": "node scripts/dev-reset.mjs && npm run build",
     "build": "npm run build:css && vite build",
     "build:css": "tailwindcss -i ./src/styles/style.css -o ./src/styles/generated.css --minify",
     "typecheck": "tsc --noEmit",
