@@ -126,6 +126,7 @@
 
   .zt-md-editor .ProseMirror {
     outline: none;
+    white-space: pre-wrap;
   }
 
   .zt-md-editor .ProseMirror:focus,
@@ -157,3 +158,4 @@
     @apply cursor-text;
   }
 }
+
