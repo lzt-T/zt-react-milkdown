@@ -14,15 +14,15 @@ const SLASH_DEBUG_PREFIX = '[zt-md/slash-debug]';
  */
 export const createEditor = async (options: CreateEditorOptions): Promise<EditorController> => {
   /** core 子模块导出。 */
-  const coreKit = (await import('@milkdown/kit/core')) as Record<string, unknown>;
+  const coreKit = (await import('@milkdown/core')) as Record<string, unknown>;
   /** listener 子模块导出。 */
-  const listenerKit = (await import('@milkdown/kit/plugin/listener')) as Record<string, unknown>;
+  const listenerKit = (await import('@milkdown/plugin-listener')) as Record<string, unknown>;
   /** commonmark 子模块导出。 */
-  const commonmarkKit = (await import('@milkdown/kit/preset/commonmark')) as Record<string, unknown>;
+  const commonmarkKit = (await import('@milkdown/preset-commonmark')) as Record<string, unknown>;
   /** gfm 子模块导出。 */
-  const gfmKit = (await import('@milkdown/kit/preset/gfm')) as Record<string, unknown>;
+  const gfmKit = (await import('@milkdown/preset-gfm')) as Record<string, unknown>;
   /** utils 子模块导出。 */
-  const utilsKit = (await import('@milkdown/kit/utils')) as Record<string, unknown>;
+  const utilsKit = (await import('@milkdown/utils')) as Record<string, unknown>;
 
   /** Editor 构造对象。 */
   const Editor = assertKey(coreKit, 'Editor') as {

@@ -1,8 +1,8 @@
-import type { MilkdownPlugin } from '@milkdown/kit/ctx';
-import { nodeRule } from '@milkdown/kit/prose';
-import { InputRule } from '@milkdown/kit/prose/inputrules';
-import { Fragment } from '@milkdown/kit/prose/model';
-import { $ctx, $inputRule, $nodeSchema, $remark } from '@milkdown/kit/utils';
+import type { MilkdownPlugin } from '@milkdown/ctx';
+import { nodeRule } from '@milkdown/prose';
+import { InputRule } from '@milkdown/prose/inputrules';
+import { Fragment } from '@milkdown/prose/model';
+import { $ctx, $inputRule, $nodeSchema, $remark } from '@milkdown/utils';
 import type { KatexOptions } from 'katex';
 import katex from 'katex';
 import remarkMath from 'remark-math';

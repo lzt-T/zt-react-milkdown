@@ -1,6 +1,6 @@
 import katex from 'katex';
-import type { Node as ProseNode } from '@milkdown/kit/prose/model';
-import type { EditorView, NodeView, NodeViewConstructor } from '@milkdown/kit/prose/view';
+import type { Node as ProseNode } from '@milkdown/prose/model';
+import type { EditorView, NodeView, NodeViewConstructor } from '@milkdown/prose/view';
 import type { EditorI18nMessages } from '../../types/editor';
 import { resolveEditorMessages } from '../../local/i18n';
 
