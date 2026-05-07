@@ -1,0 +1,8 @@
+@layer components {
+  .zt-md-editor .ProseMirror blockquote {
+    margin: 0.5em 0;
+    border-left: 2px solid var(--zt-border);
+    padding-left: 1em;
+    color: inherit;
+  }
+}
