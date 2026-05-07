@@ -4,7 +4,10 @@ import { resolvePresetPlugins } from '../plugins/preset-common';
 import { assertKey } from '../utils/guard';
 import { createMathBlockEditableNodeView } from '../plugins/custom/math-block-editable';
 import { math } from '../plugins/custom/math-plugin';
+import { createSlashMenuPlugin } from '../plugins/custom/slash-menu';
 import { resolveEditorMessages } from '../local/i18n';
+// slash 菜单调试日志前缀。
+const SLASH_DEBUG_PREFIX = '[zt-md/slash-debug]';
 
 /**
  * 创建并初始化 Milkdown 编辑器实例。
@@ -52,11 +55,23 @@ export const createEditor = async (options: CreateEditorOptions): Promise<Editor
   const replaceAll = assertKey(utilsKit, 'replaceAll');
 
   /** 默认插件集合。 */
+  const slashSetup = await createSlashMenuPlugin(options.slashMenu);
+  /** slash 插件实例列表。 */
+  const slashPlugins = slashSetup.plugins;
+  console.log(`${SLASH_DEBUG_PREFIX} CREATE_EDITOR_SLASH_PLUGIN`, {
+    isNull: slashPlugins.length === 0,
+    pluginCount: slashPlugins.length
+  });
+  /** 默认插件集合。 */
   const defaultPlugins = resolvePresetPlugins({
     listener,
     commonmark,
     gfm,
-    math
+    math,
+    slash: slashPlugins.length > 0 ? slashPlugins : null
+  });
+  console.log(`${SLASH_DEBUG_PREFIX} PRESET_PLUGIN_NAMES`, {
+    names: defaultPlugins.map((descriptor) => descriptor.name)
   });
 
   /** 编辑器实例。 */
@@ -82,6 +97,10 @@ export const createEditor = async (options: CreateEditorOptions): Promise<Editor
     listenerManager.markdownUpdated((_ctx: unknown, markdown: string) => {
       options.onChange(markdown);
     });
+
+    if (slashSetup.config) {
+      slashSetup.config(ctx);
+    }
   });
 
   defaultPlugins.forEach((descriptor) => {

@@ -6,6 +6,7 @@
 @import "../theme/light.css";
 @import "../theme/dark.css";
 @import "./modules/math-block.css";
+@import "./modules/slash-menu.css";
 
 @source "../**/*.{ts,tsx}";
 

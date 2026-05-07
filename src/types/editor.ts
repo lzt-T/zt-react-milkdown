@@ -27,6 +27,42 @@ export interface EditorI18nMessages {
 }
 
 /**
+ * 定义 slash 菜单支持的命令类型。
+ */
+export type SlashMenuCommand =
+  | 'heading1'
+  | 'heading2'
+  | 'heading3'
+  | 'bulletList'
+  | 'orderedList'
+  | 'taskList'
+  | 'blockquote';
+
+/**
+ * 定义 slash 菜单项结构。
+ */
+export interface SlashMenuItem {
+  /** 菜单项唯一标识。 */
+  id: string;
+  /** 菜单项展示文案。 */
+  label: string;
+  /** 菜单项分组文案。 */
+  group: string;
+  /** 菜单项对应命令。 */
+  command: SlashMenuCommand;
+}
+
+/**
+ * 定义 slash 菜单配置结构。
+ */
+export interface SlashMenuConfig {
+  /** 是否启用 slash 菜单。 */
+  enabled?: boolean;
+  /** 菜单项配置。 */
+  items?: SlashMenuItem[];
+}
+
+/**
  * 定义编辑器变更事件回调。
  */
 export type EditorChangeHandler = (markdown: string) => void;
@@ -55,6 +91,8 @@ export interface MilkdownEditorProps {
   editable?: boolean;
   /** 额外头部内容。 */
   headerSlot?: ReactNode;
+  /** slash 菜单配置。 */
+  slashMenu?: SlashMenuConfig;
 }
 
 /**
@@ -69,6 +107,8 @@ export interface CreateEditorOptions {
   editable: boolean;
   /** 编辑器文案。 */
   messages?: EditorI18nMessages;
+  /** slash 菜单配置。 */
+  slashMenu?: SlashMenuConfig;
   /** Markdown 变化事件。 */
   onChange: EditorChangeHandler;
 }

@@ -1,0 +1,34 @@
+@layer components {
+  .zt-md .slash-menu {
+    position: fixed;
+    z-index: 1200;
+    border: 1px solid var(--zt-border);
+    border-radius: 12px;
+    background: var(--zt-surface);
+    color: var(--zt-fg);
+    box-shadow: 0 12px 30px -20px color-mix(in srgb, var(--zt-primary) 40%, transparent);
+    min-width: 210px;
+    max-height: 320px;
+    overflow: auto;
+    padding: 8px;
+  }
+
+  .zt-md .slash-menu-item {
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 14px;
+    line-height: 1.4;
+  }
+
+  .zt-md .slash-menu-item:hover,
+  .zt-md .slash-menu-item[data-selected='true'] {
+    background: color-mix(in srgb, var(--zt-primary) 12%, var(--zt-surface));
+  }
+
+  .zt-md .slash-menu-group {
+    margin: 6px 6px 4px;
+    color: var(--zt-muted);
+    font-size: 12px;
+    line-height: 1.2;
+  }
+}

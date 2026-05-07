@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import type { EditorController, EditorI18nMessages } from '../../types/editor';
+import type { EditorController, EditorI18nMessages, SlashMenuConfig } from '../../types/editor';
 import { createEditor } from '../../core/createEditor';
 
 /**
@@ -14,6 +14,8 @@ export interface UseMilkdownEditorOptions {
   editable: boolean;
   /** 编辑器文案。 */
   messages?: EditorI18nMessages;
+  /** slash 菜单配置。 */
+  slashMenu?: SlashMenuConfig;
   /** 编辑器内容变更回调。 */
   onMarkdownChange: (markdown: string) => void;
   /** 编辑器初始化失败回调。 */
@@ -70,6 +72,7 @@ export const useMilkdownEditor = (options: UseMilkdownEditorOptions): void => {
           markdown: options.markdown,
           editable: options.editable,
           messages: options.messages,
+          slashMenu: options.slashMenu,
           onChange: (nextMarkdown) => {
             currentMarkdownRef.current = nextMarkdown;
             onMarkdownChangeRef.current(nextMarkdown);
@@ -104,6 +107,7 @@ export const useMilkdownEditor = (options: UseMilkdownEditorOptions): void => {
   }, [
     options.container,
     options.editable,
+    options.slashMenu,
     options.messages?.mathBlockSourceAriaLabel,
     options.messages?.mathRenderError
   ]);

@@ -55,6 +55,7 @@ export const MilkdownEditor = (props: MilkdownEditorProps): JSX.Element => {
     markdown,
     editable,
     messages,
+    slashMenu: props.slashMenu,
     onMarkdownChange: handleMarkdownChange,
     onInitReady: handleInitReady,
     onInitError: handleInitError

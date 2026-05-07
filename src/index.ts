@@ -8,6 +8,9 @@ export type {
   EditorLocale,
   EditorTheme,
   MilkdownEditorProps,
-  CreateEditorOptions
+  CreateEditorOptions,
+  SlashMenuCommand,
+  SlashMenuConfig,
+  SlashMenuItem
 } from './types/editor';
 export type { EditorPluginDescriptor } from './types/plugin';
