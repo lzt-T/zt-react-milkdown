@@ -1,9 +1,12 @@
 import { useCallback, useMemo, useState, type CSSProperties } from 'react';
+import { Milkdown, MilkdownProvider } from '@milkdown/react';
 import clsx from 'clsx';
 import type { MilkdownEditorProps } from '../../types/editor';
 import { useControlledState } from '../hooks/useControlledState';
 import { useMilkdownEditor } from '../hooks/useMilkdownEditor';
 import { resolveEditorMessages } from '../../local/i18n';
+// 默认防抖时长（毫秒）。
+const DEFAULT_DEBOUNCE_MS = 160;
 
 /**
  * 将占位文案转为 CSS content 可消费的字符串。
@@ -23,17 +26,53 @@ const toCssContentString = (value: string): string => {
 };
 
 /**
+ * 渲染 Milkdown 运行时并完成实例同步。
+ */
+const MilkdownRuntime = (props: {
+  markdown: string;
+  editable: boolean;
+  debounceMs: number;
+  messages: ReturnType<typeof resolveEditorMessages>;
+  slashMenu: MilkdownEditorProps['slashMenu'];
+  editorStyle: CSSProperties & Record<'--zt-gap-placeholder-content', string>;
+  onMarkdownChange: (markdown: string) => void;
+  onInitReady: () => void;
+  onInitError: (error: unknown) => void;
+}): JSX.Element => {
+  useMilkdownEditor({
+    markdown: props.markdown,
+    editable: props.editable,
+    debounceMs: props.debounceMs,
+    messages: props.messages,
+    slashMenu: props.slashMenu,
+    onMarkdownChange: props.onMarkdownChange,
+    onInitReady: props.onInitReady,
+    onInitError: props.onInitError
+  });
+
+  return (
+    <div
+      className={clsx('zt-md-editor', props.editable ? 'zt-md-editable' : 'zt-md-readonly')}
+      aria-label={props.messages.editorAriaLabel}
+      style={props.editorStyle}
+    >
+      <Milkdown />
+    </div>
+  );
+};
+
+/**
  * React 版 Milkdown 编辑器组件。
  */
 export const MilkdownEditor = (props: MilkdownEditorProps): JSX.Element => {
-  /** 编辑器挂载容器。 */
-  const [editorContainer, setEditorContainer] = useState<HTMLDivElement | null>(null);
   /** 初始化失败提示。 */
   const [initErrorMessage, setInitErrorMessage] = useState<string>('');
   /** 当前主题。 */
   const theme = props.theme ?? 'light';
   /** 当前可编辑状态。 */
   const editable = props.editable ?? true;
+  /** 内容变更防抖时长。 */
+  const debounceMs = props.debounceMs ?? DEFAULT_DEBOUNCE_MS;
 
   /** 统一受控与非受控状态。 */
   const { markdown, setMarkdown } = useControlledState(
@@ -75,28 +114,24 @@ export const MilkdownEditor = (props: MilkdownEditorProps): JSX.Element => {
     setInitErrorMessage(nextMessage);
   }, [messages.initError]);
 
-  useMilkdownEditor({
-    container: editorContainer,
-    markdown,
-    editable,
-    messages,
-    slashMenu: props.slashMenu,
-    onMarkdownChange: handleMarkdownChange,
-    onInitReady: handleInitReady,
-    onInitError: handleInitError
-  });
-
   return (
     <div className={clsx('zt-md', theme === 'dark' ? 'zt-md-dark' : 'zt-md-light', props.className)}>
       {props.headerSlot ? <div className="zt-md-header">{props.headerSlot}</div> : null}
       <div className="zt-md-body">
         {initErrorMessage ? <div className="zt-md-error">{initErrorMessage}</div> : null}
-        <div
-          ref={setEditorContainer}
-          className={clsx('zt-md-editor', editable ? 'zt-md-editable' : 'zt-md-readonly')}
-          aria-label={messages.editorAriaLabel}
-          style={editorStyle}
-        />
+        <MilkdownProvider>
+          <MilkdownRuntime
+            markdown={markdown}
+            editable={editable}
+            debounceMs={debounceMs}
+            messages={messages}
+            slashMenu={props.slashMenu}
+            editorStyle={editorStyle}
+            onMarkdownChange={handleMarkdownChange}
+            onInitReady={handleInitReady}
+            onInitError={handleInitError}
+          />
+        </MilkdownProvider>
       </div>
     </div>
   );

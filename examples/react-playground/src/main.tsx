@@ -43,7 +43,8 @@ const playgroundTexts: Record<PlaygroundLocale, PlaygroundTexts> = {
     enLabel: "英文",
   },
   "en-US": {
-    description: "A redesigned dual-theme editor for readable notes, atmosphere, and math input.",
+    description:
+      "A redesigned dual-theme editor for readable notes, atmosphere, and math input.",
     lightThemeLabel: "Light theme",
     darkThemeLabel: "Dark theme",
     zhLabel: "Chinese",
@@ -82,7 +83,9 @@ const App = (): JSX.Element => {
   // 当前示例文案。
   const texts = playgroundTexts[locale];
   // 主题切换文案。
-  const themeButtonLabel = isDarkTheme ? texts.lightThemeLabel : texts.darkThemeLabel;
+  const themeButtonLabel = isDarkTheme
+    ? texts.lightThemeLabel
+    : texts.darkThemeLabel;
   // 语言切换文案。
   const localeButtonLabel = locale === "zh-CN" ? texts.enLabel : texts.zhLabel;
   /**
@@ -95,11 +98,15 @@ const App = (): JSX.Element => {
    * 切换中文与英文语言。
    */
   const handleLocaleToggle = useCallback((): void => {
-    setLocale((currentLocale) => (currentLocale === "zh-CN" ? "en-US" : "zh-CN"));
+    setLocale((currentLocale) =>
+      currentLocale === "zh-CN" ? "en-US" : "zh-CN",
+    );
   }, []);
 
   return (
-    <div className={`playground-shell ${isDarkTheme ? "playground-dark" : "playground-light"}`}>
+    <div
+      className={`playground-shell ${isDarkTheme ? "playground-dark" : "playground-light"}`}
+    >
       <div className="playground-orb playground-orb-primary" />
       <div className="playground-orb playground-orb-secondary" />
       <main className="playground-main">
@@ -108,18 +115,29 @@ const App = (): JSX.Element => {
           <h1 className="playground-title">Write With Rhythm</h1>
           <p className="playground-description">{texts.description}</p>
           <div className="playground-actions">
-            <button type="button" className="playground-theme-toggle" onClick={handleThemeToggle}>
+            <button
+              type="button"
+              className="playground-theme-toggle"
+              onClick={handleThemeToggle}
+            >
               {themeButtonLabel}
             </button>
-            <button type="button" className="playground-theme-toggle" onClick={handleLocaleToggle}>
+            <button
+              type="button"
+              className="playground-theme-toggle"
+              onClick={handleLocaleToggle}
+            >
               {localeButtonLabel}
             </button>
           </div>
         </header>
         <section className="playground-editor-wrap">
-          <MilkdownEditor value={value} onChange={setValue} theme={theme} locale={locale}
-          
-          maxHeight={400}
+          <MilkdownEditor
+            value={value}
+            onChange={setValue}
+            theme={theme}
+            locale={locale}
+            maxHeight={400}
           />
         </section>
       </main>

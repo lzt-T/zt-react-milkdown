@@ -96,6 +96,8 @@ export interface MilkdownEditorProps {
   editable?: boolean;
   /** 编辑区最大高度，超出后在编辑区内部滚动。 */
   maxHeight?: CSSProperties['maxHeight'];
+  /** 内容变更回调的防抖时长（毫秒）。 */
+  debounceMs?: number;
   /** 额外头部内容。 */
   headerSlot?: ReactNode;
   /** slash 菜单配置。 */

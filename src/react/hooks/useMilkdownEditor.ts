@@ -1,4 +1,6 @@
-import { useEffect, useRef } from 'react';
+import { debounce } from 'es-toolkit/function';
+import { useEffect, useMemo, useRef } from 'react';
+import { useEditor } from '@milkdown/react';
 import type { EditorController, EditorI18nMessages, SlashMenuConfig } from '../../types/editor';
 import { createEditor } from '../../core/createEditor';
 
@@ -6,12 +8,12 @@ import { createEditor } from '../../core/createEditor';
  * 定义 useMilkdownEditor 的输入参数。
  */
 export interface UseMilkdownEditorOptions {
-  /** 编辑器容器节点。 */
-  container: HTMLElement | null;
   /** 需要同步到编辑器的 markdown。 */
   markdown: string;
   /** 当前是否可编辑。 */
   editable: boolean;
+  /** 内容变更外发的防抖时长（毫秒）。 */
+  debounceMs: number;
   /** 编辑器文案。 */
   messages?: EditorI18nMessages;
   /** slash 菜单配置。 */
@@ -25,6 +27,16 @@ export interface UseMilkdownEditorOptions {
 }
 
 /**
+ * 定义给 @milkdown/react 使用的生命周期适配器。
+ */
+interface ReactEditorLifecycleAdapter {
+  /** 启动编辑器。 */
+  create: () => Promise<ReactEditorLifecycleAdapter>;
+  /** 销毁编辑器。 */
+  destroy: () => Promise<void>;
+}
+
+/**
  * 封装 Milkdown 的创建、销毁与外部同步流程。
  */
 export const useMilkdownEditor = (options: UseMilkdownEditorOptions): void => {
@@ -32,12 +44,22 @@ export const useMilkdownEditor = (options: UseMilkdownEditorOptions): void => {
   const controllerRef = useRef<EditorController | null>(null);
   /** 当前已写入编辑器的 markdown。 */
   const currentMarkdownRef = useRef<string>(options.markdown);
+  /** 当前最新 markdown 入参引用。 */
+  const latestMarkdownRef = useRef<string>(options.markdown);
   /** markdown 变更回调引用。 */
   const onMarkdownChangeRef = useRef<(markdown: string) => void>(options.onMarkdownChange);
   /** 初始化失败回调引用。 */
   const onInitErrorRef = useRef<((error: unknown) => void) | undefined>(options.onInitError);
   /** 初始化成功回调引用。 */
   const onInitReadyRef = useRef<(() => void) | undefined>(options.onInitReady);
+  /** markdown 变化外发防抖器引用。 */
+  const debouncedEmitRef = useRef<ReturnType<typeof debounce<(markdown: string) => void>> | null>(
+    null
+  );
+
+  useEffect(() => {
+    latestMarkdownRef.current = options.markdown;
+  }, [options.markdown]);
 
   useEffect(() => {
     onMarkdownChangeRef.current = options.onMarkdownChange;
@@ -52,65 +74,71 @@ export const useMilkdownEditor = (options: UseMilkdownEditorOptions): void => {
   }, [options.onInitReady]);
 
   useEffect(() => {
-    if (!options.container) {
-      return;
+    if (debouncedEmitRef.current) {
+      debouncedEmitRef.current.cancel();
     }
-    /** 已校验非空的容器节点。 */
-    const container = options.container;
 
-    /** 是否已经被销毁。 */
-    let disposed = false;
-
-    /**
-     * 启动编辑器实例。
-     */
-    const boot = async (): Promise<void> => {
-      try {
-        /** 新建控制器。 */
-        const controller = await createEditor({
-          root: container,
-          markdown: options.markdown,
-          editable: options.editable,
-          messages: options.messages,
-          slashMenu: options.slashMenu,
-          onChange: (nextMarkdown) => {
-            currentMarkdownRef.current = nextMarkdown;
-            onMarkdownChangeRef.current(nextMarkdown);
-          }
-        });
-
-        if (disposed) {
-          await controller.destroy();
-          return;
-        }
-
-        controllerRef.current = controller;
-        onInitReadyRef.current?.();
-      } catch (error) {
-        console.error('Milkdown init failed:', error);
-        onInitErrorRef.current?.(error);
-      }
-    };
-
-    void boot();
+    // 防抖后再向外抛出 markdown，降低高频输入回调压力。
+    debouncedEmitRef.current = debounce(
+      (nextMarkdown: string) => {
+        onMarkdownChangeRef.current(nextMarkdown);
+      },
+      options.debounceMs
+    );
 
     return () => {
-      disposed = true;
-      /** 旧控制器引用。 */
-      const prevController = controllerRef.current;
-      controllerRef.current = null;
-
-      if (prevController) {
-        void prevController.destroy();
-      }
+      debouncedEmitRef.current?.cancel();
+      debouncedEmitRef.current = null;
     };
-  }, [
-    options.container,
-    options.editable,
-    options.slashMenu,
-    options.messages?.mathBlockSourceAriaLabel,
-    options.messages?.mathRenderError
-  ]);
+  }, [options.debounceMs]);
+
+  /** 稳定的编辑器工厂函数。 */
+  const getEditor = useMemo(() => {
+    return (root: HTMLElement): ReactEditorLifecycleAdapter => {
+      /** 当前适配器的实例状态。 */
+      let controller: EditorController | null = null;
+
+      /** 生命周期适配器。 */
+      const adapter: ReactEditorLifecycleAdapter = {
+        create: async () => {
+          try {
+            controller = await createEditor({
+              root,
+              markdown: latestMarkdownRef.current,
+              editable: options.editable,
+              messages: options.messages,
+              slashMenu: options.slashMenu,
+              onChange: (nextMarkdown) => {
+                currentMarkdownRef.current = nextMarkdown;
+                debouncedEmitRef.current?.(nextMarkdown);
+              }
+            });
+            controllerRef.current = controller;
+            onInitReadyRef.current?.();
+          } catch (error) {
+            console.error('Milkdown init failed:', error);
+            onInitErrorRef.current?.(error);
+          }
+          return adapter;
+        },
+        destroy: async () => {
+          debouncedEmitRef.current?.cancel();
+          if (!controller) {
+            return;
+          }
+          await controller.destroy();
+          if (controllerRef.current === controller) {
+            controllerRef.current = null;
+          }
+          controller = null;
+        }
+      };
+
+      return adapter;
+    };
+  }, [options.editable, options.messages, options.slashMenu]);
+
+  useEditor(getEditor, [getEditor]);
 
   useEffect(() => {
     /** 当前控制器。 */
