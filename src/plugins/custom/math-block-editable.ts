@@ -2,8 +2,9 @@ import katex from 'katex';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { Check, Copy, Trash2 } from 'lucide-react';
-import type { Node as ProseNode } from '@milkdown/prose/model';
-import { TextSelection } from '@milkdown/prose/state';
+import { GapCursor } from '@milkdown/prose/gapcursor';
+import type { Node as ProseNode, ResolvedPos } from '@milkdown/prose/model';
+import { TextSelection, type Selection } from '@milkdown/prose/state';
 import type { EditorView, NodeView, NodeViewConstructor } from '@milkdown/prose/view';
 import type { EditorI18nMessages } from '../../types/editor';
 import { resolveEditorMessages } from '../../local/i18n';
@@ -20,6 +21,13 @@ const DRAG_DISTANCE_THRESHOLD = 5;
  * 复制成功态清理延迟（毫秒）。
  */
 const COPY_FEEDBACK_DURATION = 1200;
+/**
+ * GapCursor 构造器类型。
+ */
+type GapCursorConstructor = typeof GapCursor & {
+  /** 判断当前位置是否允许创建 GapCursor。 */
+  valid: (position: ResolvedPos) => boolean;
+};
 
 /**
  * 基于 lucide-react 组件渲染 SVG 字符串。
@@ -379,7 +387,7 @@ class MathBlockEditableNodeView implements NodeView {
 
     event.preventDefault();
 
-    // 按方向键选择公式块前/后最近可落点。
+    // 按方向键选择公式块前/后边界位置。
     const targetPosition =
       event.key === 'ArrowUp'
         ? nodePosition
@@ -387,12 +395,28 @@ class MathBlockEditableNodeView implements NodeView {
     // 上键向前找位点，下键向后找位点。
     const selectionDirection = event.key === 'ArrowUp' ? -1 : 1;
     const transaction = this.view.state.tr
-      .setSelection(TextSelection.near(this.view.state.doc.resolve(targetPosition), selectionDirection))
+      .setSelection(this.createBoundarySelection(targetPosition, selectionDirection))
       .scrollIntoView();
     this.view.dispatch(transaction);
     // 显式将焦点交还给主编辑器。
     this.view.focus();
   };
+
+  /**
+   * 创建公式块边界选择，优先使用 GapCursor。
+   */
+  private createBoundarySelection(targetPosition: number, selectionDirection: -1 | 1): Selection {
+    // 目标解析位置。
+    const resolvedPosition = this.view.state.doc.resolve(targetPosition);
+    // 带合法性判断的 GapCursor 构造器。
+    const gapCursorConstructor = GapCursor as GapCursorConstructor;
+
+    if (gapCursorConstructor.valid(resolvedPosition)) {
+      return new GapCursor(resolvedPosition);
+    }
+
+    return TextSelection.near(resolvedPosition, selectionDirection);
+  }
 
   /**
    * 源码输入框失焦后退出编辑态。

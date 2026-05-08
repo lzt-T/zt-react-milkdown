@@ -7,6 +7,8 @@
 @import "../theme/dark.css";
 /* @import "./modules/math-block.css"; */
 @import "./modules/slash-menu.css";
+@import "./modules/gap-cursor.css";
+@import "./modules/drop-cursor.css";
 @import "./modules/math-block.css";
 @import "./modules/blockquote.css";
 @import "./modules/task-list.css";
@@ -102,13 +104,8 @@
   }
 
   .zt-md-body {
-    @apply relative min-h-[240px];
+    @apply relative min-h-[160px];
     background: var(--zt-surface);
-  }
-
-  .zt-md-placeholder {
-    @apply pointer-events-none absolute left-5 top-4 z-10 text-sm text-zt-muted;
-    letter-spacing: 0.01em;
   }
 
   .zt-md-error {
@@ -118,7 +115,7 @@
   }
 
   .zt-md-editor {
-    @apply min-h-[240px] px-5 py-4 text-[15px] leading-8 outline-none;
+    @apply min-h-[160px] px-5 py-4 text-[15px] leading-8 outline-none;
     position: relative;
   }
 

@@ -117,7 +117,10 @@ const App = (): JSX.Element => {
           </div>
         </header>
         <section className="playground-editor-wrap">
-          <MilkdownEditor value={value} onChange={setValue} theme={theme} locale={locale} />
+          <MilkdownEditor value={value} onChange={setValue} theme={theme} locale={locale}
+          
+          maxHeight={400}
+          />
         </section>
       </main>
     </div>

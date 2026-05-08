@@ -107,6 +107,7 @@
   padding: clamp(0.55rem, 1.2vw, 0.8rem);
   background: var(--pg-panel);
   box-shadow: 0 28px 52px -44px color-mix(in srgb, var(--pg-primary) 34%, transparent);
+
 }
 
 .playground-light .playground-orb,

@@ -10,6 +10,10 @@ export interface PresetPluginExports {
   commonmark: unknown;
   /** gfm 插件实例。 */
   gfm: unknown;
+  /** 块间光标插件实例。 */
+  gapCursor: unknown;
+  /** 拖拽落点指示器插件实例。 */
+  dropCursor: unknown;
   /** math 插件实例（可为单个插件或插件数组）。 */
   math: unknown | unknown[];
   /** 任务列表交互插件实例。 */
@@ -46,6 +50,8 @@ export const resolvePresetPlugins = (pluginExports: PresetPluginExports): Editor
   appendPluginDescriptors(descriptors, 'listener', pluginExports.listener);
   appendPluginDescriptors(descriptors, 'commonmark', pluginExports.commonmark);
   appendPluginDescriptors(descriptors, 'gfm', pluginExports.gfm);
+  appendPluginDescriptors(descriptors, 'gap-cursor', pluginExports.gapCursor);
+  appendPluginDescriptors(descriptors, 'drop-cursor', pluginExports.dropCursor);
   appendPluginDescriptors(descriptors, 'math', pluginExports.math);
   appendPluginDescriptors(descriptors, 'task-list-toggle', pluginExports.taskListToggle);
   if (pluginExports.slash) {

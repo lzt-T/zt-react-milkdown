@@ -1,0 +1,7 @@
+@layer components {
+  .zt-md-editor .ProseMirror-dropcursor {
+    background-color: var(--zt-primary) !important;
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--zt-primary) 24%, transparent);
+    border-radius: 999px;
+  }
+}

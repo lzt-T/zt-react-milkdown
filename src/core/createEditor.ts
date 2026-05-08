@@ -2,6 +2,8 @@ import type { CreateEditorOptions, EditorController } from '../types/editor';
 import { createReplaceAllExecutor } from './commands';
 import { resolvePresetPlugins } from '../plugins/preset-common';
 import { assertKey } from '../utils/guard';
+import { dropCursorPlugin } from '../plugins/custom/drop-cursor';
+import { gapCursorPlugin } from '../plugins/custom/gap-cursor';
 import { createMathBlockEditableNodeView } from '../plugins/custom/math-block-editable';
 import { math } from '../plugins/custom/math-plugin';
 import { createSlashMenuPlugin } from '../plugins/custom/slash-menu';
@@ -68,6 +70,8 @@ export const createEditor = async (options: CreateEditorOptions): Promise<Editor
     listener,
     commonmark,
     gfm,
+    gapCursor: gapCursorPlugin,
+    dropCursor: dropCursorPlugin,
     math,
     taskListToggle,
     slash: slashPlugins.length > 0 ? slashPlugins : null

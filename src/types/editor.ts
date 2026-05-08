@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 
 /**
  * 定义编辑器支持的主题类型。
@@ -94,6 +94,8 @@ export interface MilkdownEditorProps {
   placeholder?: string;
   /** 是否可编辑。 */
   editable?: boolean;
+  /** 编辑区最大高度，超出后在编辑区内部滚动。 */
+  maxHeight?: CSSProperties['maxHeight'];
   /** 额外头部内容。 */
   headerSlot?: ReactNode;
   /** slash 菜单配置。 */
