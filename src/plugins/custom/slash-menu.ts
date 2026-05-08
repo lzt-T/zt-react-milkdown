@@ -1,4 +1,5 @@
 import type { SlashMenuConfig, SlashMenuItem } from '../../types/editor';
+import { resolveEditorWrapper, resolvePlacement, toContentAnchor } from '../../lib/editor-overlay-position';
 import { runSlashCommand } from './slash-menu-commands';
 import { removeSlashQueryAtCursor, resolveMenuState, resolveSlashMenuItems } from './slash-menu-logic';
 import { createSlashMenuViewController } from './slash-menu-view';
@@ -21,8 +22,6 @@ interface SlashRuntime {
   plugins: unknown[];
   /** slash key。 */
   key: unknown;
-  /** slash provider 构造器。 */
-  Provider: new (options: Record<string, unknown>) => any;
 }
 
 /**
@@ -78,9 +77,7 @@ const resolveSlashRuntime = async (): Promise<SlashRuntime | null> => {
   const slashModule = unwrapModuleExports(rawModule);
   // slash 工厂函数。
   const slashFactory = getObjectValue(slashModule, 'slashFactory');
-  // slash provider 构造函数。
-  const Provider = getObjectValue(slashModule, 'SlashProvider');
-  if (typeof slashFactory !== 'function' || typeof Provider !== 'function') {
+  if (typeof slashFactory !== 'function') {
     return null;
   }
 
@@ -112,8 +109,7 @@ const resolveSlashRuntime = async (): Promise<SlashRuntime | null> => {
 
   return {
     plugins,
-    key,
-    Provider: Provider as new (options: Record<string, unknown>) => any
+    key
   };
 };
 
@@ -143,16 +139,24 @@ export const createSlashMenuPlugin = async (config?: SlashMenuConfig): Promise<S
     // 当前过滤后的菜单项。
     let visibleItems: SlashMenuItem[] = items;
 
-    // slash provider 实例。
-    const provider = new runtime.Provider({
-      content: menuView.menu,
-      shouldShow: (view: any) => resolveMenuState(view, items).shouldShow,
-      offset: { mainAxis: 8, crossAxis: 0 },
-      floatingUIOptions: {
-        strategy: 'fixed',
-        placement: 'bottom-start'
+    /**
+     * 解析当前光标在视口中的锚点矩形。
+     */
+    const resolveAnchorRect = (view: any): DOMRect | null => {
+      const from = view?.state?.selection?.from;
+      if (typeof from !== 'number') {
+        return null;
       }
-    });
+
+      const coords = view?.coordsAtPos?.(from) as
+        | { top: number; bottom: number; left: number; right: number }
+        | null;
+      if (!coords) {
+        return null;
+      }
+
+      return new DOMRect(coords.left, coords.top, Math.max(coords.right - coords.left, 1), coords.bottom - coords.top);
+    };
 
     /**
      * 按当前编辑器状态同步菜单显隐、数据与渲染。
@@ -168,17 +172,34 @@ export const createSlashMenuPlugin = async (config?: SlashMenuConfig): Promise<S
         activeIndex = 0;
       }
       if (!nextState.shouldShow) {
+        menuView.updatePositionContext(null);
         menuView.setVisible(false);
         return;
+      }
+
+      const anchorRect = resolveAnchorRect(view);
+      const editorWrapper = resolveEditorWrapper(view?.dom as HTMLElement | null);
+      if (anchorRect && editorWrapper) {
+        const placementThreshold = 320;
+        const placement = resolvePlacement(anchorRect, placementThreshold);
+        const contentAnchor = toContentAnchor(anchorRect, editorWrapper);
+        menuView.updatePositionContext({
+          editorWrapper,
+          anchorTopInContent: contentAnchor.anchorTopInContent,
+          anchorBottomInContent: contentAnchor.anchorBottomInContent,
+          anchorLeftInContent: contentAnchor.anchorLeftInContent,
+          placement,
+          offsetY: 8
+        });
       }
 
       menuView.renderIfNeeded(visibleItems, activeIndex);
       if (!menuView.isVisible()) {
         menuView.setVisible(true, () => {
-          provider.update(view);
+          menuView.updatePosition();
         });
       } else {
-        provider.update(view);
+        menuView.updatePosition();
       }
     };
 
@@ -250,7 +271,9 @@ export const createSlashMenuPlugin = async (config?: SlashMenuConfig): Promise<S
               }
               activeIndex = (activeIndex + 1) % visibleItems.length;
               menuView.renderIfNeeded(visibleItems, activeIndex);
-              menuView.scrollActiveItemIntoView();
+              menuView.scrollActiveItemIntoView(() => {
+                menuView.updatePosition();
+              });
               return true;
             }
             if (event.key === 'ArrowUp') {
@@ -259,7 +282,9 @@ export const createSlashMenuPlugin = async (config?: SlashMenuConfig): Promise<S
               }
               activeIndex = (activeIndex - 1 + visibleItems.length) % visibleItems.length;
               menuView.renderIfNeeded(visibleItems, activeIndex);
-              menuView.scrollActiveItemIntoView();
+              menuView.scrollActiveItemIntoView(() => {
+                menuView.updatePosition();
+              });
               return true;
             }
             if (event.key === 'Enter') {
@@ -279,8 +304,7 @@ export const createSlashMenuPlugin = async (config?: SlashMenuConfig): Promise<S
             syncMenuState(view);
           },
           destroy: () => {
-            provider.destroy();
-            menuView.menu.remove();
+            menuView.destroy();
           }
         })
       });

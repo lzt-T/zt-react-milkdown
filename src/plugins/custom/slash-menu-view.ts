@@ -1,4 +1,28 @@
 import type { SlashMenuItem } from '../../types/editor';
+import { createOverlayRepositionScheduler, toViewportPosition, type OverlayPlacement } from '../../lib/editor-overlay-position';
+
+/**
+ * slash 菜单展开方向。
+ */
+type SlashMenuPlacement = OverlayPlacement;
+
+/**
+ * slash 菜单定位上下文（第一段：内容坐标计算所需输入）。
+ */
+interface SlashMenuPositionContext {
+  /** 编辑器滚动容器。 */
+  editorWrapper: HTMLElement;
+  /** 光标顶部在编辑器内容坐标系中的位置。 */
+  anchorTopInContent: number;
+  /** 光标底部在编辑器内容坐标系中的位置。 */
+  anchorBottomInContent: number;
+  /** 光标左侧在编辑器内容坐标系中的位置。 */
+  anchorLeftInContent: number;
+  /** 菜单展开方向（在输入更新时决策）。 */
+  placement: SlashMenuPlacement;
+  /** 主轴偏移（与光标的垂直间距）。 */
+  offsetY: number;
+}
 
 /**
  * slash 菜单视图控制器。
@@ -13,7 +37,13 @@ export interface SlashMenuViewController {
   /** 渲染菜单项（输入不变时跳过）。 */
   renderIfNeeded: (items: SlashMenuItem[], activeIndex: number) => void;
   /** 将当前高亮菜单项滚动到可视区域内。 */
-  scrollActiveItemIntoView: () => void;
+  scrollActiveItemIntoView: (onAfterScroll?: () => void) => void;
+  /** 更新菜单定位上下文（不会立即强制显示）。 */
+  updatePositionContext: (context: SlashMenuPositionContext | null) => void;
+  /** 按当前上下文刷新定位。 */
+  updatePosition: () => void;
+  /** 销毁控制器并清理全局监听。 */
+  destroy: () => void;
 }
 
 /**
@@ -51,6 +81,7 @@ export const createSlashMenuViewController = (): SlashMenuViewController => {
   const menu = document.createElement('div');
   menu.className = 'slash-menu';
   menu.style.display = 'none';
+  document.body.appendChild(menu);
 
   // 当前是否展示菜单。
   let menuVisible = false;
@@ -58,6 +89,66 @@ export const createSlashMenuViewController = (): SlashMenuViewController => {
   let lastRenderSignature = '';
   // 是否需要在下一次显示时进行双次定位更新。
   let shouldRepositionOnNextShow = false;
+  // 当前定位上下文（由插件 update 驱动更新）。
+  let positionContext: SlashMenuPositionContext | null = null;
+
+  /**
+   * 从编辑器主题根节点同步菜单所需 CSS 变量，避免 portal 后丢失主题上下文。
+   */
+  const syncThemeVariables = (editorWrapper: HTMLElement): void => {
+    const themeHost = (editorWrapper.closest('.zt-md') || editorWrapper) as HTMLElement;
+    const computedStyle = window.getComputedStyle(themeHost);
+    const variableNames = ['--zt-border', '--zt-surface', '--zt-fg', '--zt-primary', '--zt-muted'];
+    variableNames.forEach((name) => {
+      const value = computedStyle.getPropertyValue(name).trim();
+      if (!value) {
+        return;
+      }
+      menu.style.setProperty(name, value);
+    });
+  };
+
+  /**
+   * 第二段：将内容坐标换算为视口坐标并写入 fixed 菜单样式。
+   */
+  const updatePosition = (): void => {
+    if (!menuVisible || !positionContext) {
+      return;
+    }
+
+    const {
+      editorWrapper,
+      anchorTopInContent,
+      anchorBottomInContent,
+      anchorLeftInContent,
+      placement,
+      offsetY
+    } = positionContext;
+    const viewportPosition = toViewportPosition({
+      wrapper: editorWrapper,
+      anchor: {
+        anchorTopInContent,
+        anchorBottomInContent,
+        anchorLeftInContent
+      },
+      overlaySize: { width: menu.offsetWidth || 210 },
+      placement,
+      offsetY,
+      boundaryInset: 4
+    });
+
+    menu.style.left = `${viewportPosition.left}px`;
+    menu.style.top = `${viewportPosition.top}px`;
+    menu.dataset.placement = placement;
+  };
+
+  // 通用浮层重定位调度器（监听 + RAF 节流）。
+  const repositionScheduler = createOverlayRepositionScheduler(() => {
+    if (!menuVisible) {
+      return;
+    }
+    updatePosition();
+  });
 
   /**
    * 清理浮层定位内联样式，避免下次显示复用旧坐标。
@@ -66,6 +157,7 @@ export const createSlashMenuViewController = (): SlashMenuViewController => {
     menu.style.top = '';
     menu.style.left = '';
     menu.style.transform = '';
+    delete menu.dataset.placement;
   };
 
   /**
@@ -80,11 +172,15 @@ export const createSlashMenuViewController = (): SlashMenuViewController => {
     menu.style.display = visible ? 'block' : 'none';
     if (!visible) {
       // 隐藏时清理坐标并重置渲染签名，避免历史位置残留。
+      repositionScheduler.unbindGlobal();
+      repositionScheduler.bindWrapper(null);
       resetMenuPositionStyles();
       lastRenderSignature = '';
       shouldRepositionOnNextShow = true;
       return;
     }
+
+    repositionScheduler.bindGlobal();
 
     if (updatePosition) {
       // 从隐藏切换为显示后，立即按当前光标位置刷新定位。
@@ -114,7 +210,7 @@ export const createSlashMenuViewController = (): SlashMenuViewController => {
   /**
    * 将高亮项对齐到菜单容器可视区域（仅在越界时滚动）。
    */
-  const scrollActiveItemIntoView = (): void => {
+  const scrollActiveItemIntoView = (onAfterScroll?: () => void): void => {
     // 当前高亮菜单项节点。
     const activeItemNode = menu.querySelector('.slash-menu-item[data-selected="true"]') as HTMLElement | null;
     if (!activeItemNode) {
@@ -125,6 +221,28 @@ export const createSlashMenuViewController = (): SlashMenuViewController => {
       block: 'nearest',
       inline: 'nearest'
     });
+    if (onAfterScroll) {
+      onAfterScroll();
+    }
+  };
+
+  /**
+   * 更新定位上下文；传 null 时清空上下文。
+   */
+  const updatePositionContext = (context: SlashMenuPositionContext | null): void => {
+    positionContext = context;
+    repositionScheduler.bindWrapper(context?.editorWrapper ?? null);
+    if (context && typeof window !== 'undefined') {
+      syncThemeVariables(context.editorWrapper);
+    }
+  };
+
+  /**
+   * 销毁控制器：移除监听并删除菜单节点。
+   */
+  const destroy = (): void => {
+    repositionScheduler.destroy();
+    menu.remove();
   };
 
   return {
@@ -132,6 +250,9 @@ export const createSlashMenuViewController = (): SlashMenuViewController => {
     isVisible: () => menuVisible,
     setVisible,
     renderIfNeeded,
-    scrollActiveItemIntoView
+    scrollActiveItemIntoView,
+    updatePositionContext,
+    updatePosition,
+    destroy
   };
 };

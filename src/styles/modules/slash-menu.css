@@ -1,5 +1,5 @@
 @layer components {
-  .zt-md .slash-menu {
+  .slash-menu {
     position: fixed;
     z-index: 1200;
     border: 1px solid var(--zt-border);
@@ -11,21 +11,26 @@
     max-height: 320px;
     overflow: auto;
     padding: 8px;
+    will-change: top, left, transform;
   }
 
-  .zt-md .slash-menu-item {
+  .slash-menu[data-placement='top'] {
+    transform: translateY(-100%);
+  }
+
+  .slash-menu-item {
     border-radius: 8px;
     padding: 8px 10px;
     font-size: 14px;
     line-height: 1.4;
   }
 
-  .zt-md .slash-menu-item:hover,
-  .zt-md .slash-menu-item[data-selected='true'] {
+  .slash-menu-item:hover,
+  .slash-menu-item[data-selected='true'] {
     background: color-mix(in srgb, var(--zt-primary) 12%, var(--zt-surface));
   }
 
-  .zt-md .slash-menu-group {
+  .slash-menu-group {
     margin: 6px 6px 4px;
     color: var(--zt-muted);
     font-size: 12px;
