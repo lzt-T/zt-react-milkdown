@@ -22,6 +22,146 @@ const getObjectValue = (value: unknown, key: string): unknown => {
 const runCommand = (command: EditorCommandExecutor, view: any): boolean => command(view.state, view.dispatch, view);
 
 /**
+ * 判断当前选区是否位于表格节点内。
+ */
+const isSelectionInsideTable = (view: any): boolean => {
+  // 当前选区起点。
+  const from = view?.state?.selection?.$from;
+  if (!from) {
+    return false;
+  }
+
+  for (let depth = from.depth; depth > 0; depth -= 1) {
+    // 当前层级节点。
+    const currentNode = from.node(depth);
+    if (currentNode?.type?.name === 'table') {
+      return true;
+    }
+  }
+
+  return false;
+};
+
+/**
+ * 从给定位置向上查找表格起始位置。
+ */
+const findTableStartPos = (view: any, startPos: number): number => {
+  // 当前文档对象。
+  const doc = view?.state?.doc;
+  if (!doc || typeof startPos !== 'number') {
+    return -1;
+  }
+
+  const boundedPos = Math.min(Math.max(startPos, 0), doc.content.size);
+  // 解析后的文档位置对象。
+  const resolvedPos = doc.resolve(boundedPos);
+  for (let depth = resolvedPos.depth; depth > 0; depth -= 1) {
+    // 当前层级节点。
+    const currentNode = resolvedPos.node(depth);
+    if (currentNode?.type?.name === 'table') {
+      return resolvedPos.before(depth);
+    }
+  }
+
+  return -1;
+};
+
+/**
+ * 构建目标尺寸的表格节点。
+ */
+const createTableNode = (view: any, rows: number, cols: number, withHeaderRow: boolean): any | null => {
+  // 当前 schema。
+  const schema = view?.state?.schema;
+  // 节点类型集合。
+  const nodes = schema?.nodes as Record<string, any> | undefined;
+  if (!nodes) {
+    return null;
+  }
+
+  // 表格相关节点类型。
+  const tableType = nodes.table;
+  const tableRowType = nodes.table_row;
+  const tableHeaderType = nodes.table_header;
+  const tableCellType = nodes.table_cell;
+  if (!tableType || !tableRowType || !tableHeaderType || !tableCellType) {
+    return null;
+  }
+
+  // 基础单元格数量。
+  const normalizedRows = Math.max(1, rows);
+  const normalizedCols = Math.max(1, cols);
+  // 表格行节点集合。
+  const tableRows = Array.from({ length: normalizedRows }, (_rowValue, rowIndex) => {
+    // 当前行是否为表头行。
+    const useHeaderCell = withHeaderRow && rowIndex === 0;
+    // 当前行使用的单元格节点类型。
+    const cellType = useHeaderCell ? tableHeaderType : tableCellType;
+    // 当前行的单元格节点集合。
+    const cells = Array.from({ length: normalizedCols }, () => cellType.createAndFill()).filter(Boolean);
+    return tableRowType.create(null, cells);
+  });
+
+  return tableType.create(null, tableRows);
+};
+
+/**
+ * 插入默认表格并将光标定位到首个单元格。
+ */
+const insertDefaultTable = async (view: any): Promise<boolean> => {
+  if (!view?.state || !view?.dispatch) {
+    return false;
+  }
+
+  if (isSelectionInsideTable(view)) {
+    return false;
+  }
+
+  // 默认插入起点。
+  const insertPos = view.state.selection.from;
+  // 默认 3x3 含表头。
+  const tableNode = createTableNode(view, 3, 3, true);
+  if (!tableNode) {
+    return false;
+  }
+
+  view.dispatch(view.state.tr.replaceSelectionWith(tableNode).scrollIntoView());
+
+  // 当前表格节点起始位置。
+  let tableStart = findTableStartPos(view, insertPos);
+  if (tableStart < 0 && insertPos > 0) {
+    tableStart = findTableStartPos(view, insertPos - 1);
+  }
+  if (tableStart < 0) {
+    return true;
+  }
+
+  // 表格首个单元格节点起点：table > row > cell => tableStart + 2。
+  const firstCellStartPos = tableStart + 2;
+  if (firstCellStartPos > view.state.doc.content.size) {
+    return true;
+  }
+
+  // prose state 模块导出集合。
+  const proseStateModule = (await import('@milkdown/prose/state')) as Record<string, unknown>;
+  // TextSelection 构造器。
+  const TextSelection = getObjectValue(proseStateModule, 'TextSelection') as
+    | {
+        create: (doc: unknown, from: number, to?: number) => unknown;
+        near: (resolvedPos: unknown, bias?: number) => unknown;
+      }
+    | undefined;
+  if (!TextSelection || typeof TextSelection.near !== 'function') {
+    return true;
+  }
+
+  // 从首个单元格起点向前找最近可编辑文本位置，确保进入单元格内部可输入态。
+  const textSelection = TextSelection.near(view.state.doc.resolve(firstCellStartPos), 1);
+  view.dispatch(view.state.tr.setSelection(textSelection).scrollIntoView());
+  view.focus();
+  return true;
+};
+
+/**
  * 设置当前列表项的任务完成状态。
  */
 const setCurrentListItemChecked = (view: any, checked: boolean): boolean => {
@@ -189,6 +329,10 @@ export const runSlashCommand = async (view: any, command: SlashMenuCommand): Pro
     const nodeSelection = NodeSelection.create(view.state.doc, mathBlockPosition);
     view.dispatch(view.state.tr.setSelection(nodeSelection).scrollIntoView());
     return true;
+  }
+
+  if (command === 'table') {
+    return insertDefaultTable(view);
   }
 
   if (command in listTypeMap) {

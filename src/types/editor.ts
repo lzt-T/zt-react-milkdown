@@ -41,7 +41,8 @@ export type SlashMenuCommand =
   | 'orderedList'
   | 'taskList'
   | 'blockquote'
-  | 'mathBlock';
+  | 'mathBlock'
+  | 'table';
 
 /**
  * 定义 slash 菜单项结构。
@@ -53,6 +54,8 @@ export interface SlashMenuItem {
   label: string;
   /** 菜单项分组文案。 */
   group: string;
+  /** 菜单项图标键名（对应 lucide-react 图标）。 */
+  icon?: string;
   /** 菜单项对应命令。 */
   command: SlashMenuCommand;
 }

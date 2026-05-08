@@ -1,6 +1,19 @@
 @layer components {
-  .zt-md-editor .ProseMirror p:first-child:only-child:has(> br:only-child)::before,
-  .zt-md-editor .ProseMirror p:first-child:only-child:empty::before {
+  .zt-md-editor .ProseMirror > p:first-child:only-child:has(> br:only-child)::before,
+  .zt-md-editor .ProseMirror > p:first-child:only-child:empty::before {
+    content: var(--zt-gap-placeholder-content);
+    float: left;
+    color: var(--zt-muted);
+    pointer-events: none;
+    user-select: none;
+    height: 0;
+    white-space: pre-wrap;
+  }
+
+  .zt-md-editor .ProseMirror td:focus-within > p:first-child:only-child:has(> br:only-child)::before,
+  .zt-md-editor .ProseMirror td:focus-within > p:first-child:only-child:empty::before,
+  .zt-md-editor .ProseMirror th:focus-within > p:first-child:only-child:has(> br:only-child)::before,
+  .zt-md-editor .ProseMirror th:focus-within > p:first-child:only-child:empty::before {
     content: var(--zt-gap-placeholder-content);
     float: left;
     color: var(--zt-muted);

@@ -1,10 +1,45 @@
 import type { SlashMenuItem } from '../../types/editor';
+import { createElement } from 'react';
+import { createRoot, type Root } from 'react-dom/client';
+import {
+  Circle,
+  Heading1,
+  Heading2,
+  Heading3,
+  List,
+  ListOrdered,
+  ListTodo,
+  Sigma,
+  Table,
+  TextQuote,
+  type LucideIcon
+} from 'lucide-react';
 import { createOverlayRepositionScheduler, toViewportPosition, type OverlayPlacement } from '../../lib/editor-overlay-position';
 
 /**
  * slash 菜单展开方向。
  */
 type SlashMenuPlacement = OverlayPlacement;
+
+/**
+ * slash 菜单支持的 lucide 图标映射表。
+ */
+const SLASH_MENU_ICON_MAP: Record<string, LucideIcon> = {
+  Heading1,
+  Heading2,
+  Heading3,
+  List,
+  ListOrdered,
+  ListTodo,
+  TextQuote,
+  Sigma,
+  Table
+};
+
+/**
+ * 兜底图标组件。
+ */
+const FALLBACK_SLASH_MENU_ICON: LucideIcon = Circle;
 
 /**
  * slash 菜单定位上下文（第一段：内容坐标计算所需输入）。
@@ -49,7 +84,17 @@ export interface SlashMenuViewController {
 /**
  * 刷新菜单内容与选中态。
  */
-const renderMenuItems = (menu: HTMLDivElement, items: SlashMenuItem[], activeIndex: number): void => {
+const renderMenuItems = (
+  menu: HTMLDivElement,
+  items: SlashMenuItem[],
+  activeIndex: number,
+  iconRoots: Root[]
+): void => {
+  // 清理上次图标渲染 root，避免重复挂载。
+  iconRoots.splice(0).forEach((iconRoot) => {
+    iconRoot.unmount();
+  });
+
   menu.innerHTML = '';
   // 当前渲染分组名。
   let currentGroup = '';
@@ -66,9 +111,27 @@ const renderMenuItems = (menu: HTMLDivElement, items: SlashMenuItem[], activeInd
     // 菜单项节点。
     const itemNode = document.createElement('div');
     itemNode.className = 'slash-menu-item';
-    itemNode.textContent = item.label;
     itemNode.dataset.command = item.command;
     itemNode.dataset.selected = index === activeIndex ? 'true' : 'false';
+
+    // 菜单项图标容器。
+    const iconNode = document.createElement('span');
+    iconNode.className = 'slash-menu-item-icon';
+    // 当前菜单项图标组件。
+    const iconComponent = item.icon ? (SLASH_MENU_ICON_MAP[item.icon] ?? FALLBACK_SLASH_MENU_ICON) : null;
+    if (iconComponent) {
+      const iconRoot = createRoot(iconNode);
+      iconRoot.render(createElement(iconComponent, { size: 16, strokeWidth: 2 }));
+      iconRoots.push(iconRoot);
+    }
+
+    // 菜单项文案容器。
+    const labelNode = document.createElement('span');
+    labelNode.className = 'slash-menu-item-label';
+    labelNode.textContent = item.label;
+
+    itemNode.appendChild(iconNode);
+    itemNode.appendChild(labelNode);
     menu.appendChild(itemNode);
   });
 };
@@ -91,6 +154,8 @@ export const createSlashMenuViewController = (): SlashMenuViewController => {
   let shouldRepositionOnNextShow = false;
   // 当前定位上下文（由插件 update 驱动更新）。
   let positionContext: SlashMenuPositionContext | null = null;
+  // 当前已挂载图标 root 集合。
+  const iconRoots: Root[] = [];
 
   /**
    * 从编辑器主题根节点同步菜单所需 CSS 变量，避免 portal 后丢失主题上下文。
@@ -203,7 +268,7 @@ export const createSlashMenuViewController = (): SlashMenuViewController => {
       return;
     }
 
-    renderMenuItems(menu, items, activeIndex);
+    renderMenuItems(menu, items, activeIndex, iconRoots);
     lastRenderSignature = renderSignature;
   };
 
@@ -241,6 +306,9 @@ export const createSlashMenuViewController = (): SlashMenuViewController => {
    * 销毁控制器：移除监听并删除菜单节点。
    */
   const destroy = (): void => {
+    iconRoots.splice(0).forEach((iconRoot) => {
+      iconRoot.unmount();
+    });
     repositionScheduler.destroy();
     menu.remove();
   };

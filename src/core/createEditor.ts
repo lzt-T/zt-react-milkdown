@@ -7,6 +7,7 @@ import { gapCursorPlugin } from '../plugins/custom/gap-cursor';
 import { createMathBlockEditableNodeView } from '../plugins/custom/math-block-editable';
 import { math } from '../plugins/custom/math-plugin';
 import { createSlashMenuPlugin } from '../plugins/custom/slash-menu';
+import { tableArrowEntryPlugin } from '../plugins/custom/table-arrow-entry';
 import { taskListToggle } from '../plugins/custom/task-list-toggle';
 import { resolveEditorMessages } from '../local/i18n';
 // slash 菜单调试日志前缀。
@@ -70,6 +71,7 @@ export const createEditor = async (options: CreateEditorOptions): Promise<Editor
     listener,
     commonmark,
     gfm,
+    tableArrowEntry: tableArrowEntryPlugin,
     gapCursor: gapCursorPlugin,
     dropCursor: dropCursorPlugin,
     math,

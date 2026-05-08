@@ -10,6 +10,8 @@ export interface PresetPluginExports {
   commonmark: unknown;
   /** gfm 插件实例。 */
   gfm: unknown;
+  /** 表格方向键进入插件实例。 */
+  tableArrowEntry: unknown;
   /** 块间光标插件实例。 */
   gapCursor: unknown;
   /** 拖拽落点指示器插件实例。 */
@@ -50,6 +52,7 @@ export const resolvePresetPlugins = (pluginExports: PresetPluginExports): Editor
   appendPluginDescriptors(descriptors, 'listener', pluginExports.listener);
   appendPluginDescriptors(descriptors, 'commonmark', pluginExports.commonmark);
   appendPluginDescriptors(descriptors, 'gfm', pluginExports.gfm);
+  appendPluginDescriptors(descriptors, 'table-arrow-entry', pluginExports.tableArrowEntry);
   appendPluginDescriptors(descriptors, 'gap-cursor', pluginExports.gapCursor);
   appendPluginDescriptors(descriptors, 'drop-cursor', pluginExports.dropCursor);
   appendPluginDescriptors(descriptors, 'math', pluginExports.math);

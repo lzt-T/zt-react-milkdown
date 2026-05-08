@@ -12,6 +12,7 @@
 @import "./modules/math-block.css";
 @import "./modules/blockquote.css";
 @import "./modules/task-list.css";
+@import "./modules/table.css";
 
 @source "../**/*.{ts,tsx}";
 

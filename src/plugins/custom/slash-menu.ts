@@ -136,8 +136,107 @@ export const createSlashMenuPlugin = async (config?: SlashMenuConfig): Promise<S
     let activeIndex = 0;
     // 当前编辑器视图引用。
     let currentView: any = null;
+    // 当前绑定过捕获监听的编辑器根节点。
+    let boundEditorDom: HTMLElement | null = null;
     // 当前过滤后的菜单项。
     let visibleItems: SlashMenuItem[] = items;
+    // 菜单导航键集合。
+    const NAVIGATION_KEYS = new Set(['ArrowDown', 'ArrowUp', 'Enter', 'Escape']);
+
+    /**
+     * 判断当前是否处于 slash 可交互态。
+     */
+    const isSlashInteractable = (): boolean => {
+      if (!menuView.isVisible() || !currentView) {
+        return false;
+      }
+      return resolveMenuState(currentView, items).shouldShow;
+    };
+
+    /**
+     * 处理菜单可见态下的键盘导航。
+     */
+    const handleVisibleMenuKeyDown = (event: KeyboardEvent): boolean => {
+      if (!NAVIGATION_KEYS.has(event.key) || !isSlashInteractable()) {
+        return false;
+      }
+      if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        if (visibleItems.length === 0) {
+          return true;
+        }
+        activeIndex = (activeIndex + 1) % visibleItems.length;
+        menuView.renderIfNeeded(visibleItems, activeIndex);
+        menuView.scrollActiveItemIntoView(() => {
+          menuView.updatePosition();
+        });
+        return true;
+      }
+      if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        if (visibleItems.length === 0) {
+          return true;
+        }
+        activeIndex = (activeIndex - 1 + visibleItems.length) % visibleItems.length;
+        menuView.renderIfNeeded(visibleItems, activeIndex);
+        menuView.scrollActiveItemIntoView(() => {
+          menuView.updatePosition();
+        });
+        return true;
+      }
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        void runActiveCommand();
+        return true;
+      }
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        menuView.setVisible(false);
+        return true;
+      }
+      return false;
+    };
+
+    /**
+     * 在编辑器根节点绑定 keydown 捕获监听，确保菜单可见时优先消费按键。
+     */
+    const bindEditorCaptureKeydown = (view: any): void => {
+      const nextEditorDom = view?.dom as HTMLElement | null;
+      if (boundEditorDom === nextEditorDom) {
+        return;
+      }
+      if (boundEditorDom) {
+        boundEditorDom.removeEventListener('keydown', handleEditorCaptureKeydown, true);
+      }
+      boundEditorDom = nextEditorDom;
+      if (!boundEditorDom) {
+        return;
+      }
+      boundEditorDom.addEventListener('keydown', handleEditorCaptureKeydown, true);
+    };
+
+    /**
+     * 清理编辑器根节点上的 keydown 捕获监听。
+     */
+    const unbindEditorCaptureKeydown = (): void => {
+      if (!boundEditorDom) {
+        return;
+      }
+      boundEditorDom.removeEventListener('keydown', handleEditorCaptureKeydown, true);
+      boundEditorDom = null;
+    };
+
+    /**
+     * 编辑器捕获阶段键盘处理：菜单可见时优先消费导航键。
+     */
+    const handleEditorCaptureKeydown = (event: KeyboardEvent): void => {
+      const handled = handleVisibleMenuKeyDown(event);
+      if (!handled) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+    };
 
     /**
      * 解析当前光标在视口中的锚点矩形。
@@ -262,48 +361,17 @@ export const createSlashMenuPlugin = async (config?: SlashMenuConfig): Promise<S
       ctx.set(runtime.key, {
         props: {
           handleKeyDown: (_view: unknown, event: KeyboardEvent) => {
-            if (!menuView.isVisible()) {
-              return false;
-            }
-            if (event.key === 'ArrowDown') {
-              if (visibleItems.length === 0) {
-                return true;
-              }
-              activeIndex = (activeIndex + 1) % visibleItems.length;
-              menuView.renderIfNeeded(visibleItems, activeIndex);
-              menuView.scrollActiveItemIntoView(() => {
-                menuView.updatePosition();
-              });
-              return true;
-            }
-            if (event.key === 'ArrowUp') {
-              if (visibleItems.length === 0) {
-                return true;
-              }
-              activeIndex = (activeIndex - 1 + visibleItems.length) % visibleItems.length;
-              menuView.renderIfNeeded(visibleItems, activeIndex);
-              menuView.scrollActiveItemIntoView(() => {
-                menuView.updatePosition();
-              });
-              return true;
-            }
-            if (event.key === 'Enter') {
-              void runActiveCommand();
-              return true;
-            }
-            if (event.key === 'Escape') {
-              menuView.setVisible(false);
-              return true;
-            }
-            return false;
+            return handleVisibleMenuKeyDown(event);
           }
         },
         view: () => ({
           update: (view: any) => {
             currentView = view;
+            bindEditorCaptureKeydown(view);
             syncMenuState(view);
           },
           destroy: () => {
+            unbindEditorCaptureKeydown();
             menuView.destroy();
           }
         })

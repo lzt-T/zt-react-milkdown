@@ -19,15 +19,36 @@
   }
 
   .slash-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     border-radius: 8px;
     padding: 8px 10px;
     font-size: 14px;
     line-height: 1.4;
   }
 
+  .slash-menu-item-icon {
+    display: inline-flex;
+    width: 16px;
+    height: 16px;
+    flex: 0 0 16px;
+    color: var(--zt-muted);
+  }
+
+  .slash-menu-item-label {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
   .slash-menu-item:hover,
   .slash-menu-item[data-selected='true'] {
     background: color-mix(in srgb, var(--zt-primary) 12%, var(--zt-surface));
+  }
+
+  .slash-menu-item:hover .slash-menu-item-icon,
+  .slash-menu-item[data-selected='true'] .slash-menu-item-icon {
+    color: var(--zt-fg);
   }
 
   .slash-menu-group {

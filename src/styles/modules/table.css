@@ -1,0 +1,23 @@
+.zt-md-editor .ProseMirror .tableWrapper {
+  margin: 0.75rem 0;
+  overflow-x: auto;
+}
+
+.zt-md-editor .ProseMirror table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.zt-md-editor .ProseMirror th,
+.zt-md-editor .ProseMirror td {
+  border: 1px solid var(--zt-border);
+  padding: 0.5rem 0.625rem;
+  vertical-align: top;
+}
+
+.zt-md-editor .ProseMirror th {
+  background: color-mix(in srgb, var(--zt-primary) 8%, var(--zt-surface));
+  font-weight: 600;
+  text-align: left;
+}

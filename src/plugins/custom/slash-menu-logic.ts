@@ -14,14 +14,15 @@ export interface SlashMenuState {
  * 默认 slash 菜单项。
  */
 const DEFAULT_SLASH_MENU_ITEMS: SlashMenuItem[] = [
-  { id: 'heading-1', label: '标题 1', group: '标题', command: 'heading1' },
-  { id: 'heading-2', label: '标题 2', group: '标题', command: 'heading2' },
-  { id: 'heading-3', label: '标题 3', group: '标题', command: 'heading3' },
-  { id: 'bullet-list', label: '无序列表', group: '列表', command: 'bulletList' },
-  { id: 'ordered-list', label: '有序列表', group: '列表', command: 'orderedList' },
-  { id: 'task-list', label: '任务列表', group: '列表', command: 'taskList' },
-  { id: 'blockquote', label: '引用块', group: '插入', command: 'blockquote' },
-  { id: 'math-block', label: '公式块', group: '插入', command: 'mathBlock' }
+  { id: 'heading-1', label: '标题 1', group: '标题', icon: 'Heading1', command: 'heading1' },
+  { id: 'heading-2', label: '标题 2', group: '标题', icon: 'Heading2', command: 'heading2' },
+  { id: 'heading-3', label: '标题 3', group: '标题', icon: 'Heading3', command: 'heading3' },
+  { id: 'bullet-list', label: '无序列表', group: '列表', icon: 'List', command: 'bulletList' },
+  { id: 'ordered-list', label: '有序列表', group: '列表', icon: 'ListOrdered', command: 'orderedList' },
+  { id: 'task-list', label: '任务列表', group: '列表', icon: 'ListTodo', command: 'taskList' },
+  { id: 'blockquote', label: '引用块', group: '插入', icon: 'TextQuote', command: 'blockquote' },
+  { id: 'math-block', label: '公式块', group: '插入', icon: 'Sigma', command: 'mathBlock' },
+  { id: 'table', label: '表格', group: '插入', icon: 'Table', command: 'table' }
 ];
 
 /**
