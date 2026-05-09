@@ -26,6 +26,16 @@ export interface OverlayViewportPosition {
 }
 
 /**
+ * 浮层 Portal 内坐标（用于 absolute 定位）。
+ */
+export interface OverlayPortalPosition {
+  /** Portal 内顶部坐标。 */
+  top: number;
+  /** Portal 内左侧坐标。 */
+  left: number;
+}
+
+/**
  * 浮层换算配置。
  */
 export interface OverlayPositionConfig {
@@ -101,6 +111,21 @@ export const toViewportPosition = (config: OverlayPositionConfig): OverlayViewpo
   return {
     left: wrapperRect.left + clampedLeft - wrapper.scrollLeft,
     top: wrapperRect.top + overlayTopInContent - wrapper.scrollTop
+  };
+};
+
+/**
+ * 将内容坐标换算为编辑器 Portal 内 absolute 坐标。
+ */
+export const toPortalPosition = (config: OverlayPositionConfig, portalContainer: HTMLElement): OverlayPortalPosition => {
+  // 原有视口坐标。
+  const viewportPosition = toViewportPosition(config);
+  // Portal 容器视口矩形。
+  const portalRect = portalContainer.getBoundingClientRect();
+
+  return {
+    left: viewportPosition.left - portalRect.left,
+    top: viewportPosition.top - portalRect.top
   };
 };
 

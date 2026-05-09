@@ -3,8 +3,6 @@
 @import "tailwindcss/utilities.css" layer(utilities);
 @import "tw-animate-css";
 @import "../theme/tokens.css";
-@import "../theme/light.css";
-@import "../theme/dark.css";
 /* @import "./modules/math-block.css"; */
 @import "./modules/slash-menu.css";
 @import "./modules/gap-cursor.css";
@@ -45,6 +43,7 @@
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -62,23 +61,19 @@
     --popover: var(--zt-surface);
     --popover-foreground: var(--zt-fg);
     --primary: var(--zt-primary);
-    --primary-foreground: oklch(0.985 0 0);
+    --primary-foreground: var(--zt-primary-foreground);
     --secondary: var(--zt-secondary);
     --secondary-foreground: var(--zt-fg);
     --muted: color-mix(in srgb, var(--zt-muted) 20%, var(--zt-surface));
     --muted-foreground: var(--zt-muted);
     --accent: color-mix(in srgb, var(--zt-primary) 14%, var(--zt-surface));
     --accent-foreground: var(--zt-fg);
-    --destructive: oklch(0.577 0.245 27.325);
+    --destructive: var(--zt-destructive);
+    --destructive-foreground: var(--zt-destructive-foreground);
     --border: var(--zt-border);
     --input: var(--zt-border);
     --ring: color-mix(in srgb, var(--zt-primary) 45%, var(--zt-border));
     --radius: var(--zt-radius);
-  }
-
-  .zt-md-dark {
-    --primary-foreground: oklch(0.205 0 0);
-    --destructive: oklch(0.704 0.191 22.216);
   }
 }
 
@@ -88,7 +83,6 @@
     box-shadow:
       inset 0 1px 0 color-mix(in srgb, white 36%, transparent),
       0 18px 40px -26px color-mix(in srgb, var(--zt-primary) 20%, transparent);
-    transform: translateZ(0);
   }
 
   .zt-md:focus-within {
@@ -107,6 +101,13 @@
   .zt-md-body {
     @apply relative min-h-[160px];
     background: var(--zt-surface);
+  }
+
+  .zt-md-portal {
+    position: absolute;
+    inset: 0;
+    z-index: 30;
+    pointer-events: none;
   }
 
   .zt-md-error {

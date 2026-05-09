@@ -34,6 +34,7 @@ const MilkdownRuntime = (props: {
   debounceMs: number;
   messages: ReturnType<typeof resolveEditorMessages>;
   slashMenu: MilkdownEditorProps['slashMenu'];
+  portalContainer: HTMLElement;
   editorStyle: CSSProperties & Record<'--zt-gap-placeholder-content', string>;
   onMarkdownChange: (markdown: string) => void;
   onInitReady: () => void;
@@ -41,6 +42,7 @@ const MilkdownRuntime = (props: {
 }): JSX.Element => {
   useMilkdownEditor({
     markdown: props.markdown,
+    portalContainer: props.portalContainer,
     editable: props.editable,
     debounceMs: props.debounceMs,
     messages: props.messages,
@@ -67,6 +69,8 @@ const MilkdownRuntime = (props: {
 export const MilkdownEditor = (props: MilkdownEditorProps): JSX.Element => {
   /** 初始化失败提示。 */
   const [initErrorMessage, setInitErrorMessage] = useState<string>('');
+  /** 编辑器内部浮层 Portal 容器。 */
+  const [portalContainer, setPortalContainer] = useState<HTMLDivElement | null>(null);
   /** 当前主题。 */
   const theme = props.theme ?? 'light';
   /** 当前可编辑状态。 */
@@ -113,25 +117,35 @@ export const MilkdownEditor = (props: MilkdownEditorProps): JSX.Element => {
     const nextMessage = error instanceof Error ? error.message : messages.initError;
     setInitErrorMessage(nextMessage);
   }, [messages.initError]);
+  /**
+   * 同步编辑器内部浮层 Portal 容器。
+   */
+  const handlePortalContainerRef = useCallback((node: HTMLDivElement | null): void => {
+    setPortalContainer(node);
+  }, []);
 
   return (
     <div className={clsx('zt-md', theme === 'dark' ? 'zt-md-dark' : 'zt-md-light', props.className)}>
       {props.headerSlot ? <div className="zt-md-header">{props.headerSlot}</div> : null}
       <div className="zt-md-body">
         {initErrorMessage ? <div className="zt-md-error">{initErrorMessage}</div> : null}
-        <MilkdownProvider>
-          <MilkdownRuntime
-            markdown={markdown}
-            editable={editable}
-            debounceMs={debounceMs}
-            messages={messages}
-            slashMenu={props.slashMenu}
-            editorStyle={editorStyle}
-            onMarkdownChange={handleMarkdownChange}
-            onInitReady={handleInitReady}
-            onInitError={handleInitError}
-          />
-        </MilkdownProvider>
+        {portalContainer ? (
+          <MilkdownProvider>
+            <MilkdownRuntime
+              markdown={markdown}
+              portalContainer={portalContainer}
+              editable={editable}
+              debounceMs={debounceMs}
+              messages={messages}
+              slashMenu={props.slashMenu}
+              editorStyle={editorStyle}
+              onMarkdownChange={handleMarkdownChange}
+              onInitReady={handleInitReady}
+              onInitError={handleInitError}
+            />
+          </MilkdownProvider>
+        ) : null}
+        <div ref={handlePortalContainerRef} className="zt-md-portal" />
       </div>
     </div>
   );

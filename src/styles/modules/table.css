@@ -24,7 +24,7 @@
 }
 
 .zt-md-table-actions-overlay {
-  position: fixed;
+  position: absolute;
   z-index: 30;
   display: inline-flex;
   align-items: center;
@@ -71,8 +71,8 @@
 }
 
 .zt-md-table-action-button-danger:hover {
-  background: color-mix(in srgb, var(--destructive) 10%, transparent);
-  color: var(--destructive);
+  background: color-mix(in srgb, var(--zt-destructive) 10%, transparent);
+  color: var(--zt-destructive);
 }
 
 .zt-md-table-action-button svg {
@@ -86,12 +86,8 @@
   gap: 0.375rem;
   border: 1px solid var(--zt-border);
   border-radius: calc(var(--zt-radius) + 2px);
-  --popover: var(--zt-surface);
-  --popover-foreground: var(--zt-fg);
-  --foreground: var(--zt-fg);
-  --muted: color-mix(in srgb, var(--zt-muted) 20%, var(--zt-surface));
   background: color-mix(in srgb, var(--zt-surface) 90%, var(--zt-bg));
-  color: var(--popover-foreground);
+  color: var(--zt-fg);
   box-shadow:
     0 14px 32px -22px color-mix(in srgb, var(--zt-primary) 35%, transparent),
     0 12px 20px -18px color-mix(in srgb, var(--zt-fg) 22%, transparent);
@@ -129,14 +125,14 @@ button.zt-md-table-action-menu-item {
 }
 
 button.zt-md-table-action-menu-item-danger {
-  color: var(--destructive);
+  color: var(--zt-destructive);
 }
 
 .zt-md-table-action-popover button.zt-md-table-action-menu-item-danger:disabled {
-  color: var(--destructive);
+  color: var(--zt-destructive);
 }
 
 .zt-md-table-action-popover button.zt-md-table-action-menu-item-danger:not(:disabled):hover {
-  background: color-mix(in srgb, var(--destructive) 8%, transparent);
-  color: var(--destructive);
+  background: color-mix(in srgb, var(--zt-destructive) 8%, transparent);
+  color: var(--zt-destructive);
 }

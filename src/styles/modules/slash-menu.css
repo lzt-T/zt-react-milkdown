@@ -1,6 +1,6 @@
 @layer components {
   .slash-menu {
-    position: fixed;
+    position: absolute;
     z-index: 1200;
     border: 1px solid var(--zt-border);
     border-radius: 12px;
@@ -11,6 +11,7 @@
     max-height: 320px;
     overflow: auto;
     padding: 8px;
+    pointer-events: auto;
     will-change: top, left, transform;
   }
 

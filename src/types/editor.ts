@@ -135,6 +135,8 @@ export interface MilkdownEditorProps {
 export interface CreateEditorOptions {
   /** 绑定的根节点。 */
   root: HTMLElement;
+  /** 编辑器内部浮层 Portal 容器。 */
+  portalContainer: HTMLElement;
   /** 初始 Markdown 内容。 */
   markdown: string;
   /** 是否允许编辑。 */

@@ -21,7 +21,7 @@ import {
   createOverlayRepositionScheduler,
   resolveEditorWrapper,
   toContentAnchor,
-  toViewportPosition,
+  toPortalPosition,
   type OverlayContentAnchor,
   type OverlayPlacement
 } from '../../lib/editor-overlay-position';
@@ -40,8 +40,6 @@ const OVERLAY_BOUNDARY_INSET = 4;
 const TABLE_ACTION_PLACEMENT: OverlayPlacement = 'top';
 // 表格列默认对齐方式。
 const DEFAULT_TABLE_ALIGNMENT: TableCellAlignment = 'left';
-// 按钮浮层需要继承的主题变量。
-const TABLE_ACTION_THEME_VARIABLES = ['--zt-muted', '--zt-primary', '--destructive'] as const;
 /**
  * 基于 lucide-react 组件渲染 SVG 字符串。
  */
@@ -99,6 +97,8 @@ class TableFocusActionsView implements PluginView {
   private readonly moreActionsRoot: Root;
   // 编辑器滚动容器。
   private readonly editorWrapper: HTMLElement | null;
+  // 编辑器内部浮层 Portal 容器。
+  private readonly portalContainer: HTMLElement;
   // 当前聚焦表格起始位置。
   private currentTableStart: number | null = null;
   // 当前聚焦表格节点大小。
@@ -122,9 +122,10 @@ class TableFocusActionsView implements PluginView {
   /**
    * 初始化插件视图。
    */
-  constructor(view: EditorView, messages: EditorI18nMessages) {
+  constructor(view: EditorView, messages: EditorI18nMessages, portalContainer: HTMLElement) {
     this.view = view;
     this.messages = messages;
+    this.portalContainer = portalContainer;
     this.editorWrapper = resolveEditorWrapper(view.dom);
     this.actionsContainer = document.createElement('div');
     this.actionsContainer.className = 'zt-md-table-actions-overlay';
@@ -423,7 +424,7 @@ class TableFocusActionsView implements PluginView {
     this.moreActionsRoot.render(
       createElement(TableMoreActions, {
         messages: this.messages,
-        portalContainer: this.editorWrapper,
+        portalContainer: this.portalContainer,
         canInsertRowAbove,
         canInsertColumn,
         canDeleteRow,
@@ -491,13 +492,13 @@ class TableFocusActionsView implements PluginView {
   }
 
   /**
-   * 基于当前实时几何信息更新按钮定位（fixed 视口坐标）。
+   * 基于当前实时几何信息更新按钮定位（Portal 内 absolute 坐标）。
    */
   private updateOverlayPosition(): void {
     if (
       !this.editorWrapper ||
       !this.currentTableElement ||
-      this.actionsContainer.parentElement !== document.body
+      this.actionsContainer.parentElement !== this.portalContainer
     ) {
       return;
     }
@@ -512,34 +513,20 @@ class TableFocusActionsView implements PluginView {
       return;
     }
 
-    const viewportPosition = toViewportPosition({
-      wrapper: this.editorWrapper,
-      anchor: currentAnchor,
-      overlaySize: { width: actionsWidth },
-      placement: TABLE_ACTION_PLACEMENT,
-      offsetY: 0,
-      boundaryInset: OVERLAY_BOUNDARY_INSET
-    });
-    this.actionsContainer.style.left = `${viewportPosition.left}px`;
-    this.actionsContainer.style.top = `${viewportPosition.top}px`;
-  }
-
-  /**
-   * 同步编辑器主题变量到 body 浮层容器。
-   */
-  private syncThemeVariablesToOverlay(): void {
-    if (!this.editorWrapper) {
-      return;
-    }
-
-    const wrapperStyles = getComputedStyle(this.editorWrapper);
-    for (const variableName of TABLE_ACTION_THEME_VARIABLES) {
-      const variableValue = wrapperStyles.getPropertyValue(variableName).trim();
-      if (!variableValue) {
-        continue;
-      }
-      this.actionsContainer.style.setProperty(variableName, variableValue);
-    }
+    // 按钮组在编辑器 Portal 内的定位坐标。
+    const portalPosition = toPortalPosition(
+      {
+        wrapper: this.editorWrapper,
+        anchor: currentAnchor,
+        overlaySize: { width: actionsWidth },
+        placement: TABLE_ACTION_PLACEMENT,
+        offsetY: 0,
+        boundaryInset: OVERLAY_BOUNDARY_INSET
+      },
+      this.portalContainer
+    );
+    this.actionsContainer.style.left = `${portalPosition.left}px`;
+    this.actionsContainer.style.top = `${portalPosition.top}px`;
   }
 
   /**
@@ -570,10 +557,9 @@ class TableFocusActionsView implements PluginView {
       return;
     }
 
-    if (this.actionsContainer.parentElement !== document.body) {
-      document.body.append(this.actionsContainer);
+    if (this.actionsContainer.parentElement !== this.portalContainer) {
+      this.portalContainer.append(this.actionsContainer);
     }
-    this.syncThemeVariablesToOverlay();
     // 当前聚焦列是否可用于列操作。
     const canInsertColumn = isFocusedTableColumnValid(focusedTable);
     // 当前聚焦列是否可删除。
@@ -629,13 +615,13 @@ class TableFocusActionsView implements PluginView {
 /**
  * 表格聚焦操作插件：聚焦表格时显示删除按钮。
  */
-export const createTableFocusActionsPlugin = (messages?: EditorI18nMessages): ReturnType<typeof $prose> => {
+export const createTableFocusActionsPlugin = (portalContainer: HTMLElement, messages?: EditorI18nMessages): ReturnType<typeof $prose> => {
   const resolvedMessages = resolveEditorMessages(undefined, messages);
 
   return $prose(() => {
     return new Plugin({
       key: new PluginKey(TABLE_FOCUS_ACTIONS_PLUGIN_KEY),
-      view: (view) => new TableFocusActionsView(view as EditorView, resolvedMessages)
+      view: (view) => new TableFocusActionsView(view as EditorView, resolvedMessages, portalContainer)
     });
   });
 };

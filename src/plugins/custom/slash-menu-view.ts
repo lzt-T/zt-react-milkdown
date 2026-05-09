@@ -14,7 +14,7 @@ import {
   TextQuote,
   type LucideIcon
 } from 'lucide-react';
-import { createOverlayRepositionScheduler, toViewportPosition, type OverlayPlacement } from '../../lib/editor-overlay-position';
+import { createOverlayRepositionScheduler, toPortalPosition, type OverlayPlacement } from '../../lib/editor-overlay-position';
 
 /**
  * slash 菜单展开方向。
@@ -139,12 +139,12 @@ const renderMenuItems = (
 /**
  * 创建 slash 菜单视图控制器。
  */
-export const createSlashMenuViewController = (): SlashMenuViewController => {
+export const createSlashMenuViewController = (portalContainer: HTMLElement): SlashMenuViewController => {
   // 菜单容器节点。
   const menu = document.createElement('div');
   menu.className = 'slash-menu';
   menu.style.display = 'none';
-  document.body.appendChild(menu);
+  portalContainer.appendChild(menu);
 
   // 当前是否展示菜单。
   let menuVisible = false;
@@ -158,23 +158,7 @@ export const createSlashMenuViewController = (): SlashMenuViewController => {
   const iconRoots: Root[] = [];
 
   /**
-   * 从编辑器主题根节点同步菜单所需 CSS 变量，避免 portal 后丢失主题上下文。
-   */
-  const syncThemeVariables = (editorWrapper: HTMLElement): void => {
-    const themeHost = (editorWrapper.closest('.zt-md') || editorWrapper) as HTMLElement;
-    const computedStyle = window.getComputedStyle(themeHost);
-    const variableNames = ['--zt-border', '--zt-surface', '--zt-fg', '--zt-primary', '--zt-muted'];
-    variableNames.forEach((name) => {
-      const value = computedStyle.getPropertyValue(name).trim();
-      if (!value) {
-        return;
-      }
-      menu.style.setProperty(name, value);
-    });
-  };
-
-  /**
-   * 第二段：将内容坐标换算为视口坐标并写入 fixed 菜单样式。
+   * 第二段：将内容坐标换算为 Portal 内坐标并写入 absolute 菜单样式。
    */
   const updatePosition = (): void => {
     if (!menuVisible || !positionContext) {
@@ -189,21 +173,25 @@ export const createSlashMenuViewController = (): SlashMenuViewController => {
       placement,
       offsetY
     } = positionContext;
-    const viewportPosition = toViewportPosition({
-      wrapper: editorWrapper,
-      anchor: {
-        anchorTopInContent,
-        anchorBottomInContent,
-        anchorLeftInContent
+    // 菜单在编辑器 Portal 内的定位坐标。
+    const portalPosition = toPortalPosition(
+      {
+        wrapper: editorWrapper,
+        anchor: {
+          anchorTopInContent,
+          anchorBottomInContent,
+          anchorLeftInContent
+        },
+        overlaySize: { width: menu.offsetWidth || 210 },
+        placement,
+        offsetY,
+        boundaryInset: 4
       },
-      overlaySize: { width: menu.offsetWidth || 210 },
-      placement,
-      offsetY,
-      boundaryInset: 4
-    });
+      portalContainer
+    );
 
-    menu.style.left = `${viewportPosition.left}px`;
-    menu.style.top = `${viewportPosition.top}px`;
+    menu.style.left = `${portalPosition.left}px`;
+    menu.style.top = `${portalPosition.top}px`;
     menu.dataset.placement = placement;
   };
 
@@ -297,9 +285,6 @@ export const createSlashMenuViewController = (): SlashMenuViewController => {
   const updatePositionContext = (context: SlashMenuPositionContext | null): void => {
     positionContext = context;
     repositionScheduler.bindWrapper(context?.editorWrapper ?? null);
-    if (context && typeof window !== 'undefined') {
-      syncThemeVariables(context.editorWrapper);
-    }
   };
 
   /**

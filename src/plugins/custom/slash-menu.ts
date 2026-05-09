@@ -116,7 +116,7 @@ const resolveSlashRuntime = async (): Promise<SlashRuntime | null> => {
 /**
  * 创建 slash 菜单插件。
  */
-export const createSlashMenuPlugin = async (config?: SlashMenuConfig): Promise<SlashPluginSetup> => {
+export const createSlashMenuPlugin = async (portalContainer: HTMLElement, config?: SlashMenuConfig): Promise<SlashPluginSetup> => {
   if (config?.enabled === false) {
     return { plugins: [], config: null };
   }
@@ -131,7 +131,7 @@ export const createSlashMenuPlugin = async (config?: SlashMenuConfig): Promise<S
     // 最终菜单项配置。
     const items = resolveSlashMenuItems(config);
     // slash 菜单视图控制器。
-    const menuView = createSlashMenuViewController();
+    const menuView = createSlashMenuViewController(portalContainer);
     // 当前高亮索引。
     let activeIndex = 0;
     // 当前编辑器视图引用。

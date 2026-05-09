@@ -61,10 +61,10 @@ export const createEditor = async (options: CreateEditorOptions): Promise<Editor
   /** 编辑器文案。 */
   const messages = options.messages ?? resolveEditorMessages();
   /** 表格聚焦操作插件实例。 */
-  const tableFocusActionsPlugin = createTableFocusActionsPlugin(messages);
+  const tableFocusActionsPlugin = createTableFocusActionsPlugin(options.portalContainer, messages);
 
   /** 默认插件集合。 */
-  const slashSetup = await createSlashMenuPlugin(options.slashMenu);
+  const slashSetup = await createSlashMenuPlugin(options.portalContainer, options.slashMenu);
   /** slash 插件实例列表。 */
   const slashPlugins = slashSetup.plugins;
   console.log(`${SLASH_DEBUG_PREFIX} CREATE_EDITOR_SLASH_PLUGIN`, {

@@ -55,9 +55,9 @@
   }
 
   .zt-md-editor .zt-md-math-block-action-button-danger:hover {
-    background: color-mix(in srgb, var(--destructive) 12%, var(--zt-surface));
-    color: var(--destructive);
-    border-color: color-mix(in srgb, var(--destructive) 35%, var(--zt-border));
+    background: color-mix(in srgb, var(--zt-destructive) 12%, var(--zt-surface));
+    color: var(--zt-destructive);
+    border-color: color-mix(in srgb, var(--zt-destructive) 35%, var(--zt-border));
   }
 
   .zt-md-editor .zt-md-math-block-action-button svg {

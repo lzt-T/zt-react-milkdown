@@ -10,6 +10,8 @@ import { createEditor } from '../../core/createEditor';
 export interface UseMilkdownEditorOptions {
   /** 需要同步到编辑器的 markdown。 */
   markdown: string;
+  /** 编辑器内部浮层 Portal 容器。 */
+  portalContainer: HTMLElement;
   /** 当前是否可编辑。 */
   editable: boolean;
   /** 内容变更外发的防抖时长（毫秒）。 */
@@ -104,6 +106,7 @@ export const useMilkdownEditor = (options: UseMilkdownEditorOptions): void => {
           try {
             controller = await createEditor({
               root,
+              portalContainer: options.portalContainer,
               markdown: latestMarkdownRef.current,
               editable: options.editable,
               messages: options.messages,
@@ -136,7 +139,7 @@ export const useMilkdownEditor = (options: UseMilkdownEditorOptions): void => {
 
       return adapter;
     };
-  }, [options.editable, options.messages, options.slashMenu]);
+  }, [options.editable, options.messages, options.portalContainer, options.slashMenu]);
 
   useEditor(getEditor, [getEditor]);
 

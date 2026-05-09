@@ -6,6 +6,7 @@
 }
 
 .zt-md-light {
+  color-scheme: light;
   --zt-bg: #f6f8fc;
   --zt-surface: #ffffff;
   --zt-elevated: #f2f5fb;
@@ -13,11 +14,15 @@
   --zt-muted: #5e7087;
   --zt-border: #d4dde9;
   --zt-primary: #0c6cc3;
+  --zt-primary-foreground: oklch(0.985 0 0);
   --zt-secondary: #f27a1a;
+  --zt-destructive: oklch(0.577 0.245 27.325);
+  --zt-destructive-foreground: oklch(0.985 0 0);
   --zt-glow: color-mix(in srgb, var(--zt-primary) 20%, transparent);
 }
 
 .zt-md-dark {
+  color-scheme: dark;
   --zt-bg: #0c1220;
   --zt-surface: #131d31;
   --zt-elevated: #1a2740;
@@ -25,6 +30,9 @@
   --zt-muted: #93a7c3;
   --zt-border: #2f4366;
   --zt-primary: #6eb4ff;
+  --zt-primary-foreground: oklch(0.205 0 0);
   --zt-secondary: #ffab66;
+  --zt-destructive: oklch(0.704 0.191 22.216);
+  --zt-destructive-foreground: oklch(0.205 0 0);
   --zt-glow: color-mix(in srgb, var(--zt-primary) 36%, transparent);
 }
