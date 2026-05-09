@@ -8,6 +8,7 @@ import { createMathBlockEditableNodeView } from '../plugins/custom/math-block-ed
 import { math } from '../plugins/custom/math-plugin';
 import { createSlashMenuPlugin } from '../plugins/custom/slash-menu';
 import { tableArrowEntryPlugin } from '../plugins/custom/table-arrow-entry';
+import { createTableFocusActionsPlugin } from '../plugins/custom/table-focus-actions';
 import { taskListToggle } from '../plugins/custom/task-list-toggle';
 import { resolveEditorMessages } from '../local/i18n';
 // slash 菜单调试日志前缀。
@@ -57,6 +58,10 @@ export const createEditor = async (options: CreateEditorOptions): Promise<Editor
   const gfm = assertKey(gfmKit, 'gfm');
   /** replaceAll 命令导出对象。 */
   const replaceAll = assertKey(utilsKit, 'replaceAll');
+  /** 编辑器文案。 */
+  const messages = options.messages ?? resolveEditorMessages();
+  /** 表格聚焦操作插件实例。 */
+  const tableFocusActionsPlugin = createTableFocusActionsPlugin(messages);
 
   /** 默认插件集合。 */
   const slashSetup = await createSlashMenuPlugin(options.slashMenu);
@@ -72,6 +77,7 @@ export const createEditor = async (options: CreateEditorOptions): Promise<Editor
     commonmark,
     gfm,
     tableArrowEntry: tableArrowEntryPlugin,
+    tableFocusActions: tableFocusActionsPlugin,
     gapCursor: gapCursorPlugin,
     dropCursor: dropCursorPlugin,
     math,
@@ -84,9 +90,6 @@ export const createEditor = async (options: CreateEditorOptions): Promise<Editor
 
   /** 编辑器实例。 */
   const editor = Editor.make();
-  /** 编辑器文案。 */
-  const messages = options.messages ?? resolveEditorMessages();
-
   editor.config((ctx: any) => {
     ctx.set(rootCtx, options.root);
     ctx.set(defaultValueCtx, options.markdown);

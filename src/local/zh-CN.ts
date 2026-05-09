@@ -10,5 +10,6 @@ export const zhCNMessages: EditorI18nMessages = {
   mathBlockSourceAriaLabel: '公式块源码',
   mathBlockCopyAriaLabel: '复制公式源码',
   mathBlockDeleteAriaLabel: '删除公式块',
+  tableDeleteAriaLabel: '删除表格',
   mathRenderError: '公式渲染失败，请检查公式语法。'
 };

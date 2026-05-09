@@ -7,6 +7,11 @@ import { resolve } from 'node:path';
  * 创建 Vite 的库构建配置。
  */
 export default defineConfig({
+  resolve: {
+    alias: {
+      '@': resolve(__dirname, 'src')
+    }
+  },
   plugins: [
     react(),
     dts({

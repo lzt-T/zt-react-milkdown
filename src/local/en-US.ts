@@ -10,5 +10,6 @@ export const enUSMessages: EditorI18nMessages = {
   mathBlockSourceAriaLabel: 'Math block source',
   mathBlockCopyAriaLabel: 'Copy math source',
   mathBlockDeleteAriaLabel: 'Delete math block',
+  tableDeleteAriaLabel: 'Delete table',
   mathRenderError: 'Formula rendering failed. Please check the formula syntax.'
 };

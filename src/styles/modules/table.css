@@ -21,3 +21,41 @@
   font-weight: 600;
   text-align: left;
 }
+
+.zt-md-table-action-button {
+  top: 0.25rem;
+  right: 0.25rem;
+  z-index: 30;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 1px solid var(--zt-border);
+  border-radius: calc(var(--zt-radius) - 2px);
+  background: var(--zt-surface);
+  color: var(--zt-muted);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.zt-md-table-action-button-overlay {
+  position: fixed;
+  pointer-events: auto;
+}
+
+.zt-md-table-action-button:hover {
+  background: color-mix(in srgb, var(--zt-primary) 10%, var(--zt-surface));
+  color: var(--zt-primary);
+}
+
+.zt-md-table-action-button-danger:hover {
+  background: color-mix(in srgb, var(--destructive) 12%, var(--zt-surface));
+  color: var(--destructive);
+  border-color: color-mix(in srgb, var(--destructive) 35%, var(--zt-border));
+}
+
+.zt-md-table-action-button svg {
+  width: 1rem;
+  height: 1rem;
+}

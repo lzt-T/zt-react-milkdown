@@ -131,6 +131,7 @@ const App = (): JSX.Element => {
             </button>
           </div>
         </header>
+
         <section className="playground-editor-wrap">
           <MilkdownEditor
             value={value}

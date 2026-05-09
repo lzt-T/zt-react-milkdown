@@ -48,7 +48,20 @@ const shouldBlockSlashMenu = (view: any): boolean => {
 
   // 当前父节点类型名。
   const parentTypeName = String(from.parent?.type?.name ?? '');
-  return parentTypeName.includes('code') || parentTypeName === 'math_block';
+  if (parentTypeName.includes('code') || parentTypeName === 'math_block') {
+    return true;
+  }
+
+  // 从当前节点向上查找，命中 table 祖先时禁止展示 slash 菜单。
+  for (let depth = from.depth; depth > 0; depth -= 1) {
+    // 当前层级节点类型名。
+    const nodeTypeName = String(from.node(depth)?.type?.name ?? '');
+    if (nodeTypeName === 'table' || nodeTypeName === 'table_cell' || nodeTypeName === 'table_header') {
+      return true;
+    }
+  }
+
+  return false;
 };
 
 /**
