@@ -79,7 +79,7 @@
 
 @layer components {
   .zt-md {
-    @apply relative w-full overflow-visible rounded-[var(--zt-radius-lg)] border border-zt-border bg-zt-surface font-sans text-zt-fg transition-[transform,border-color,box-shadow] duration-300 ease-out;
+    @apply relative w-full overflow-visible rounded-[var(--zt-radius)] border border-zt-border bg-zt-surface font-sans text-zt-fg transition-[transform,border-color,box-shadow] duration-300 ease-out;
     box-shadow:
       inset 0 1px 0 color-mix(in srgb, white 36%, transparent),
       0 18px 40px -26px color-mix(in srgb, var(--zt-primary) 20%, transparent);
@@ -101,6 +101,7 @@
   .zt-md-body {
     @apply relative min-h-[160px];
     background: var(--zt-surface);
+    border-radius: var(--zt-radius);
   }
 
   .zt-md-portal {
@@ -153,6 +154,32 @@
     right: -1px;
     top: -1px;
     bottom: -1px;
+  }
+
+  /* 统一编辑器内部滚动条样式，新增滚动容器默认自动继承。 */
+  .zt-md * {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--zt-muted) 42%, var(--zt-surface)) transparent;
+  }
+
+  .zt-md *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .zt-md *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .zt-md *::-webkit-scrollbar-thumb {
+    border: 2px solid transparent;
+    border-radius: 999px;
+    background-clip: padding-box;
+    background-color: color-mix(in srgb, var(--zt-muted) 42%, var(--zt-surface));
+  }
+
+  .zt-md *:hover::-webkit-scrollbar-thumb {
+    background-color: color-mix(in srgb, var(--zt-primary) 34%, var(--zt-muted));
   }
 
   .zt-md-readonly {
