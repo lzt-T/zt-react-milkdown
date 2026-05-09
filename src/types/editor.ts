@@ -28,6 +28,26 @@ export interface EditorI18nMessages {
   mathBlockDeleteAriaLabel: string;
   /** 表格删除按钮无障碍标签。 */
   tableDeleteAriaLabel: string;
+  /** 表格更多按钮无障碍标签。 */
+  tableMoreAriaLabel: string;
+  /** 表格列左对齐按钮无障碍标签。 */
+  tableAlignLeftAriaLabel: string;
+  /** 表格列居中按钮无障碍标签。 */
+  tableAlignCenterAriaLabel: string;
+  /** 表格列右对齐按钮无障碍标签。 */
+  tableAlignRightAriaLabel: string;
+  /** 表格上方插入行按钮文案。 */
+  tableInsertRowAboveLabel: string;
+  /** 表格下方插入行按钮文案。 */
+  tableInsertRowBelowLabel: string;
+  /** 表格左侧插入列按钮文案。 */
+  tableInsertColumnLeftLabel: string;
+  /** 表格右侧插入列按钮文案。 */
+  tableInsertColumnRightLabel: string;
+  /** 表格删除当前行按钮文案。 */
+  tableDeleteRowLabel: string;
+  /** 表格删除当前列按钮文案。 */
+  tableDeleteColumnLabel: string;
   /** 公式渲染失败提示。 */
   mathRenderError: string;
 }

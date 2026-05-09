@@ -1,12 +1,22 @@
 import { createElement } from 'react';
+import { createRoot, type Root } from 'react-dom/client';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { Trash2 } from 'lucide-react';
-import type { EditorState } from '@milkdown/prose/state';
-import { Plugin, PluginKey } from '@milkdown/prose/state';
+import { AlignCenter, AlignLeft, AlignRight, Trash2 } from 'lucide-react';
+import { Plugin, PluginKey, TextSelection } from '@milkdown/prose/state';
 import type { EditorView, PluginView } from '@milkdown/prose/view';
 import { $prose } from '@milkdown/utils';
 import type { EditorI18nMessages } from '../../types/editor';
 import { resolveEditorMessages } from '../../local/i18n';
+import { TableMoreActions } from './table-more-actions';
+import { deleteFocusedTableColumn, deleteFocusedTableRow } from './table-deletion-actions';
+import {
+  createTableWithUpdatedColumnAlignment,
+  createTableWithInsertedColumn,
+  createTableWithInsertedRow,
+  type TableCellAlignment,
+  type TableColumnInsertDirection
+} from './table-row-insertion';
+import { isFocusedTableColumnValid, resolveCellTextPosition, resolveFocusedTable } from './table-selection';
 import {
   createOverlayRepositionScheduler,
   resolveEditorWrapper,
@@ -16,23 +26,28 @@ import {
   type OverlayPlacement
 } from '../../lib/editor-overlay-position';
 
-// 表格节点类型名。
-const TABLE_NODE_NAME = 'table';
 // 表格操作插件唯一键。
 const TABLE_FOCUS_ACTIONS_PLUGIN_KEY = 'zt-md-table-focus-actions';
-// 按钮与表格边缘的视觉间距（像素）。
-const ACTION_BUTTON_OFFSET = 4;
+// 按钮容器右边缘与表格右边缘对齐偏移（像素）。
+const ACTION_BUTTON_ALIGNMENT_OFFSET = 0;
+// 表格顶部操作留白槽高度（像素）。
+const TABLE_ACTIONS_GAP_HEIGHT = 24;
+// 按钮位于留白槽内时距槽顶的偏移（像素）。
+const TABLE_ACTIONS_GAP_INSET = 4;
 // 浮层边界内边距（像素）。
 const OVERLAY_BOUNDARY_INSET = 4;
 // 表格按钮使用上方锚定位。
 const TABLE_ACTION_PLACEMENT: OverlayPlacement = 'top';
-
+// 表格列默认对齐方式。
+const DEFAULT_TABLE_ALIGNMENT: TableCellAlignment = 'left';
+// 按钮浮层需要继承的主题变量。
+const TABLE_ACTION_THEME_VARIABLES = ['--zt-muted', '--zt-primary', '--destructive'] as const;
 /**
  * 基于 lucide-react 组件渲染 SVG 字符串。
  */
-const renderLucideIconMarkup = (): string => {
+const renderLucideIconMarkup = (iconComponent: typeof Trash2): string => {
   return renderToStaticMarkup(
-    createElement(Trash2, {
+    createElement(iconComponent, {
       size: 14,
       strokeWidth: 2,
       'aria-hidden': 'true'
@@ -41,7 +56,13 @@ const renderLucideIconMarkup = (): string => {
 };
 
 // 删除按钮图标。
-const deleteIconMarkup = renderLucideIconMarkup();
+const deleteIconMarkup = renderLucideIconMarkup(Trash2);
+// 左对齐按钮图标。
+const alignLeftIconMarkup = renderLucideIconMarkup(AlignLeft);
+// 居中按钮图标。
+const alignCenterIconMarkup = renderLucideIconMarkup(AlignCenter);
+// 右对齐按钮图标。
+const alignRightIconMarkup = renderLucideIconMarkup(AlignRight);
 
 /**
  * 判断当前编辑器是否可编辑。
@@ -55,44 +76,39 @@ const isEditorViewEditable = (view: EditorView): boolean => {
 };
 
 /**
- * 解析当前选区所在表格节点与起始位置。
- */
-const resolveFocusedTable = (state: EditorState): { tableStart: number; tableNodeSize: number } | null => {
-  const selectionStart = state.selection.$from;
-
-  for (let depth = selectionStart.depth; depth >= 0; depth -= 1) {
-    const currentNode = selectionStart.node(depth);
-    if (currentNode.type.name !== TABLE_NODE_NAME) {
-      continue;
-    }
-
-    return {
-      tableStart: depth === 0 ? 0 : selectionStart.before(depth),
-      tableNodeSize: currentNode.nodeSize
-    };
-  }
-
-  return null;
-};
-
-/**
  * 创建并维护“聚焦表格删除按钮”插件视图。
  */
 class TableFocusActionsView implements PluginView {
   // 编辑器视图。
   private view: EditorView;
+  // 编辑器文案。
+  private readonly messages: EditorI18nMessages;
+  // 操作区容器 DOM。
+  private readonly actionsContainer: HTMLDivElement;
   // 删除按钮 DOM。
   private readonly deleteButton: HTMLButtonElement;
+  // 左对齐按钮 DOM。
+  private readonly alignLeftButton: HTMLButtonElement;
+  // 居中按钮 DOM。
+  private readonly alignCenterButton: HTMLButtonElement;
+  // 右对齐按钮 DOM。
+  private readonly alignRightButton: HTMLButtonElement;
+  // 更多菜单挂载 DOM。
+  private readonly moreActionsMount: HTMLSpanElement;
+  // 更多菜单 React Root。
+  private readonly moreActionsRoot: Root;
   // 编辑器滚动容器。
   private readonly editorWrapper: HTMLElement | null;
   // 当前聚焦表格起始位置。
   private currentTableStart: number | null = null;
   // 当前聚焦表格节点大小。
   private currentTableNodeSize: number | null = null;
+  // 当前聚焦列索引。
+  private currentColumnIndex: number | null = null;
+  // 当前聚焦列对齐方式。
+  private currentColumnAlignment: TableCellAlignment = DEFAULT_TABLE_ALIGNMENT;
   // 当前聚焦表格 DOM。
   private currentTableElement: HTMLElement | null = null;
-  // 当前按钮锚点（内容坐标）。
-  private currentAnchor: OverlayContentAnchor | null = null;
   // 当前锚点位置是否有效。
   private hasPositionContext = false;
   // 浮层重定位调度器。
@@ -108,16 +124,34 @@ class TableFocusActionsView implements PluginView {
    */
   constructor(view: EditorView, messages: EditorI18nMessages) {
     this.view = view;
+    this.messages = messages;
     this.editorWrapper = resolveEditorWrapper(view.dom);
+    this.actionsContainer = document.createElement('div');
+    this.actionsContainer.className = 'zt-md-table-actions-overlay';
     this.deleteButton = document.createElement('button');
     this.deleteButton.type = 'button';
-    this.deleteButton.className =
-      'zt-md-table-action-button zt-md-table-action-button-overlay zt-md-table-action-button-danger';
+    this.deleteButton.className = 'zt-md-table-action-button zt-md-table-action-button-danger';
     this.deleteButton.style.display = 'inline-flex';
     this.deleteButton.setAttribute('aria-label', messages.tableDeleteAriaLabel);
     this.deleteButton.innerHTML = deleteIconMarkup;
-    this.deleteButton.addEventListener('mousedown', this.handleDeleteMouseDown);
+    this.alignLeftButton = this.createColumnAlignmentButton(messages.tableAlignLeftAriaLabel, alignLeftIconMarkup);
+    this.alignCenterButton = this.createColumnAlignmentButton(messages.tableAlignCenterAriaLabel, alignCenterIconMarkup);
+    this.alignRightButton = this.createColumnAlignmentButton(messages.tableAlignRightAriaLabel, alignRightIconMarkup);
+    this.moreActionsMount = document.createElement('span');
+    this.moreActionsMount.className = 'zt-md-table-more-actions-mount';
+    this.moreActionsRoot = createRoot(this.moreActionsMount);
+    this.actionsContainer.append(
+      this.moreActionsMount,
+      this.alignLeftButton,
+      this.alignCenterButton,
+      this.alignRightButton,
+      this.deleteButton
+    );
+    this.actionsContainer.addEventListener('mousedown', this.handleActionsMouseDown);
     this.deleteButton.addEventListener('click', this.handleDeleteClick);
+    this.alignLeftButton.addEventListener('click', this.handleAlignLeftClick);
+    this.alignCenterButton.addEventListener('click', this.handleAlignCenterClick);
+    this.alignRightButton.addEventListener('click', this.handleAlignRightClick);
     this.repositionScheduler.bindGlobal();
     this.repositionScheduler.bindWrapper(this.editorWrapper);
     this.update(view);
@@ -126,9 +160,55 @@ class TableFocusActionsView implements PluginView {
   /**
    * 阻止按钮点击导致编辑器选区丢失。
    */
-  private readonly handleDeleteMouseDown = (event: MouseEvent): void => {
+  private readonly handleActionsMouseDown = (event: MouseEvent): void => {
     event.preventDefault();
   };
+
+  /**
+   * 创建列对齐按钮。
+   */
+  private createColumnAlignmentButton(ariaLabel: string, iconMarkup: string): HTMLButtonElement {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'zt-md-table-action-button';
+    button.style.display = 'inline-flex';
+    button.setAttribute('aria-label', ariaLabel);
+    button.innerHTML = iconMarkup;
+    return button;
+  }
+
+  /**
+   * 解析列对齐状态。
+   */
+  private resolveColumnAlignment(alignment: unknown): TableCellAlignment {
+    if (alignment === 'center' || alignment === 'right') {
+      return alignment;
+    }
+
+    return DEFAULT_TABLE_ALIGNMENT;
+  }
+
+  /**
+   * 刷新列对齐按钮可用性与激活态。
+   */
+  private updateAlignmentButtonsState(canAlignColumn: boolean): void {
+    this.alignLeftButton.disabled = !canAlignColumn;
+    this.alignCenterButton.disabled = !canAlignColumn;
+    this.alignRightButton.disabled = !canAlignColumn;
+
+    this.alignLeftButton.classList.toggle(
+      'zt-md-table-action-button-active',
+      canAlignColumn && this.currentColumnAlignment === 'left'
+    );
+    this.alignCenterButton.classList.toggle(
+      'zt-md-table-action-button-active',
+      canAlignColumn && this.currentColumnAlignment === 'center'
+    );
+    this.alignRightButton.classList.toggle(
+      'zt-md-table-action-button-active',
+      canAlignColumn && this.currentColumnAlignment === 'right'
+    );
+  }
 
   /**
    * 删除当前聚焦表格。
@@ -146,6 +226,218 @@ class TableFocusActionsView implements PluginView {
     this.view.dispatch(transaction);
     this.view.focus();
   };
+
+  /**
+   * 将当前聚焦列设置为目标对齐方式。
+   */
+  private applyColumnAlignment(alignment: TableCellAlignment): void {
+    // 当前聚焦表格信息。
+    const focusedTable = resolveFocusedTable(this.view.state);
+    if (!focusedTable || focusedTable.rowIndex < 0 || focusedTable.columnIndex < 0) {
+      return;
+    }
+
+    // 更新当前列对齐后的合法表格节点。
+    const nextTable = createTableWithUpdatedColumnAlignment(
+      this.view.state,
+      focusedTable.tableNode,
+      focusedTable.columnIndex,
+      alignment
+    );
+    if (!nextTable) {
+      return;
+    }
+
+    // 表格替换起点。
+    const replaceFrom = focusedTable.tableStart;
+    // 表格替换终点。
+    const replaceTo = focusedTable.tableStart + focusedTable.tableNodeSize;
+    // 替换为合法表格后的事务。
+    const transaction = this.view.state.tr.replaceWith(replaceFrom, replaceTo, nextTable);
+    // 保持光标留在当前单元格。
+    const targetPosition = resolveCellTextPosition(nextTable, replaceFrom, focusedTable.rowIndex, focusedTable.columnIndex);
+    if (targetPosition !== null) {
+      transaction.setSelection(TextSelection.near(transaction.doc.resolve(targetPosition), 1));
+    }
+    transaction.scrollIntoView();
+    this.view.dispatch(transaction);
+    this.view.focus();
+  }
+
+  /**
+   * 将当前列设置为左对齐。
+   */
+  private readonly handleAlignLeftClick = (): void => {
+    this.applyColumnAlignment('left');
+  };
+
+  /**
+   * 将当前列设置为居中对齐。
+   */
+  private readonly handleAlignCenterClick = (): void => {
+    this.applyColumnAlignment('center');
+  };
+
+  /**
+   * 将当前列设置为右对齐。
+   */
+  private readonly handleAlignRightClick = (): void => {
+    this.applyColumnAlignment('right');
+  };
+
+  /**
+   * 在当前行下方插入一行。
+   */
+  private readonly handleInsertRowBelow = (): void => {
+    // 当前聚焦表格信息。
+    const focusedTable = resolveFocusedTable(this.view.state);
+    if (!focusedTable || focusedTable.rowIndex < 0) {
+      return;
+    }
+
+    // 插入新行后的合法表格节点。
+    const nextTable = createTableWithInsertedRow(this.view.state, focusedTable.tableNode, focusedTable.rowIndex, 'below');
+    if (!nextTable) {
+      return;
+    }
+
+    // 表格替换起点。
+    const replaceFrom = focusedTable.tableStart;
+    // 表格替换终点。
+    const replaceTo = focusedTable.tableStart + focusedTable.tableNodeSize;
+    // 替换为合法表格后的事务。
+    const transaction = this.view.state.tr.replaceWith(replaceFrom, replaceTo, nextTable);
+    // 新插入行首个单元格文本位置。
+    const targetPosition = resolveCellTextPosition(nextTable, replaceFrom, focusedTable.rowIndex + 1, 0);
+    if (targetPosition !== null) {
+      transaction.setSelection(TextSelection.near(transaction.doc.resolve(targetPosition), 1));
+    }
+    transaction.scrollIntoView();
+    this.view.dispatch(transaction);
+    this.view.focus();
+  };
+
+  /**
+   * 在当前行上方插入一行。
+   */
+  private readonly handleInsertRowAbove = (): void => {
+    // 当前聚焦表格信息。
+    const focusedTable = resolveFocusedTable(this.view.state);
+    if (!focusedTable || focusedTable.rowIndex <= 0) {
+      return;
+    }
+
+    // 插入新行后的合法表格节点。
+    const nextTable = createTableWithInsertedRow(this.view.state, focusedTable.tableNode, focusedTable.rowIndex, 'above');
+    if (!nextTable) {
+      return;
+    }
+
+    // 表格替换起点。
+    const replaceFrom = focusedTable.tableStart;
+    // 表格替换终点。
+    const replaceTo = focusedTable.tableStart + focusedTable.tableNodeSize;
+    // 替换为合法表格后的事务。
+    const transaction = this.view.state.tr.replaceWith(replaceFrom, replaceTo, nextTable);
+    // 新插入行首个单元格文本位置。
+    const targetPosition = resolveCellTextPosition(nextTable, replaceFrom, focusedTable.rowIndex, 0);
+    if (targetPosition !== null) {
+      transaction.setSelection(TextSelection.near(transaction.doc.resolve(targetPosition), 1));
+    }
+    transaction.scrollIntoView();
+    this.view.dispatch(transaction);
+    this.view.focus();
+  };
+
+  /**
+   * 在当前列附近插入一列。
+   */
+  private insertColumn(direction: TableColumnInsertDirection): void {
+    // 当前聚焦表格信息。
+    const focusedTable = resolveFocusedTable(this.view.state);
+    if (!focusedTable || focusedTable.rowIndex < 0 || focusedTable.columnIndex < 0) {
+      return;
+    }
+
+    // 插入新列后的合法表格节点。
+    const nextTable = createTableWithInsertedColumn(
+      this.view.state,
+      focusedTable.tableNode,
+      focusedTable.columnIndex,
+      direction
+    );
+    if (!nextTable) {
+      return;
+    }
+
+    // 表格替换起点。
+    const replaceFrom = focusedTable.tableStart;
+    // 表格替换终点。
+    const replaceTo = focusedTable.tableStart + focusedTable.tableNodeSize;
+    // 替换为合法表格后的事务。
+    const transaction = this.view.state.tr.replaceWith(replaceFrom, replaceTo, nextTable);
+    // 新列索引。
+    const targetColumnIndex = direction === 'left' ? focusedTable.columnIndex : focusedTable.columnIndex + 1;
+    // 新插入列对应单元格文本位置。
+    const targetPosition = resolveCellTextPosition(nextTable, replaceFrom, focusedTable.rowIndex, targetColumnIndex);
+    if (targetPosition !== null) {
+      transaction.setSelection(TextSelection.near(transaction.doc.resolve(targetPosition), 1));
+    }
+    transaction.scrollIntoView();
+    this.view.dispatch(transaction);
+    this.view.focus();
+  }
+
+  /**
+   * 在当前列左侧插入一列。
+   */
+  private readonly handleInsertColumnLeft = (): void => {
+    this.insertColumn('left');
+  };
+
+  /**
+   * 在当前列右侧插入一列。
+   */
+  private readonly handleInsertColumnRight = (): void => {
+    this.insertColumn('right');
+  };
+
+  /**
+   * 删除当前普通表格行。
+   */
+  private readonly handleDeleteRow = (): void => {
+    deleteFocusedTableRow(this.view);
+  };
+
+  /**
+   * 删除当前表格列。
+   */
+  private readonly handleDeleteColumn = (): void => {
+    deleteFocusedTableColumn(this.view);
+  };
+
+  /**
+   * 渲染更多操作菜单。
+   */
+  private renderMoreActions(canInsertRowAbove: boolean, canInsertColumn: boolean, canDeleteRow: boolean, canDeleteColumn: boolean): void {
+    this.moreActionsRoot.render(
+      createElement(TableMoreActions, {
+        messages: this.messages,
+        portalContainer: this.editorWrapper,
+        canInsertRowAbove,
+        canInsertColumn,
+        canDeleteRow,
+        canDeleteColumn,
+        onInsertRowAbove: this.handleInsertRowAbove,
+        onInsertRowBelow: this.handleInsertRowBelow,
+        onInsertColumnLeft: this.handleInsertColumnLeft,
+        onInsertColumnRight: this.handleInsertColumnRight,
+        onDeleteRow: this.handleDeleteRow,
+        onDeleteColumn: this.handleDeleteColumn,
+        onKeepEditorFocus: () => this.view.focus()
+      })
+    );
+  }
 
   /**
    * 解析可定位的 table DOM 节点。
@@ -166,18 +458,17 @@ class TableFocusActionsView implements PluginView {
   /**
    * 解析当前表格对应的浮层锚点。
    */
-  private resolveTableAnchor(tableElement: HTMLTableElement): OverlayContentAnchor | null {
+  private resolveTableAnchor(tableElement: HTMLTableElement, actionsWidth: number): OverlayContentAnchor | null {
     if (!this.editorWrapper) {
       return null;
     }
 
-    const buttonWidth = this.deleteButton.offsetWidth || 28;
     const tableRect = tableElement.getBoundingClientRect();
     const rawAnchor = toContentAnchor(tableRect, this.editorWrapper);
     const tableWidth = tableRect.width;
     const tableRightInContent = rawAnchor.anchorLeftInContent + tableWidth;
-    const desiredLeftInContent = tableRightInContent - buttonWidth - ACTION_BUTTON_OFFSET;
-    const desiredTopInContent = rawAnchor.anchorTopInContent + ACTION_BUTTON_OFFSET;
+    const desiredLeftInContent = tableRightInContent - actionsWidth - ACTION_BUTTON_ALIGNMENT_OFFSET;
+    const desiredTopInContent = rawAnchor.anchorTopInContent - TABLE_ACTIONS_GAP_HEIGHT + TABLE_ACTIONS_GAP_INSET;
 
     return {
       anchorLeftInContent: desiredLeftInContent,
@@ -187,23 +478,68 @@ class TableFocusActionsView implements PluginView {
   }
 
   /**
-   * 更新按钮定位（fixed 视口坐标）。
+   * 解析按钮容器实时宽度。
+   */
+  private resolveActionsContainerWidth(): number | null {
+    // 优先使用真实布局宽度，避免首次渲染读取 0 导致锚点左偏。
+    const width = this.actionsContainer.getBoundingClientRect().width;
+    if (width <= 0) {
+      return null;
+    }
+
+    return width;
+  }
+
+  /**
+   * 基于当前实时几何信息更新按钮定位（fixed 视口坐标）。
    */
   private updateOverlayPosition(): void {
-    if (!this.editorWrapper || !this.currentAnchor || this.deleteButton.parentElement !== document.body) {
+    if (
+      !this.editorWrapper ||
+      !this.currentTableElement ||
+      this.actionsContainer.parentElement !== document.body
+    ) {
+      return;
+    }
+
+    const actionsWidth = this.resolveActionsContainerWidth();
+    if (actionsWidth === null) {
+      return;
+    }
+
+    const currentAnchor = this.resolveTableAnchor(this.currentTableElement, actionsWidth);
+    if (!currentAnchor) {
       return;
     }
 
     const viewportPosition = toViewportPosition({
       wrapper: this.editorWrapper,
-      anchor: this.currentAnchor,
-      overlaySize: { width: this.deleteButton.offsetWidth || 28 },
+      anchor: currentAnchor,
+      overlaySize: { width: actionsWidth },
       placement: TABLE_ACTION_PLACEMENT,
       offsetY: 0,
       boundaryInset: OVERLAY_BOUNDARY_INSET
     });
-    this.deleteButton.style.left = `${viewportPosition.left}px`;
-    this.deleteButton.style.top = `${viewportPosition.top}px`;
+    this.actionsContainer.style.left = `${viewportPosition.left}px`;
+    this.actionsContainer.style.top = `${viewportPosition.top}px`;
+  }
+
+  /**
+   * 同步编辑器主题变量到 body 浮层容器。
+   */
+  private syncThemeVariablesToOverlay(): void {
+    if (!this.editorWrapper) {
+      return;
+    }
+
+    const wrapperStyles = getComputedStyle(this.editorWrapper);
+    for (const variableName of TABLE_ACTION_THEME_VARIABLES) {
+      const variableValue = wrapperStyles.getPropertyValue(variableName).trim();
+      if (!variableValue) {
+        continue;
+      }
+      this.actionsContainer.style.setProperty(variableName, variableValue);
+    }
   }
 
   /**
@@ -233,18 +569,26 @@ class TableFocusActionsView implements PluginView {
       this.detach();
       return;
     }
-    const tableAnchor = this.resolveTableAnchor(tableElement);
-    if (!tableAnchor) {
-      this.detach();
-      return;
-    }
 
-    if (this.deleteButton.parentElement !== document.body) {
-      document.body.append(this.deleteButton);
+    if (this.actionsContainer.parentElement !== document.body) {
+      document.body.append(this.actionsContainer);
     }
+    this.syncThemeVariablesToOverlay();
+    // 当前聚焦列是否可用于列操作。
+    const canInsertColumn = isFocusedTableColumnValid(focusedTable);
+    // 当前聚焦列是否可删除。
+    const canDeleteColumn = canInsertColumn && focusedTable.tableNode.child(0).childCount > 1;
+    const canInsertRowAbove = focusedTable.rowIndex > 0;
+    const canDeleteRow = focusedTable.rowIndex > 0;
+    const headerRow = focusedTable.tableNode.childCount > 0 ? focusedTable.tableNode.child(0) : null;
+    this.currentColumnIndex = canInsertColumn ? focusedTable.columnIndex : null;
+    this.currentColumnAlignment = this.resolveColumnAlignment(
+      this.currentColumnIndex === null ? null : headerRow?.maybeChild(this.currentColumnIndex)?.attrs?.alignment
+    );
+    this.updateAlignmentButtonsState(canInsertColumn);
+    this.renderMoreActions(canInsertRowAbove, canInsertColumn, canDeleteRow, canDeleteColumn);
 
     this.currentTableElement = tableElement;
-    this.currentAnchor = tableAnchor;
     this.currentTableStart = focusedTable.tableStart;
     this.currentTableNodeSize = focusedTable.tableNodeSize;
     this.hasPositionContext = true;
@@ -256,11 +600,14 @@ class TableFocusActionsView implements PluginView {
    * 卸载按钮与容器状态。
    */
   private detach(): void {
-    this.deleteButton.remove();
-    this.currentAnchor = null;
+    this.moreActionsRoot.render(null);
+    this.actionsContainer.remove();
     this.currentTableElement = null;
     this.currentTableStart = null;
     this.currentTableNodeSize = null;
+    this.currentColumnIndex = null;
+    this.currentColumnAlignment = DEFAULT_TABLE_ALIGNMENT;
+    this.updateAlignmentButtonsState(false);
     this.hasPositionContext = false;
   }
 
@@ -270,17 +617,19 @@ class TableFocusActionsView implements PluginView {
   destroy(): void {
     this.detach();
     this.repositionScheduler.destroy();
-    this.deleteButton.removeEventListener('mousedown', this.handleDeleteMouseDown);
+    this.moreActionsRoot.unmount();
+    this.actionsContainer.removeEventListener('mousedown', this.handleActionsMouseDown);
     this.deleteButton.removeEventListener('click', this.handleDeleteClick);
+    this.alignLeftButton.removeEventListener('click', this.handleAlignLeftClick);
+    this.alignCenterButton.removeEventListener('click', this.handleAlignCenterClick);
+    this.alignRightButton.removeEventListener('click', this.handleAlignRightClick);
   }
 }
 
 /**
  * 表格聚焦操作插件：聚焦表格时显示删除按钮。
  */
-export const createTableFocusActionsPlugin = (
-  messages?: EditorI18nMessages
-): ReturnType<typeof $prose> => {
+export const createTableFocusActionsPlugin = (messages?: EditorI18nMessages): ReturnType<typeof $prose> => {
   const resolvedMessages = resolveEditorMessages(undefined, messages);
 
   return $prose(() => {

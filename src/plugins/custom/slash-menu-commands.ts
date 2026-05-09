@@ -80,10 +80,11 @@ const createTableNode = (view: any, rows: number, cols: number, withHeaderRow: b
 
   // 表格相关节点类型。
   const tableType = nodes.table;
+  const tableHeaderRowType = nodes.table_header_row;
   const tableRowType = nodes.table_row;
   const tableHeaderType = nodes.table_header;
   const tableCellType = nodes.table_cell;
-  if (!tableType || !tableRowType || !tableHeaderType || !tableCellType) {
+  if (!tableType || !tableHeaderRowType || !tableRowType || !tableHeaderType || !tableCellType) {
     return null;
   }
 
@@ -94,11 +95,13 @@ const createTableNode = (view: any, rows: number, cols: number, withHeaderRow: b
   const tableRows = Array.from({ length: normalizedRows }, (_rowValue, rowIndex) => {
     // 当前行是否为表头行。
     const useHeaderCell = withHeaderRow && rowIndex === 0;
+    // 当前行节点类型。
+    const rowType = useHeaderCell ? tableHeaderRowType : tableRowType;
     // 当前行使用的单元格节点类型。
     const cellType = useHeaderCell ? tableHeaderType : tableCellType;
     // 当前行的单元格节点集合。
     const cells = Array.from({ length: normalizedCols }, () => cellType.createAndFill()).filter(Boolean);
-    return tableRowType.create(null, cells);
+    return rowType.create(null, cells);
   });
 
   return tableType.create(null, tableRows);
