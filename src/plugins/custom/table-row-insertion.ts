@@ -47,6 +47,13 @@ const createEmptyCell = (cellType: any, alignment: string): ProseNode | null => 
 };
 
 /**
+ * 过滤掉空单元格并保留 ProseNode 类型信息。
+ */
+const isProseNode = (cell: ProseNode | null): cell is ProseNode => {
+  return cell !== null;
+};
+
+/**
  * 将表格行规范为 GFM 表格 schema 所需节点类型。
  */
 const createNormalizedRow = (
@@ -59,7 +66,7 @@ const createNormalizedRow = (
   // 当前行单元格集合。
   const cells = Array.from({ length: columnCount }, (_value, cellIndex) => {
     return createNormalizedCell(cellType, sourceRow.maybeChild(cellIndex), alignments[cellIndex] ?? 'left');
-  }).filter(Boolean);
+  }).filter(isProseNode);
 
   return rowType.create(null, cells);
 };
@@ -178,7 +185,7 @@ export const createTableWithInsertedRow = (
   for (let rowIndex = 0; rowIndex < tableNode.childCount; rowIndex += 1) {
     if (rowIndex === targetRowIndex && direction === 'above') {
       // 当前行上方新增的普通表格行。
-      const insertedCells = alignments.map((alignment) => createEmptyCell(tableCellType, alignment)).filter(Boolean);
+      const insertedCells = alignments.map((alignment) => createEmptyCell(tableCellType, alignment)).filter(isProseNode);
       rows.push(tableRowType.create(null, insertedCells));
     }
 
@@ -198,7 +205,7 @@ export const createTableWithInsertedRow = (
 
     if (rowIndex === targetRowIndex && direction === 'below') {
       // 当前行下方新增的普通表格行。
-      const insertedCells = alignments.map((alignment) => createEmptyCell(tableCellType, alignment)).filter(Boolean);
+      const insertedCells = alignments.map((alignment) => createEmptyCell(tableCellType, alignment)).filter(isProseNode);
       rows.push(tableRowType.create(null, insertedCells));
     }
   }

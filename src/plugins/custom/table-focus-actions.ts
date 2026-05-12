@@ -3,7 +3,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { AlignCenter, AlignLeft, AlignRight, Trash2 } from 'lucide-react';
 import { Plugin, PluginKey, TextSelection } from '@milkdown/prose/state';
-import type { EditorView, PluginView } from '@milkdown/prose/view';
+import type { EditorView } from '@milkdown/prose/view';
 import { $prose } from '@milkdown/utils';
 import type { EditorI18nMessages } from '../../types/editor';
 import { resolveEditorMessages } from '../../local/i18n';
@@ -76,7 +76,7 @@ const isEditorViewEditable = (view: EditorView): boolean => {
 /**
  * 创建并维护“聚焦表格删除按钮”插件视图。
  */
-class TableFocusActionsView implements PluginView {
+class TableFocusActionsView {
   // 编辑器视图。
   private view: EditorView;
   // 编辑器文案。
@@ -108,7 +108,7 @@ class TableFocusActionsView implements PluginView {
   // 当前聚焦列对齐方式。
   private currentColumnAlignment: TableCellAlignment = DEFAULT_TABLE_ALIGNMENT;
   // 当前聚焦表格 DOM。
-  private currentTableElement: HTMLElement | null = null;
+  private currentTableElement: HTMLTableElement | null = null;
   // 当前锚点位置是否有效。
   private hasPositionContext = false;
   // 浮层重定位调度器。

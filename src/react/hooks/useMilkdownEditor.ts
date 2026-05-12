@@ -1,6 +1,5 @@
 import { debounce } from 'es-toolkit/function';
-import { useEffect, useMemo, useRef } from 'react';
-import { useEditor } from '@milkdown/react';
+import { useEffect, useRef } from 'react';
 import type { EditorController, EditorI18nMessages, SlashMenuConfig } from '../../types/editor';
 import { createEditor } from '../../core/createEditor';
 
@@ -8,6 +7,8 @@ import { createEditor } from '../../core/createEditor';
  * 定义 useMilkdownEditor 的输入参数。
  */
 export interface UseMilkdownEditorOptions {
+  /** Milkdown 编辑器根容器。 */
+  root: HTMLElement | null;
   /** 需要同步到编辑器的 markdown。 */
   markdown: string;
   /** 编辑器内部浮层 Portal 容器。 */
@@ -26,16 +27,6 @@ export interface UseMilkdownEditorOptions {
   onInitError?: (error: unknown) => void;
   /** 编辑器初始化成功回调。 */
   onInitReady?: () => void;
-}
-
-/**
- * 定义给 @milkdown/react 使用的生命周期适配器。
- */
-interface ReactEditorLifecycleAdapter {
-  /** 启动编辑器。 */
-  create: () => Promise<ReactEditorLifecycleAdapter>;
-  /** 销毁编辑器。 */
-  destroy: () => Promise<void>;
 }
 
 /**
@@ -94,54 +85,61 @@ export const useMilkdownEditor = (options: UseMilkdownEditorOptions): void => {
     };
   }, [options.debounceMs]);
 
-  /** 稳定的编辑器工厂函数。 */
-  const getEditor = useMemo(() => {
-    return (root: HTMLElement): ReactEditorLifecycleAdapter => {
-      /** 当前适配器的实例状态。 */
-      let controller: EditorController | null = null;
+  useEffect(() => {
+    const rootElement = options.root;
+    if (!rootElement) {
+      return;
+    }
 
-      /** 生命周期适配器。 */
-      const adapter: ReactEditorLifecycleAdapter = {
-        create: async () => {
-          try {
-            controller = await createEditor({
-              root,
-              portalContainer: options.portalContainer,
-              markdown: latestMarkdownRef.current,
-              editable: options.editable,
-              messages: options.messages,
-              slashMenu: options.slashMenu,
-              onChange: (nextMarkdown) => {
-                currentMarkdownRef.current = nextMarkdown;
-                debouncedEmitRef.current?.(nextMarkdown);
-              }
-            });
-            controllerRef.current = controller;
-            onInitReadyRef.current?.();
-          } catch (error) {
-            console.error('Milkdown init failed:', error);
-            onInitErrorRef.current?.(error);
+    /** 标记当前 effect 是否已被清理，避免过期异步结果回写。 */
+    let disposed = false;
+    /** 当前 effect 创建的控制器实例。 */
+    let localController: EditorController | null = null;
+
+    void (async () => {
+      try {
+        const controller = await createEditor({
+          root: rootElement,
+          portalContainer: options.portalContainer,
+          markdown: latestMarkdownRef.current,
+          editable: options.editable,
+          messages: options.messages,
+          slashMenu: options.slashMenu,
+          onChange: (nextMarkdown) => {
+            currentMarkdownRef.current = nextMarkdown;
+            debouncedEmitRef.current?.(nextMarkdown);
           }
-          return adapter;
-        },
-        destroy: async () => {
-          debouncedEmitRef.current?.cancel();
-          if (!controller) {
-            return;
-          }
+        });
+
+        if (disposed) {
           await controller.destroy();
-          if (controllerRef.current === controller) {
-            controllerRef.current = null;
-          }
-          controller = null;
+          return;
         }
-      };
 
-      return adapter;
+        localController = controller;
+        controllerRef.current = controller;
+        onInitReadyRef.current?.();
+      } catch (error) {
+        if (!disposed) {
+          console.error('Milkdown init failed:', error);
+          onInitErrorRef.current?.(error);
+        }
+      }
+    })();
+
+    return () => {
+      disposed = true;
+      debouncedEmitRef.current?.cancel();
+      if (!localController) {
+        return;
+      }
+      void localController.destroy();
+      if (controllerRef.current === localController) {
+        controllerRef.current = null;
+      }
+      localController = null;
     };
-  }, [options.editable, options.messages, options.portalContainer, options.slashMenu]);
-
-  useEditor(getEditor, [getEditor]);
+  }, [options.root, options.editable, options.messages, options.portalContainer, options.slashMenu]);
 
   useEffect(() => {
     /** 当前控制器。 */

@@ -560,6 +560,14 @@ export const createMathBlockEditableNodeView = (
   messages: EditorI18nMessages = resolveEditorMessages()
 ): NodeViewConstructor => {
   return (node, view, getPos) => {
-    return new MathBlockEditableNodeView(node, view, getPos, messages);
+    // 将 NodeViewConstructor 的可选 getPos 统一收敛到当前实现可接受的类型范围。
+    const resolvedGetPos =
+      typeof getPos === 'function'
+        ? () => {
+            const nextPosition = getPos();
+            return typeof nextPosition === 'number' ? nextPosition : 0;
+          }
+        : false;
+    return new MathBlockEditableNodeView(node, view, resolvedGetPos, messages);
   };
 };
