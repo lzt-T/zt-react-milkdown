@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 import dts from 'vite-plugin-dts';
 import { resolve } from 'node:path';
 
@@ -14,6 +15,7 @@ export default defineConfig({
   },
   plugins: [
     react(),
+    tailwindcss(),
     dts({
       include: ['src'],
       outDir: 'dist',
@@ -41,7 +43,7 @@ export default defineConfig({
           'react-dom': 'ReactDOM'
         },
         assetFileNames: (assetInfo) => {
-          if (assetInfo.name === 'style.css') {
+          if (assetInfo.name === 'style.css' || assetInfo.name?.endsWith('.css')) {
             return 'style.css';
           }
 
