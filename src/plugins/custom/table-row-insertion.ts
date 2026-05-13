@@ -1,5 +1,8 @@
-import type { Node as ProseNode } from '@milkdown/prose/model';
-import type { EditorState } from '@milkdown/prose/state';
+import { TextSelection } from '@milkdown/prose/state';
+import type { EditorView } from '@milkdown/prose/view';
+import { TableMap, addColumnAfter, addColumnBefore, addRowAfter, addRowBefore, deleteColumn, deleteRow } from '@milkdown/prose/tables';
+import type { FocusedTable } from './table-selection';
+import { resolveCellTextPosition } from './table-selection';
 
 /**
  * 表格行插入方向。
@@ -10,440 +13,165 @@ export type TableRowInsertDirection = 'above' | 'below';
  * 表格列插入方向。
  */
 export type TableColumnInsertDirection = 'left' | 'right';
+
 /**
  * 表格单元格对齐方式。
  */
 export type TableCellAlignment = 'left' | 'center' | 'right';
 
 /**
- * 获取单元格对齐属性。
+ * 将选区定位到指定单元格。
  */
-const resolveCellAlignment = (cellNode: ProseNode | null): string => {
-  return typeof cellNode?.attrs.alignment === 'string' ? cellNode.attrs.alignment : 'left';
-};
-
-/**
- * 创建符合目标类型的表格单元格。
- */
-const createNormalizedCell = (cellType: any, sourceCell: ProseNode | null, alignment: string): ProseNode | null => {
-  // 新单元格属性。
-  const attrs = { alignment };
-  if (sourceCell) {
-    // 复用原单元格内容创建的单元格。
-    const cellWithContent = cellType.createAndFill(attrs, sourceCell.content);
-    if (cellWithContent) {
-      return cellWithContent;
-    }
+const focusTableCell = (view: EditorView, focusedTable: FocusedTable, rowIndex: number, columnIndex: number): boolean => {
+  // 目标单元格文本位置。
+  const targetPosition = resolveCellTextPosition(focusedTable.tableNode, focusedTable.tableStart, rowIndex, columnIndex);
+  if (targetPosition === null) {
+    return false;
   }
 
-  return cellType.createAndFill(attrs);
+  // 当前定位事务。
+  const transaction = view.state.tr.setSelection(TextSelection.near(view.state.tr.doc.resolve(targetPosition), 1));
+  view.dispatch(transaction);
+  return true;
 };
 
 /**
- * 创建空白表格单元格。
+ * 执行 ProseMirror Table 命令。
  */
-const createEmptyCell = (cellType: any, alignment: string): ProseNode | null => {
-  return cellType.createAndFill({ alignment });
-};
-
-/**
- * 过滤掉空单元格并保留 ProseNode 类型信息。
- */
-const isProseNode = (cell: ProseNode | null): cell is ProseNode => {
-  return cell !== null;
-};
-
-/**
- * 将表格行规范为 GFM 表格 schema 所需节点类型。
- */
-const createNormalizedRow = (
-  rowType: any,
-  cellType: any,
-  sourceRow: ProseNode,
-  columnCount: number,
-  alignments: string[]
-): ProseNode | null => {
-  // 当前行单元格集合。
-  const cells = Array.from({ length: columnCount }, (_value, cellIndex) => {
-    return createNormalizedCell(cellType, sourceRow.maybeChild(cellIndex), alignments[cellIndex] ?? 'left');
-  }).filter(isProseNode);
-
-  return rowType.create(null, cells);
-};
-
-/**
- * 创建插入列后的规范化表格行。
- */
-const createRowWithInsertedColumn = (
-  rowType: any,
-  cellType: any,
-  sourceRow: ProseNode,
-  columnCount: number,
-  alignments: string[],
-  targetColumnIndex: number,
-  direction: TableColumnInsertDirection
-): ProseNode | null => {
-  // 当前列继承的对齐方式。
-  const insertedAlignment = alignments[targetColumnIndex] ?? 'left';
-  // 插入列后的单元格集合。
-  const cells: ProseNode[] = [];
-
-  for (let cellIndex = 0; cellIndex < columnCount; cellIndex += 1) {
-    if (cellIndex === targetColumnIndex && direction === 'left') {
-      // 当前列左侧新增的单元格。
-      const insertedCell = createEmptyCell(cellType, insertedAlignment);
-      if (insertedCell) {
-        cells.push(insertedCell);
-      }
-    }
-
-    // 原始单元格。
-    const sourceCell = sourceRow.maybeChild(cellIndex);
-    // 规范化后的原始单元格。
-    const normalizedCell = createNormalizedCell(cellType, sourceCell, alignments[cellIndex] ?? 'left');
-    if (normalizedCell) {
-      cells.push(normalizedCell);
-    }
-
-    if (cellIndex === targetColumnIndex && direction === 'right') {
-      // 当前列右侧新增的单元格。
-      const insertedCell = createEmptyCell(cellType, insertedAlignment);
-      if (insertedCell) {
-        cells.push(insertedCell);
-      }
-    }
+const runTableCommand = (
+  view: EditorView,
+  command: (state: EditorView['state'], dispatch?: EditorView['dispatch'], view?: EditorView) => boolean
+): boolean => {
+  // 命令执行结果。
+  const success = command(view.state, view.dispatch, view);
+  if (!success) {
+    return false;
   }
 
-  return rowType.create(null, cells);
+  view.dispatch(view.state.tr.scrollIntoView());
+  view.focus();
+  return true;
 };
 
 /**
- * 创建删除列后的规范化表格行。
+ * 在目标行上下插入一行。
  */
-const createRowWithDeletedColumn = (
-  rowType: any,
-  cellType: any,
-  sourceRow: ProseNode,
-  columnCount: number,
-  alignments: string[],
-  targetColumnIndex: number
-): ProseNode | null => {
-  // 删除列后的单元格集合。
-  const cells: ProseNode[] = [];
-
-  for (let cellIndex = 0; cellIndex < columnCount; cellIndex += 1) {
-    if (cellIndex === targetColumnIndex) {
-      continue;
-    }
-
-    // 原始单元格。
-    const sourceCell = sourceRow.maybeChild(cellIndex);
-    // 规范化后的保留单元格。
-    const normalizedCell = createNormalizedCell(cellType, sourceCell, alignments[cellIndex] ?? 'left');
-    if (normalizedCell) {
-      cells.push(normalizedCell);
-    }
-  }
-
-  return rowType.create(null, cells);
-};
-
-/**
- * 构造已规范化并插入新行的表格节点。
- */
-export const createTableWithInsertedRow = (
-  state: EditorState,
-  tableNode: ProseNode,
-  targetRowIndex: number,
+export const insertTableRow = (
+  view: EditorView,
+  focusedTable: FocusedTable,
   direction: TableRowInsertDirection
-): ProseNode | null => {
-  // 表格节点类型。
-  const tableType = state.schema.nodes.table;
-  // 表头行节点类型。
-  const tableHeaderRowType = state.schema.nodes.table_header_row;
-  // 普通表格行节点类型。
-  const tableRowType = state.schema.nodes.table_row;
-  // 表头单元格节点类型。
-  const tableHeaderType = state.schema.nodes.table_header;
-  // 普通表格单元格节点类型。
-  const tableCellType = state.schema.nodes.table_cell;
-  if (!tableType || !tableHeaderRowType || !tableRowType || !tableHeaderType || !tableCellType) {
-    return null;
+): boolean => {
+  if (focusedTable.rowIndex < 0 || focusedTable.columnIndex < 0) {
+    return false;
   }
 
-  // 表头行节点。
-  const headerRow = tableNode.childCount > 0 ? tableNode.child(0) : null;
-  // 表格列数。
-  const columnCount = Math.max(1, headerRow?.childCount ?? 0);
-  // 表格列对齐方式。
-  const alignments = Array.from({ length: columnCount }, (_value, cellIndex) => {
-    return resolveCellAlignment(headerRow?.maybeChild(cellIndex) ?? null);
-  });
-  // 插入后的表格行集合。
-  const rows: ProseNode[] = [];
-
-  for (let rowIndex = 0; rowIndex < tableNode.childCount; rowIndex += 1) {
-    if (rowIndex === targetRowIndex && direction === 'above') {
-      // 当前行上方新增的普通表格行。
-      const insertedCells = alignments.map((alignment) => createEmptyCell(tableCellType, alignment)).filter(isProseNode);
-      rows.push(tableRowType.create(null, insertedCells));
-    }
-
-    // 原始行节点。
-    const sourceRow = tableNode.child(rowIndex);
-    // 规范化后的原始行节点。
-    const normalizedRow = createNormalizedRow(
-      rowIndex === 0 ? tableHeaderRowType : tableRowType,
-      rowIndex === 0 ? tableHeaderType : tableCellType,
-      sourceRow,
-      columnCount,
-      alignments
-    );
-    if (normalizedRow) {
-      rows.push(normalizedRow);
-    }
-
-    if (rowIndex === targetRowIndex && direction === 'below') {
-      // 当前行下方新增的普通表格行。
-      const insertedCells = alignments.map((alignment) => createEmptyCell(tableCellType, alignment)).filter(isProseNode);
-      rows.push(tableRowType.create(null, insertedCells));
-    }
+  if (!focusTableCell(view, focusedTable, focusedTable.rowIndex, focusedTable.columnIndex)) {
+    return false;
   }
 
-  return tableType.create(null, rows);
+  return runTableCommand(view, direction === 'above' ? addRowBefore : addRowAfter);
 };
 
 /**
- * 构造已规范化并删除目标行的表格节点。
+ * 删除目标行（首行表头不允许删除）。
  */
-export const createTableWithDeletedRow = (
-  state: EditorState,
-  tableNode: ProseNode,
-  targetRowIndex: number
-): ProseNode | null => {
-  // 表格节点类型。
-  const tableType = state.schema.nodes.table;
-  // 表头行节点类型。
-  const tableHeaderRowType = state.schema.nodes.table_header_row;
-  // 普通表格行节点类型。
-  const tableRowType = state.schema.nodes.table_row;
-  // 表头单元格节点类型。
-  const tableHeaderType = state.schema.nodes.table_header;
-  // 普通表格单元格节点类型。
-  const tableCellType = state.schema.nodes.table_cell;
-  if (!tableType || !tableHeaderRowType || !tableRowType || !tableHeaderType || !tableCellType) {
-    return null;
+export const removeTableRow = (view: EditorView, focusedTable: FocusedTable): boolean => {
+  if (focusedTable.rowIndex <= 0 || focusedTable.columnIndex < 0) {
+    return false;
   }
 
-  if (targetRowIndex <= 0 || targetRowIndex >= tableNode.childCount) {
-    return null;
+  if (!focusTableCell(view, focusedTable, focusedTable.rowIndex, focusedTable.columnIndex)) {
+    return false;
   }
 
-  // 表头行节点。
-  const headerRow = tableNode.childCount > 0 ? tableNode.child(0) : null;
-  // 表格列数。
-  const columnCount = Math.max(1, headerRow?.childCount ?? 0);
-  // 表格列对齐方式。
-  const alignments = Array.from({ length: columnCount }, (_value, cellIndex) => {
-    return resolveCellAlignment(headerRow?.maybeChild(cellIndex) ?? null);
-  });
-  // 删除后的表格行集合。
-  const rows: ProseNode[] = [];
+  return runTableCommand(view, deleteRow);
+};
 
-  for (let rowIndex = 0; rowIndex < tableNode.childCount; rowIndex += 1) {
-    if (rowIndex === targetRowIndex) {
+/**
+ * 在目标列左右插入一列。
+ */
+export const insertTableColumn = (
+  view: EditorView,
+  focusedTable: FocusedTable,
+  direction: TableColumnInsertDirection
+): boolean => {
+  if (focusedTable.rowIndex < 0 || focusedTable.columnIndex < 0) {
+    return false;
+  }
+
+  if (!focusTableCell(view, focusedTable, focusedTable.rowIndex, focusedTable.columnIndex)) {
+    return false;
+  }
+
+  return runTableCommand(view, direction === 'left' ? addColumnBefore : addColumnAfter);
+};
+
+/**
+ * 删除目标列（至少保留一列）。
+ */
+export const removeTableColumn = (view: EditorView, focusedTable: FocusedTable): boolean => {
+  if (focusedTable.rowIndex < 0 || focusedTable.columnIndex < 0) {
+    return false;
+  }
+
+  // 当前表格列数。
+  const columnCount = focusedTable.tableNode.childCount > 0 ? focusedTable.tableNode.child(0).childCount : 0;
+  if (columnCount <= 1) {
+    return false;
+  }
+
+  if (!focusTableCell(view, focusedTable, focusedTable.rowIndex, focusedTable.columnIndex)) {
+    return false;
+  }
+
+  return runTableCommand(view, deleteColumn);
+};
+
+/**
+ * 将目标列设置为指定对齐方式。
+ */
+export const alignTableColumn = (view: EditorView, focusedTable: FocusedTable, alignment: TableCellAlignment): boolean => {
+  if (focusedTable.columnIndex < 0) {
+    return false;
+  }
+
+  // 当前表格映射。
+  const tableMap = TableMap.get(focusedTable.tableNode);
+  // 表格内容起点。
+  const tableContentStart = focusedTable.tableStart + 1;
+  // 列索引。
+  const columnIndex = focusedTable.columnIndex;
+  // 对齐更新事务。
+  const transaction = view.state.tr;
+
+  for (let rowIndex = 0; rowIndex < tableMap.height; rowIndex += 1) {
+    // 当前单元格偏移槽位索引。
+    const mapIndex = rowIndex * tableMap.width + columnIndex;
+    // 当前单元格在 table 内容内的偏移。
+    const cellOffset = tableMap.map[mapIndex];
+    if (typeof cellOffset !== 'number') {
       continue;
     }
 
-    // 原始行节点。
-    const sourceRow = tableNode.child(rowIndex);
-    // 规范化后的保留行节点。
-    const normalizedRow = createNormalizedRow(
-      rowIndex === 0 ? tableHeaderRowType : tableRowType,
-      rowIndex === 0 ? tableHeaderType : tableCellType,
-      sourceRow,
-      columnCount,
-      alignments
-    );
-    if (normalizedRow) {
-      rows.push(normalizedRow);
+    // 当前单元格绝对位置。
+    const cellPosition = tableContentStart + cellOffset;
+    // 当前单元格节点。
+    const cellNode = transaction.doc.nodeAt(cellPosition);
+    if (!cellNode) {
+      continue;
     }
+
+    // 当前单元格新属性。
+    const nextAttrs = { ...cellNode.attrs, alignment };
+    transaction.setNodeMarkup(cellPosition, cellNode.type, nextAttrs, cellNode.marks);
   }
 
-  return tableType.create(null, rows);
-};
-
-/**
- * 构造已规范化并插入新列的表格节点。
- */
-export const createTableWithInsertedColumn = (
-  state: EditorState,
-  tableNode: ProseNode,
-  targetColumnIndex: number,
-  direction: TableColumnInsertDirection
-): ProseNode | null => {
-  // 表格节点类型。
-  const tableType = state.schema.nodes.table;
-  // 表头行节点类型。
-  const tableHeaderRowType = state.schema.nodes.table_header_row;
-  // 普通表格行节点类型。
-  const tableRowType = state.schema.nodes.table_row;
-  // 表头单元格节点类型。
-  const tableHeaderType = state.schema.nodes.table_header;
-  // 普通表格单元格节点类型。
-  const tableCellType = state.schema.nodes.table_cell;
-  if (!tableType || !tableHeaderRowType || !tableRowType || !tableHeaderType || !tableCellType) {
-    return null;
+  if (!transaction.docChanged) {
+    return false;
   }
 
-  // 表头行节点。
-  const headerRow = tableNode.childCount > 0 ? tableNode.child(0) : null;
-  // 表格列数。
-  const columnCount = Math.max(1, headerRow?.childCount ?? 0);
-  if (targetColumnIndex < 0 || targetColumnIndex >= columnCount) {
-    return null;
-  }
-
-  // 表格列对齐方式。
-  const alignments = Array.from({ length: columnCount }, (_value, cellIndex) => {
-    return resolveCellAlignment(headerRow?.maybeChild(cellIndex) ?? null);
-  });
-  // 插入后的表格行集合。
-  const rows: ProseNode[] = [];
-
-  for (let rowIndex = 0; rowIndex < tableNode.childCount; rowIndex += 1) {
-    // 原始行节点。
-    const sourceRow = tableNode.child(rowIndex);
-    // 插入列后的规范化行节点。
-    const normalizedRow = createRowWithInsertedColumn(
-      rowIndex === 0 ? tableHeaderRowType : tableRowType,
-      rowIndex === 0 ? tableHeaderType : tableCellType,
-      sourceRow,
-      columnCount,
-      alignments,
-      targetColumnIndex,
-      direction
-    );
-    if (normalizedRow) {
-      rows.push(normalizedRow);
-    }
-  }
-
-  return tableType.create(null, rows);
-};
-
-/**
- * 构造已规范化并删除目标列的表格节点。
- */
-export const createTableWithDeletedColumn = (
-  state: EditorState,
-  tableNode: ProseNode,
-  targetColumnIndex: number
-): ProseNode | null => {
-  // 表格节点类型。
-  const tableType = state.schema.nodes.table;
-  // 表头行节点类型。
-  const tableHeaderRowType = state.schema.nodes.table_header_row;
-  // 普通表格行节点类型。
-  const tableRowType = state.schema.nodes.table_row;
-  // 表头单元格节点类型。
-  const tableHeaderType = state.schema.nodes.table_header;
-  // 普通表格单元格节点类型。
-  const tableCellType = state.schema.nodes.table_cell;
-  if (!tableType || !tableHeaderRowType || !tableRowType || !tableHeaderType || !tableCellType) {
-    return null;
-  }
-
-  // 表头行节点。
-  const headerRow = tableNode.childCount > 0 ? tableNode.child(0) : null;
-  // 表格列数。
-  const columnCount = Math.max(1, headerRow?.childCount ?? 0);
-  if (columnCount <= 1 || targetColumnIndex < 0 || targetColumnIndex >= columnCount) {
-    return null;
-  }
-
-  // 表格列对齐方式。
-  const alignments = Array.from({ length: columnCount }, (_value, cellIndex) => {
-    return resolveCellAlignment(headerRow?.maybeChild(cellIndex) ?? null);
-  });
-  // 删除后的表格行集合。
-  const rows: ProseNode[] = [];
-
-  for (let rowIndex = 0; rowIndex < tableNode.childCount; rowIndex += 1) {
-    // 原始行节点。
-    const sourceRow = tableNode.child(rowIndex);
-    // 删除列后的规范化行节点。
-    const normalizedRow = createRowWithDeletedColumn(
-      rowIndex === 0 ? tableHeaderRowType : tableRowType,
-      rowIndex === 0 ? tableHeaderType : tableCellType,
-      sourceRow,
-      columnCount,
-      alignments,
-      targetColumnIndex
-    );
-    if (normalizedRow) {
-      rows.push(normalizedRow);
-    }
-  }
-
-  return tableType.create(null, rows);
-};
-
-/**
- * 构造已规范化并更新目标列对齐方式的表格节点。
- */
-export const createTableWithUpdatedColumnAlignment = (
-  state: EditorState,
-  tableNode: ProseNode,
-  targetColumnIndex: number,
-  alignment: TableCellAlignment
-): ProseNode | null => {
-  // 表格节点类型。
-  const tableType = state.schema.nodes.table;
-  // 表头行节点类型。
-  const tableHeaderRowType = state.schema.nodes.table_header_row;
-  // 普通表格行节点类型。
-  const tableRowType = state.schema.nodes.table_row;
-  // 表头单元格节点类型。
-  const tableHeaderType = state.schema.nodes.table_header;
-  // 普通表格单元格节点类型。
-  const tableCellType = state.schema.nodes.table_cell;
-  if (!tableType || !tableHeaderRowType || !tableRowType || !tableHeaderType || !tableCellType) {
-    return null;
-  }
-
-  // 表头行节点。
-  const headerRow = tableNode.childCount > 0 ? tableNode.child(0) : null;
-  // 表格列数。
-  const columnCount = Math.max(1, headerRow?.childCount ?? 0);
-  if (targetColumnIndex < 0 || targetColumnIndex >= columnCount) {
-    return null;
-  }
-
-  // 原表格列对齐方式。
-  const alignments = Array.from({ length: columnCount }, (_value, cellIndex) => {
-    return resolveCellAlignment(headerRow?.maybeChild(cellIndex) ?? null);
-  });
-  // 当前列更新为目标对齐方式。
-  alignments[targetColumnIndex] = alignment;
-  // 更新后的表格行集合。
-  const rows: ProseNode[] = [];
-
-  for (let rowIndex = 0; rowIndex < tableNode.childCount; rowIndex += 1) {
-    // 原始行节点。
-    const sourceRow = tableNode.child(rowIndex);
-    // 更新对齐后的规范化行节点。
-    const normalizedRow = createNormalizedRow(
-      rowIndex === 0 ? tableHeaderRowType : tableRowType,
-      rowIndex === 0 ? tableHeaderType : tableCellType,
-      sourceRow,
-      columnCount,
-      alignments
-    );
-    if (normalizedRow) {
-      rows.push(normalizedRow);
-    }
-  }
-
-  return tableType.create(null, rows);
+  transaction.scrollIntoView();
+  view.dispatch(transaction);
+  view.focus();
+  return true;
 };

@@ -6,6 +6,7 @@ import { dropCursorPlugin } from '../plugins/custom/drop-cursor';
 import { gapCursorPlugin } from '../plugins/custom/gap-cursor';
 import { createMathBlockEditableNodeView } from '../plugins/custom/math-block-editable';
 import { math } from '../plugins/custom/math-plugin';
+import { createSelectionTooltipPlugin } from '../plugins/custom/selection-tooltip';
 import { createSlashMenuPlugin } from '../plugins/custom/slash-menu';
 import { tableArrowEntryPlugin } from '../plugins/custom/table-arrow-entry';
 import { createTableFocusActionsPlugin } from '../plugins/custom/table-focus-actions';
@@ -62,6 +63,8 @@ export const createEditor = async (options: CreateEditorOptions): Promise<Editor
   const messages = options.messages ?? resolveEditorMessages();
   /** 表格聚焦操作插件实例。 */
   const tableFocusActionsPlugin = createTableFocusActionsPlugin(options.portalContainer, messages);
+  /** 选区 tooltip 菜单插件实例。 */
+  const selectionTooltipPlugin = createSelectionTooltipPlugin(options.portalContainer);
 
   /** 默认插件集合。 */
   const slashSetup = await createSlashMenuPlugin(options.portalContainer, options.slashMenu);
@@ -78,6 +81,7 @@ export const createEditor = async (options: CreateEditorOptions): Promise<Editor
     gfm,
     tableArrowEntry: tableArrowEntryPlugin,
     tableFocusActions: tableFocusActionsPlugin,
+    selectionTooltip: selectionTooltipPlugin,
     gapCursor: gapCursorPlugin,
     dropCursor: dropCursorPlugin,
     math,

@@ -2,7 +2,7 @@ import { createElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { AlignCenter, AlignLeft, AlignRight, Trash2 } from 'lucide-react';
-import { Plugin, PluginKey, TextSelection } from '@milkdown/prose/state';
+import { Plugin, PluginKey } from '@milkdown/prose/state';
 import type { EditorView } from '@milkdown/prose/view';
 import { $prose } from '@milkdown/utils';
 import type { EditorI18nMessages } from '../../types/editor';
@@ -10,13 +10,13 @@ import { resolveEditorMessages } from '../../local/i18n';
 import { TableMoreActions } from './table-more-actions';
 import { deleteFocusedTableColumn, deleteFocusedTableRow } from './table-deletion-actions';
 import {
-  createTableWithUpdatedColumnAlignment,
-  createTableWithInsertedColumn,
-  createTableWithInsertedRow,
+  alignTableColumn,
+  insertTableColumn,
+  insertTableRow,
   type TableCellAlignment,
   type TableColumnInsertDirection
 } from './table-row-insertion';
-import { isFocusedTableColumnValid, resolveCellTextPosition, resolveFocusedTable } from './table-selection';
+import { isFocusedTableColumnValid, resolveFocusedTable } from './table-selection';
 import {
   createOverlayRepositionScheduler,
   resolveEditorWrapper,
@@ -238,31 +238,7 @@ class TableFocusActionsView {
       return;
     }
 
-    // 更新当前列对齐后的合法表格节点。
-    const nextTable = createTableWithUpdatedColumnAlignment(
-      this.view.state,
-      focusedTable.tableNode,
-      focusedTable.columnIndex,
-      alignment
-    );
-    if (!nextTable) {
-      return;
-    }
-
-    // 表格替换起点。
-    const replaceFrom = focusedTable.tableStart;
-    // 表格替换终点。
-    const replaceTo = focusedTable.tableStart + focusedTable.tableNodeSize;
-    // 替换为合法表格后的事务。
-    const transaction = this.view.state.tr.replaceWith(replaceFrom, replaceTo, nextTable);
-    // 保持光标留在当前单元格。
-    const targetPosition = resolveCellTextPosition(nextTable, replaceFrom, focusedTable.rowIndex, focusedTable.columnIndex);
-    if (targetPosition !== null) {
-      transaction.setSelection(TextSelection.near(transaction.doc.resolve(targetPosition), 1));
-    }
-    transaction.scrollIntoView();
-    this.view.dispatch(transaction);
-    this.view.focus();
+    alignTableColumn(this.view, focusedTable, alignment);
   }
 
   /**
@@ -296,26 +272,7 @@ class TableFocusActionsView {
       return;
     }
 
-    // 插入新行后的合法表格节点。
-    const nextTable = createTableWithInsertedRow(this.view.state, focusedTable.tableNode, focusedTable.rowIndex, 'below');
-    if (!nextTable) {
-      return;
-    }
-
-    // 表格替换起点。
-    const replaceFrom = focusedTable.tableStart;
-    // 表格替换终点。
-    const replaceTo = focusedTable.tableStart + focusedTable.tableNodeSize;
-    // 替换为合法表格后的事务。
-    const transaction = this.view.state.tr.replaceWith(replaceFrom, replaceTo, nextTable);
-    // 新插入行首个单元格文本位置。
-    const targetPosition = resolveCellTextPosition(nextTable, replaceFrom, focusedTable.rowIndex + 1, 0);
-    if (targetPosition !== null) {
-      transaction.setSelection(TextSelection.near(transaction.doc.resolve(targetPosition), 1));
-    }
-    transaction.scrollIntoView();
-    this.view.dispatch(transaction);
-    this.view.focus();
+    insertTableRow(this.view, focusedTable, 'below');
   };
 
   /**
@@ -328,26 +285,7 @@ class TableFocusActionsView {
       return;
     }
 
-    // 插入新行后的合法表格节点。
-    const nextTable = createTableWithInsertedRow(this.view.state, focusedTable.tableNode, focusedTable.rowIndex, 'above');
-    if (!nextTable) {
-      return;
-    }
-
-    // 表格替换起点。
-    const replaceFrom = focusedTable.tableStart;
-    // 表格替换终点。
-    const replaceTo = focusedTable.tableStart + focusedTable.tableNodeSize;
-    // 替换为合法表格后的事务。
-    const transaction = this.view.state.tr.replaceWith(replaceFrom, replaceTo, nextTable);
-    // 新插入行首个单元格文本位置。
-    const targetPosition = resolveCellTextPosition(nextTable, replaceFrom, focusedTable.rowIndex, 0);
-    if (targetPosition !== null) {
-      transaction.setSelection(TextSelection.near(transaction.doc.resolve(targetPosition), 1));
-    }
-    transaction.scrollIntoView();
-    this.view.dispatch(transaction);
-    this.view.focus();
+    insertTableRow(this.view, focusedTable, 'above');
   };
 
   /**
@@ -360,33 +298,7 @@ class TableFocusActionsView {
       return;
     }
 
-    // 插入新列后的合法表格节点。
-    const nextTable = createTableWithInsertedColumn(
-      this.view.state,
-      focusedTable.tableNode,
-      focusedTable.columnIndex,
-      direction
-    );
-    if (!nextTable) {
-      return;
-    }
-
-    // 表格替换起点。
-    const replaceFrom = focusedTable.tableStart;
-    // 表格替换终点。
-    const replaceTo = focusedTable.tableStart + focusedTable.tableNodeSize;
-    // 替换为合法表格后的事务。
-    const transaction = this.view.state.tr.replaceWith(replaceFrom, replaceTo, nextTable);
-    // 新列索引。
-    const targetColumnIndex = direction === 'left' ? focusedTable.columnIndex : focusedTable.columnIndex + 1;
-    // 新插入列对应单元格文本位置。
-    const targetPosition = resolveCellTextPosition(nextTable, replaceFrom, focusedTable.rowIndex, targetColumnIndex);
-    if (targetPosition !== null) {
-      transaction.setSelection(TextSelection.near(transaction.doc.resolve(targetPosition), 1));
-    }
-    transaction.scrollIntoView();
-    this.view.dispatch(transaction);
-    this.view.focus();
+    insertTableColumn(this.view, focusedTable, direction);
   }
 
   /**

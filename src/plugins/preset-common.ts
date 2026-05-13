@@ -14,6 +14,8 @@ export interface PresetPluginExports {
   tableArrowEntry: unknown;
   /** 表格聚焦操作插件实例。 */
   tableFocusActions: unknown;
+  /** 选中文本 tooltip 菜单插件实例。 */
+  selectionTooltip: unknown;
   /** 块间光标插件实例。 */
   gapCursor: unknown;
   /** 拖拽落点指示器插件实例。 */
@@ -56,6 +58,7 @@ export const resolvePresetPlugins = (pluginExports: PresetPluginExports): Editor
   appendPluginDescriptors(descriptors, 'gfm', pluginExports.gfm);
   appendPluginDescriptors(descriptors, 'table-arrow-entry', pluginExports.tableArrowEntry);
   appendPluginDescriptors(descriptors, 'table-focus-actions', pluginExports.tableFocusActions);
+  appendPluginDescriptors(descriptors, 'selection-tooltip', pluginExports.selectionTooltip);
   appendPluginDescriptors(descriptors, 'gap-cursor', pluginExports.gapCursor);
   appendPluginDescriptors(descriptors, 'drop-cursor', pluginExports.dropCursor);
   appendPluginDescriptors(descriptors, 'math', pluginExports.math);
