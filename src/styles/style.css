@@ -111,6 +111,10 @@
     pointer-events: none;
   }
 
+  .zt-md-portal [data-slot="popover-content"] {
+    pointer-events: auto;
+  }
+
   .zt-md-error {
     @apply absolute right-4 top-4 z-20 rounded-md border border-zt-border px-2 py-1 text-xs;
     background: color-mix(in srgb, var(--zt-surface) 84%, var(--zt-secondary));

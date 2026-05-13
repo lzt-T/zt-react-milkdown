@@ -3,6 +3,7 @@ import { EllipsisVertical } from 'lucide-react';
 import type { EditorI18nMessages } from '../../types/editor';
 import { Button } from '../../components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '../../components/ui/popover';
+import { useCloseOnGlobalScroll } from '../../react/hooks/useCloseOnGlobalScroll';
 
 /**
  * 表格更多菜单属性。
@@ -42,6 +43,8 @@ interface TableMoreActionsProps {
 export const TableMoreActions = (props: TableMoreActionsProps): ReactElement => {
   /** Popover 展开状态。 */
   const [open, setOpen] = useState(false);
+
+  useCloseOnGlobalScroll(open, () => setOpen(false));
 
   /**
    * 阻止菜单交互抢走编辑器选区。
@@ -162,7 +165,8 @@ export const TableMoreActions = (props: TableMoreActionsProps): ReactElement => 
             type: 'button',
             variant: 'ghost',
             size: 'sm',
-            className: 'zt-md-table-action-menu-item',
+            className:
+              'zt-md-table-action-menu-item disabled:pointer-events-auto disabled:cursor-not-allowed',
             disabled: !props.canInsertRowAbove,
             onMouseDown: handleMouseDown,
             onClick: handleInsertRowAbove
@@ -175,7 +179,8 @@ export const TableMoreActions = (props: TableMoreActionsProps): ReactElement => 
             type: 'button',
             variant: 'ghost',
             size: 'sm',
-            className: 'zt-md-table-action-menu-item',
+            className:
+              'zt-md-table-action-menu-item disabled:pointer-events-auto disabled:cursor-not-allowed',
             onMouseDown: handleMouseDown,
             onClick: handleInsertRowBelow
           },
@@ -187,7 +192,8 @@ export const TableMoreActions = (props: TableMoreActionsProps): ReactElement => 
             type: 'button',
             variant: 'ghost',
             size: 'sm',
-            className: 'zt-md-table-action-menu-item',
+            className:
+              'zt-md-table-action-menu-item disabled:pointer-events-auto disabled:cursor-not-allowed',
             disabled: !props.canInsertColumn,
             onMouseDown: handleMouseDown,
             onClick: handleInsertColumnLeft
@@ -200,7 +206,8 @@ export const TableMoreActions = (props: TableMoreActionsProps): ReactElement => 
             type: 'button',
             variant: 'ghost',
             size: 'sm',
-            className: 'zt-md-table-action-menu-item',
+            className:
+              'zt-md-table-action-menu-item disabled:pointer-events-auto disabled:cursor-not-allowed',
             disabled: !props.canInsertColumn,
             onMouseDown: handleMouseDown,
             onClick: handleInsertColumnRight
@@ -218,7 +225,8 @@ export const TableMoreActions = (props: TableMoreActionsProps): ReactElement => 
             type: 'button',
             variant: 'ghost',
             size: 'sm',
-            className: 'zt-md-table-action-menu-item zt-md-table-action-menu-item-danger',
+            className:
+              'zt-md-table-action-menu-item zt-md-table-action-menu-item-danger disabled:pointer-events-auto disabled:cursor-not-allowed',
             disabled: !props.canDeleteRow,
             onMouseDown: handleMouseDown,
             onClick: handleDeleteRow
@@ -231,7 +239,8 @@ export const TableMoreActions = (props: TableMoreActionsProps): ReactElement => 
             type: 'button',
             variant: 'ghost',
             size: 'sm',
-            className: 'zt-md-table-action-menu-item zt-md-table-action-menu-item-danger',
+            className:
+              'zt-md-table-action-menu-item zt-md-table-action-menu-item-danger disabled:pointer-events-auto disabled:cursor-not-allowed',
             disabled: !props.canDeleteColumn,
             onMouseDown: handleMouseDown,
             onClick: handleDeleteColumn

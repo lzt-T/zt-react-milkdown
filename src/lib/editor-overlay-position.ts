@@ -1,3 +1,5 @@
+import { subscribeGlobalScroll } from './global-scroll-listener';
+
 /**
  * 编辑器浮层展开方向。
  */
@@ -137,6 +139,8 @@ export const createOverlayRepositionScheduler = (updateFn: () => void) => {
   let rafId = 0;
   // 当前绑定滚动监听的编辑器滚动容器。
   let scrollListenerWrapper: HTMLElement | null = null;
+  // 当前全局滚动订阅取消函数。
+  let unsubscribeGlobalScroll: (() => void) | null = null;
 
   /**
    * 触发一次 RAF 节流刷新。
@@ -159,10 +163,9 @@ export const createOverlayRepositionScheduler = (updateFn: () => void) => {
    */
   const bindGlobal = (): void => {
     window.addEventListener('resize', schedule);
-    document.addEventListener('scroll', schedule, {
-      capture: true,
-      passive: true
-    });
+    if (!unsubscribeGlobalScroll) {
+      unsubscribeGlobalScroll = subscribeGlobalScroll(schedule);
+    }
   };
 
   /**
@@ -170,7 +173,8 @@ export const createOverlayRepositionScheduler = (updateFn: () => void) => {
    */
   const unbindGlobal = (): void => {
     window.removeEventListener('resize', schedule);
-    document.removeEventListener('scroll', schedule, true);
+    unsubscribeGlobalScroll?.();
+    unsubscribeGlobalScroll = null;
   };
 
   /**
