@@ -12,6 +12,7 @@ import { tableArrowEntryPlugin } from '../plugins/custom/table-arrow-entry';
 import { createTableFocusActionsPlugin } from '../plugins/custom/table-focus-actions';
 import { taskListToggle } from '../plugins/custom/task-list-toggle';
 import { resolveEditorMessages } from '../local/i18n';
+import type { PresetPluginExports } from '../plugins/preset-common';
 // slash 菜单调试日志前缀。
 const SLASH_DEBUG_PREFIX = '[zt-md/slash-debug]';
 
@@ -21,6 +22,10 @@ const SLASH_DEBUG_PREFIX = '[zt-md/slash-debug]';
 export const createEditor = async (options: CreateEditorOptions): Promise<EditorController> => {
   /** core 子模块导出。 */
   const coreKit = (await import('@milkdown/core')) as Record<string, unknown>;
+  /** clipboard 子模块导出。 */
+  const clipboardKit = (await import('@milkdown/plugin-clipboard')) as Record<string, unknown>;
+  /** indent 子模块导出。 */
+  const indentKit = (await import('@milkdown/plugin-indent')) as Record<string, unknown>;
   /** listener 子模块导出。 */
   const listenerKit = (await import('@milkdown/plugin-listener')) as Record<string, unknown>;
   /** commonmark 子模块导出。 */
@@ -53,6 +58,10 @@ export const createEditor = async (options: CreateEditorOptions): Promise<Editor
   const listenerCtx = assertKey(listenerKit, 'listenerCtx');
   /** listener 插件导出对象。 */
   const listener = assertKey(listenerKit, 'listener');
+  /** clipboard 插件导出对象。 */
+  const clipboard = assertKey(clipboardKit, 'clipboard');
+  /** indent 插件导出对象。 */
+  const indent = assertKey(indentKit, 'indent');
   /** commonmark 插件导出对象。 */
   const commonmark = assertKey(commonmarkKit, 'commonmark');
   /** gfm 插件导出对象。 */
@@ -74,11 +83,13 @@ export const createEditor = async (options: CreateEditorOptions): Promise<Editor
     isNull: slashPlugins.length === 0,
     pluginCount: slashPlugins.length
   });
-  /** 默认插件集合。 */
-  const defaultPlugins = resolvePresetPlugins({
+  /** 预设插件导出集合。 */
+  const presetPluginExports: PresetPluginExports = {
     listener,
     commonmark,
     gfm,
+    clipboard,
+    indent,
     tableArrowEntry: tableArrowEntryPlugin,
     tableFocusActions: tableFocusActionsPlugin,
     selectionTooltip: selectionTooltipPlugin,
@@ -87,9 +98,24 @@ export const createEditor = async (options: CreateEditorOptions): Promise<Editor
     math,
     taskListToggle,
     slash: slashPlugins.length > 0 ? slashPlugins : null
+  };
+  /** 启动阶段插件集合（不含运行时延迟插件）。 */
+  const bootstrapPlugins = resolvePresetPlugins(presetPluginExports, {
+    includeRuntime: false
   });
+  /** 运行时延迟注册插件集合。 */
+  const runtimePlugins = resolvePresetPlugins(presetPluginExports, {
+    includeRuntime: true
+  });
+  /** 运行时插件描述列表。 */
+  const runtimePluginDescriptors = runtimePlugins.filter((descriptor) =>
+    descriptor.name === 'clipboard' || descriptor.name === 'indent'
+  );
   console.log(`${SLASH_DEBUG_PREFIX} PRESET_PLUGIN_NAMES`, {
-    names: defaultPlugins.map((descriptor) => descriptor.name)
+    names: bootstrapPlugins.map((descriptor) => descriptor.name)
+  });
+  console.log(`${SLASH_DEBUG_PREFIX} RUNTIME_PLUGIN_NAMES`, {
+    names: runtimePluginDescriptors.map((descriptor) => descriptor.name)
   });
 
   /** 编辑器实例。 */
@@ -118,11 +144,24 @@ export const createEditor = async (options: CreateEditorOptions): Promise<Editor
     }
   });
 
-  defaultPlugins.forEach((descriptor) => {
+  bootstrapPlugins.forEach((descriptor) => {
     editor.use(descriptor.plugin);
   });
 
   await editor.create();
+  runtimePluginDescriptors.forEach((descriptor) => {
+    try {
+      editor.use(descriptor.plugin);
+      console.log(`${SLASH_DEBUG_PREFIX} RUNTIME_PLUGIN_REGISTERED`, {
+        name: descriptor.name
+      });
+    } catch (error) {
+      console.error(`${SLASH_DEBUG_PREFIX} RUNTIME_PLUGIN_REGISTER_FAILED`, {
+        name: descriptor.name,
+        error
+      });
+    }
+  });
 
   /** replaceAll 命令执行器。 */
   const runReplaceAll = createReplaceAllExecutor(replaceAll, editor);

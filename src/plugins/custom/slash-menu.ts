@@ -25,9 +25,14 @@ interface SlashRuntime {
 }
 
 /**
+ * slash 工厂函数类型。
+ */
+type SlashFactory = (id: string) => unknown;
+
+/**
  * 从 unknown 值中安全读取对象字段。
  */
-const getObjectValue = (value: unknown, key: string): unknown => {
+const readObjectField = (value: unknown, key: string): unknown => {
   if (!value || typeof value !== 'object') {
     return undefined;
   }
@@ -36,48 +41,15 @@ const getObjectValue = (value: unknown, key: string): unknown => {
 };
 
 /**
- * 递归解包模块 default 导出，兼容多层互操作包装。
- */
-const unwrapModuleExports = (value: unknown): Record<string, unknown> => {
-  // 当前层对象。
-  let current = value;
-  // 最多尝试解包层数，避免异常循环。
-  let depth = 0;
-
-  while (current && typeof current === 'object' && depth < 6) {
-    // 当前层对象键集合。
-    const keys = Object.keys(current as Record<string, unknown>);
-    // 当前层 default 字段值。
-    const nestedDefault = getObjectValue(current, 'default');
-    if (!nestedDefault || typeof nestedDefault !== 'object') {
-      break;
-    }
-    if (keys.length <= 2 || (keys.length === 3 && keys.includes('__esModule'))) {
-      current = nestedDefault;
-      depth += 1;
-      continue;
-    }
-    break;
-  }
-
-  if (!current || typeof current !== 'object') {
-    return {};
-  }
-
-  return current as Record<string, unknown>;
-};
-
-/**
  * 规范化 slash 工厂返回值。
  */
 const resolveSlashRuntime = async (): Promise<SlashRuntime | null> => {
-  // slash 插件原始导出集合。
-  const rawModule = (await import('@milkdown/plugin-slash')) as Record<string, unknown>;
-  // 统一后的导出集合。
-  const slashModule = unwrapModuleExports(rawModule);
+  // slash 插件导出集合。
+  const slashModule = (await import('@milkdown/plugin-slash')) as { slashFactory?: SlashFactory };
   // slash 工厂函数。
-  const slashFactory = getObjectValue(slashModule, 'slashFactory');
+  const slashFactory = slashModule.slashFactory;
   if (typeof slashFactory !== 'function') {
+    console.error('[zt-md/slash] slashFactory not found');
     return null;
   }
 
@@ -99,10 +71,10 @@ const resolveSlashRuntime = async (): Promise<SlashRuntime | null> => {
     : [tuplePlugin];
   // 多策略解析 slash key。
   const key =
-    getObjectValue(tupleSpec, 'key') ??
-    getObjectValue(tuplePlugin, 'key') ??
-    getObjectValue(tupleThird, 'key') ??
-    getObjectValue(tuple, 'key');
+    readObjectField(tupleSpec, 'key') ??
+    readObjectField(tuplePlugin, 'key') ??
+    readObjectField(tupleThird, 'key') ??
+    readObjectField(tuple, 'key');
   if (plugins.length === 0 || typeof key === 'undefined') {
     return null;
   }
@@ -136,28 +108,18 @@ export const createSlashMenuPlugin = async (portalContainer: HTMLElement, config
     let activeIndex = 0;
     // 当前编辑器视图引用。
     let currentView: any = null;
-    // 当前绑定过捕获监听的编辑器根节点。
-    let boundEditorDom: HTMLElement | null = null;
     // 当前过滤后的菜单项。
     let visibleItems: SlashMenuItem[] = items;
+    // 当前周期可交互态快照。
+    let menuInteractable = false;
     // 菜单导航键集合。
     const NAVIGATION_KEYS = new Set(['ArrowDown', 'ArrowUp', 'Enter', 'Escape']);
-
-    /**
-     * 判断当前是否处于 slash 可交互态。
-     */
-    const isSlashInteractable = (): boolean => {
-      if (!menuView.isVisible() || !currentView) {
-        return false;
-      }
-      return resolveMenuState(currentView, items).shouldShow;
-    };
 
     /**
      * 处理菜单可见态下的键盘导航。
      */
     const handleVisibleMenuKeyDown = (event: KeyboardEvent): boolean => {
-      if (!NAVIGATION_KEYS.has(event.key) || !isSlashInteractable()) {
+      if (!NAVIGATION_KEYS.has(event.key) || !menuInteractable) {
         return false;
       }
       if (event.key === 'ArrowDown') {
@@ -198,47 +160,6 @@ export const createSlashMenuPlugin = async (portalContainer: HTMLElement, config
     };
 
     /**
-     * 在编辑器根节点绑定 keydown 捕获监听，确保菜单可见时优先消费按键。
-     */
-    const bindEditorCaptureKeydown = (view: any): void => {
-      const nextEditorDom = view?.dom as HTMLElement | null;
-      if (boundEditorDom === nextEditorDom) {
-        return;
-      }
-      if (boundEditorDom) {
-        boundEditorDom.removeEventListener('keydown', handleEditorCaptureKeydown, true);
-      }
-      boundEditorDom = nextEditorDom;
-      if (!boundEditorDom) {
-        return;
-      }
-      boundEditorDom.addEventListener('keydown', handleEditorCaptureKeydown, true);
-    };
-
-    /**
-     * 清理编辑器根节点上的 keydown 捕获监听。
-     */
-    const unbindEditorCaptureKeydown = (): void => {
-      if (!boundEditorDom) {
-        return;
-      }
-      boundEditorDom.removeEventListener('keydown', handleEditorCaptureKeydown, true);
-      boundEditorDom = null;
-    };
-
-    /**
-     * 编辑器捕获阶段键盘处理：菜单可见时优先消费导航键。
-     */
-    const handleEditorCaptureKeydown = (event: KeyboardEvent): void => {
-      const handled = handleVisibleMenuKeyDown(event);
-      if (!handled) {
-        return;
-      }
-      event.preventDefault();
-      event.stopPropagation();
-    };
-
-    /**
      * 解析当前光标在视口中的锚点矩形。
      */
     const resolveAnchorRect = (view: any): DOMRect | null => {
@@ -264,6 +185,7 @@ export const createSlashMenuPlugin = async (portalContainer: HTMLElement, config
       // 当前菜单状态。
       const nextState = resolveMenuState(view, items);
       visibleItems = nextState.visibleItems;
+      menuInteractable = nextState.shouldShow;
       if (nextState.shouldShow && activeIndex >= visibleItems.length) {
         activeIndex = 0;
       }
@@ -367,11 +289,10 @@ export const createSlashMenuPlugin = async (portalContainer: HTMLElement, config
         view: () => ({
           update: (view: any) => {
             currentView = view;
-            bindEditorCaptureKeydown(view);
             syncMenuState(view);
           },
           destroy: () => {
-            unbindEditorCaptureKeydown();
+            menuInteractable = false;
             menuView.destroy();
           }
         })

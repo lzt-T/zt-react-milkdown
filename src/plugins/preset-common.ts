@@ -10,6 +10,10 @@ export interface PresetPluginExports {
   commonmark: unknown;
   /** gfm 插件实例。 */
   gfm: unknown;
+  /** clipboard 插件实例。 */
+  clipboard: unknown;
+  /** indent 插件实例。 */
+  indent: unknown;
   /** 表格方向键进入插件实例。 */
   tableArrowEntry: unknown;
   /** 表格聚焦操作插件实例。 */
@@ -26,6 +30,14 @@ export interface PresetPluginExports {
   taskListToggle: unknown;
   /** slash 插件实例（可为 null 表示关闭）。 */
   slash?: unknown | null;
+}
+
+/**
+ * 默认插件收集配置。
+ */
+export interface ResolvePresetPluginsOptions {
+  /** 是否包含运行时延迟注册插件。 */
+  includeRuntime?: boolean;
 }
 
 /**
@@ -49,13 +61,22 @@ const appendPluginDescriptors = (
 /**
  * 基于显式插件导出收集默认插件。
  */
-export const resolvePresetPlugins = (pluginExports: PresetPluginExports): EditorPluginDescriptor[] => {
+export const resolvePresetPlugins = (
+  pluginExports: PresetPluginExports,
+  options: ResolvePresetPluginsOptions = {}
+): EditorPluginDescriptor[] => {
   /** 默认插件描述列表。 */
   const descriptors: EditorPluginDescriptor[] = [];
+  /** 是否包含运行时插件。 */
+  const includeRuntime = options.includeRuntime ?? true;
 
   appendPluginDescriptors(descriptors, 'listener', pluginExports.listener);
   appendPluginDescriptors(descriptors, 'commonmark', pluginExports.commonmark);
   appendPluginDescriptors(descriptors, 'gfm', pluginExports.gfm);
+  if (includeRuntime) {
+    appendPluginDescriptors(descriptors, 'clipboard', pluginExports.clipboard);
+    appendPluginDescriptors(descriptors, 'indent', pluginExports.indent);
+  }
   appendPluginDescriptors(descriptors, 'table-arrow-entry', pluginExports.tableArrowEntry);
   appendPluginDescriptors(descriptors, 'table-focus-actions', pluginExports.tableFocusActions);
   appendPluginDescriptors(descriptors, 'selection-tooltip', pluginExports.selectionTooltip);
