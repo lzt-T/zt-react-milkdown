@@ -4,6 +4,7 @@ import { resolvePresetPlugins } from '../plugins/preset-common';
 import { assertKey } from '../utils/guard';
 import { dropCursorPlugin } from '../plugins/custom/drop-cursor';
 import { gapCursorPlugin } from '../plugins/custom/gap-cursor';
+import { createImageEditableNodeView } from '../plugins/custom/image-editable';
 import { createMathBlockEditableNodeView } from '../plugins/custom/math-block-editable';
 import { math } from '../plugins/custom/math-plugin';
 import { createSelectionTooltipPlugin } from '../plugins/custom/selection-tooltip';
@@ -159,6 +160,7 @@ export const createEditor = async (options: CreateEditorOptions): Promise<Editor
     const currentNodeViews = (ctx.get(nodeViewCtx) ?? []) as Array<[string, unknown]>;
     ctx.set(nodeViewCtx, [
       ...currentNodeViews,
+      ['image', createImageEditableNodeView(messages)],
       ['math_block', createMathBlockEditableNodeView(messages)]
     ]);
 

@@ -10,6 +10,7 @@ export const enUSMessages: EditorI18nMessages = {
   mathBlockSourceAriaLabel: 'Math block source',
   mathBlockCopyAriaLabel: 'Copy math source',
   mathBlockDeleteAriaLabel: 'Delete math block',
+  imageDeleteAriaLabel: 'Delete image',
   tableDeleteAriaLabel: 'Delete table',
   tableMoreAriaLabel: 'More table actions',
   tableAlignLeftAriaLabel: 'Align current column left',

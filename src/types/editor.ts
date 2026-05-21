@@ -26,6 +26,8 @@ export interface EditorI18nMessages {
   mathBlockCopyAriaLabel: string;
   /** 公式块删除按钮无障碍标签。 */
   mathBlockDeleteAriaLabel: string;
+  /** 图片删除按钮无障碍标签。 */
+  imageDeleteAriaLabel: string;
   /** 表格删除按钮无障碍标签。 */
   tableDeleteAriaLabel: string;
   /** 表格更多按钮无障碍标签。 */

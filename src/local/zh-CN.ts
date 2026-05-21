@@ -10,6 +10,7 @@ export const zhCNMessages: EditorI18nMessages = {
   mathBlockSourceAriaLabel: '公式块源码',
   mathBlockCopyAriaLabel: '复制公式源码',
   mathBlockDeleteAriaLabel: '删除公式块',
+  imageDeleteAriaLabel: '删除图片',
   tableDeleteAriaLabel: '删除表格',
   tableMoreAriaLabel: '更多表格操作',
   tableAlignLeftAriaLabel: '当前列左对齐',
