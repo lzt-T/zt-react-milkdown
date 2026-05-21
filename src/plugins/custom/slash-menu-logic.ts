@@ -27,7 +27,8 @@ const DEFAULT_SLASH_MENU_ITEMS: SlashMenuItem[] = [
   { id: 'blockquote', label: '引用块', group: '插入', icon: 'TextQuote', command: 'blockquote' },
   { id: 'inline-code', label: '行内代码', group: '插入', icon: 'Code', command: 'inlineCode' },
   { id: 'math-block', label: '公式块', group: '插入', icon: 'Sigma', command: 'mathBlock' },
-  { id: 'table', label: '表格', group: '插入', icon: 'Table', command: 'table' }
+  { id: 'table', label: '表格', group: '插入', icon: 'Table', command: 'table' },
+  { id: 'image', label: '图片', group: '媒体', icon: 'Image', command: 'image' }
 ];
 
 /**

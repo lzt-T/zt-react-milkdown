@@ -5,6 +5,7 @@
 @import "../theme/tokens.css";
 /* @import "./modules/math-block.css"; */
 @import "./modules/slash-menu.css";
+@import "./modules/image-upload-dialog.css";
 @import "./modules/selection-menu.css";
 @import "./modules/gap-cursor.css";
 @import "./modules/drop-cursor.css";
@@ -113,7 +114,9 @@
     pointer-events: none;
   }
 
-  .zt-md-portal [data-slot="popover-content"] {
+  .zt-md-portal [data-slot="popover-content"],
+  .zt-md-portal [data-slot="dialog-overlay"],
+  .zt-md-portal [data-slot="dialog-content"] {
     pointer-events: auto;
   }
 
@@ -139,6 +142,12 @@
 
   .zt-md-editor .ProseMirror p {
     margin: 0;
+  }
+
+  .zt-md-editor .ProseMirror img {
+    display: block;
+    max-width: 100%;
+    height: auto;
   }
 
   .zt-md-editor .ProseMirror h1,

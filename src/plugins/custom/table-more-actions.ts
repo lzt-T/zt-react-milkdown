@@ -33,8 +33,6 @@ interface TableMoreActionsProps {
   onDeleteRow: () => void;
   /** 删除当前列回调。 */
   onDeleteColumn: () => void;
-  /** 保持编辑器聚焦回调。 */
-  onKeepEditorFocus: () => void;
 }
 
 /**
@@ -54,13 +52,10 @@ export const TableMoreActions = (props: TableMoreActionsProps): ReactElement => 
   };
 
   /**
-   * 切换菜单展开状态并保持编辑器聚焦。
+   * 切换菜单展开状态。
    */
   const handleOpenChange = (nextOpen: boolean): void => {
     setOpen(nextOpen);
-    if (nextOpen) {
-      props.onKeepEditorFocus();
-    }
   };
 
   /**
@@ -130,11 +125,9 @@ export const TableMoreActions = (props: TableMoreActionsProps): ReactElement => 
         asChild: true
       },
       createElement(
-        Button,
+        'button',
         {
           type: 'button',
-          variant: 'ghost',
-          size: 'icon-sm',
           className: 'zt-md-table-action-button',
           'aria-label': props.messages.tableMoreAriaLabel,
           onMouseDown: handleMouseDown

@@ -50,6 +50,50 @@ export interface EditorI18nMessages {
   tableDeleteColumnLabel: string;
   /** 公式渲染失败提示。 */
   mathRenderError: string;
+  /** 图片上传弹窗标题。 */
+  imageUploadDialogTitle: string;
+  /** 图片文件拖拽区域提示。 */
+  imageUploadDropLabel: string;
+  /** 图片文件选择按钮文案。 */
+  imageUploadPickFileLabel: string;
+  /** 图片文件上传页签文案。 */
+  imageUploadFileTab: string;
+  /** 图片链接页签文案。 */
+  imageUploadUrlTab: string;
+  /** 图片链接输入框占位文案。 */
+  imageUploadUrlPlaceholder: string;
+  /** 图片链接插入按钮文案。 */
+  imageUploadInsertUrlLabel: string;
+  /** 图片插入确认按钮文案。 */
+  imageUploadConfirmLabel: string;
+  /** 图片上传中提示。 */
+  imageUploadUploadingLabel: string;
+  /** 图片上传取消按钮文案。 */
+  imageUploadCancelLabel: string;
+  /** 图片加载失败提示。 */
+  imageUploadLoadFailed: string;
+  /** 图片重新选择提示。 */
+  imageUploadReselectHint: string;
+  /** 图片格式和大小提示。 */
+  imageUploadSupportsAndMax: string;
+  /** 文件过大错误提示。 */
+  imageUploadFileTooLarge: string;
+  /** 文件过大错误提示（带体积占位符）。 */
+  imageUploadFileSizeExceeded: string;
+  /** 非图片文件错误提示。 */
+  imageUploadInvalidType: string;
+  /** 上传失败错误提示。 */
+  imageUploadFailed: string;
+  /** 文件读取失败提示。 */
+  imageUploadFileReadFailed: string;
+  /** 图片链接格式错误提示。 */
+  imageUploadInvalidUrl: string;
+  /** 图片链接为空错误提示。 */
+  imageUploadUrlRequired: string;
+  /** 请选择图片或输入链接提示。 */
+  imageUploadSelectOrEnterImage: string;
+  /** 图片上传等待提示。 */
+  imageUploadUploadingWait: string;
 }
 
 /**
@@ -69,7 +113,23 @@ export type SlashMenuCommand =
   | 'blockquote'
   | 'inlineCode'
   | 'mathBlock'
-  | 'table';
+  | 'table'
+  | 'image';
+
+/**
+ * 定义图片文件上传处理函数。
+ */
+export type ImageUploadHandler = (file: File) => string | Promise<string>;
+
+/**
+ * 定义图片上传配置。
+ */
+export interface ImageUploadConfig {
+  /** 自定义图片上传函数，返回可插入文档的图片链接。 */
+  upload?: ImageUploadHandler;
+  /** 允许上传的最大文件体积（字节）。 */
+  maxFileSize?: number;
+}
 
 /**
  * 定义 slash 菜单项结构。
@@ -132,6 +192,8 @@ export interface MilkdownEditorProps {
   headerSlot?: ReactNode;
   /** slash 菜单配置。 */
   slashMenu?: SlashMenuConfig;
+  /** 图片上传配置。 */
+  imageUpload?: ImageUploadConfig;
 }
 
 /**
@@ -150,6 +212,8 @@ export interface CreateEditorOptions {
   messages?: EditorI18nMessages;
   /** slash 菜单配置。 */
   slashMenu?: SlashMenuConfig;
+  /** 图片上传配置。 */
+  imageUpload?: ImageUploadConfig;
   /** Markdown 变化事件。 */
   onChange: EditorChangeHandler;
 }

@@ -35,6 +35,7 @@ const MilkdownRuntime = (props: {
   debounceMs: number;
   messages: ReturnType<typeof resolveEditorMessages>;
   slashMenu: MilkdownEditorProps['slashMenu'];
+  imageUpload: MilkdownEditorProps['imageUpload'];
   portalContainer: HTMLElement;
   editorStyle: CSSProperties & Record<'--zt-gap-placeholder-content', string>;
   onMarkdownChange: (markdown: string) => void;
@@ -49,6 +50,7 @@ const MilkdownRuntime = (props: {
     debounceMs: props.debounceMs,
     messages: props.messages,
     slashMenu: props.slashMenu,
+    imageUpload: props.imageUpload,
     onMarkdownChange: props.onMarkdownChange,
     onInitReady: props.onInitReady,
     onInitError: props.onInitError
@@ -149,6 +151,7 @@ export const MilkdownEditor = (props: MilkdownEditorProps): JSX.Element => {
             debounceMs={debounceMs}
             messages={messages}
             slashMenu={props.slashMenu}
+            imageUpload={props.imageUpload}
             editorStyle={editorStyle}
             onMarkdownChange={handleMarkdownChange}
             onInitReady={handleInitReady}

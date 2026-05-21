@@ -76,7 +76,7 @@ export const createEditor = async (options: CreateEditorOptions): Promise<Editor
   const selectionTooltipPlugin = createSelectionTooltipPlugin(options.portalContainer);
 
   /** 默认插件集合。 */
-  const slashSetup = await createSlashMenuPlugin(options.portalContainer, options.slashMenu);
+  const slashSetup = await createSlashMenuPlugin(options.portalContainer, options.slashMenu, messages, options.imageUpload);
   /** slash 插件实例列表。 */
   const slashPlugins = slashSetup.plugins;
   console.log(`${SLASH_DEBUG_PREFIX} CREATE_EDITOR_SLASH_PLUGIN`, {

@@ -1,5 +1,6 @@
-import type { SlashMenuConfig, SlashMenuItem } from '../../types/editor';
+import type { EditorI18nMessages, ImageUploadConfig, SlashMenuConfig, SlashMenuItem } from '../../types/editor';
 import { resolveEditorWrapper, resolvePlacement, toContentAnchor } from '../../lib/editor-overlay-position';
+import { showImageUploadDialog } from './image-upload-dialog';
 import { runSlashCommand } from './slash-menu-commands';
 import { removeSlashQueryAtCursor, resolveMenuState, resolveSlashMenuItems } from './slash-menu-logic';
 import { createSlashMenuViewController } from './slash-menu-view';
@@ -88,7 +89,12 @@ const resolveSlashRuntime = async (): Promise<SlashRuntime | null> => {
 /**
  * 创建 slash 菜单插件。
  */
-export const createSlashMenuPlugin = async (portalContainer: HTMLElement, config?: SlashMenuConfig): Promise<SlashPluginSetup> => {
+export const createSlashMenuPlugin = async (
+  portalContainer: HTMLElement,
+  config?: SlashMenuConfig,
+  messages?: EditorI18nMessages,
+  imageUpload?: ImageUploadConfig
+): Promise<SlashPluginSetup> => {
   if (config?.enabled === false) {
     return { plugins: [], config: null };
   }
@@ -236,6 +242,18 @@ export const createSlashMenuPlugin = async (portalContainer: HTMLElement, config
       // 是否成功删除 slash 查询词。
       const removedSlashQuery = removeSlashQueryAtCursor(currentView);
       if (!removedSlashQuery) {
+        return;
+      }
+      if (item.command === 'image') {
+        menuView.setVisible(false);
+        if (messages) {
+          showImageUploadDialog({
+            portalContainer,
+            view: currentView,
+            messages,
+            imageUpload
+          });
+        }
         return;
       }
       // 当前命令是否执行成功。

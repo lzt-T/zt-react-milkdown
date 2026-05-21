@@ -7,6 +7,8 @@ export type {
   EditorI18nMessages,
   EditorLocale,
   EditorTheme,
+  ImageUploadConfig,
+  ImageUploadHandler,
   MilkdownEditorProps,
   CreateEditorOptions,
   SlashMenuCommand,

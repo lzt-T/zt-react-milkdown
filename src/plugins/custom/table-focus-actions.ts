@@ -346,8 +346,7 @@ class TableFocusActionsView {
         onInsertColumnLeft: this.handleInsertColumnLeft,
         onInsertColumnRight: this.handleInsertColumnRight,
         onDeleteRow: this.handleDeleteRow,
-        onDeleteColumn: this.handleDeleteColumn,
-        onKeepEditorFocus: () => this.view.focus()
+        onDeleteColumn: this.handleDeleteColumn
       })
     );
   }
