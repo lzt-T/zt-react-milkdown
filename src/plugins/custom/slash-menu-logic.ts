@@ -21,6 +21,7 @@ const DEFAULT_SLASH_MENU_ITEMS: SlashMenuItem[] = [
   { id: 'ordered-list', label: '有序列表', group: '列表', icon: 'ListOrdered', command: 'orderedList' },
   { id: 'task-list', label: '任务列表', group: '列表', icon: 'ListTodo', command: 'taskList' },
   { id: 'blockquote', label: '引用块', group: '插入', icon: 'TextQuote', command: 'blockquote' },
+  { id: 'inline-code', label: '行内代码', group: '插入', icon: 'Code', command: 'inlineCode' },
   { id: 'math-block', label: '公式块', group: '插入', icon: 'Sigma', command: 'mathBlock' },
   { id: 'table', label: '表格', group: '插入', icon: 'Table', command: 'table' }
 ];

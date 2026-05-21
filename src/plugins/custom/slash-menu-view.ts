@@ -3,6 +3,7 @@ import { createElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import {
   Circle,
+  Code,
   Heading1,
   Heading2,
   Heading3,
@@ -31,6 +32,7 @@ const SLASH_MENU_ICON_MAP: Record<string, LucideIcon> = {
   List,
   ListOrdered,
   ListTodo,
+  Code,
   TextQuote,
   Sigma,
   Table

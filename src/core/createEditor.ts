@@ -124,7 +124,36 @@ export const createEditor = async (options: CreateEditorOptions): Promise<Editor
     ctx.set(rootCtx, options.root);
     ctx.set(defaultValueCtx, options.markdown);
     ctx.set(editorViewOptionsCtx, {
-      editable: () => options.editable
+      editable: () => options.editable,
+      handleClick: (_view: unknown, _position: number, event: MouseEvent) => {
+        // 当前点击目标节点。
+        const target = event.target;
+        if (!(target instanceof Element)) {
+          return false;
+        }
+
+        // 当前点击命中的链接元素。
+        const anchor = target.closest('a[href]');
+        if (!(anchor instanceof HTMLAnchorElement)) {
+          return false;
+        }
+
+        // 当前链接地址。
+        const href = anchor.getAttribute('href')?.trim();
+        if (!href) {
+          return false;
+        }
+
+        // 仅在 Ctrl+点击 时触发链接跳转。
+        if (!event.ctrlKey) {
+          return false;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+        window.open(href, '_blank', 'noopener,noreferrer');
+        return true;
+      }
     });
     /** 当前 nodeView 注册列表。 */
     const currentNodeViews = (ctx.get(nodeViewCtx) ?? []) as Array<[string, unknown]>;

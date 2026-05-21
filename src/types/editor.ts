@@ -63,6 +63,7 @@ export type SlashMenuCommand =
   | 'orderedList'
   | 'taskList'
   | 'blockquote'
+  | 'inlineCode'
   | 'mathBlock'
   | 'table';
 

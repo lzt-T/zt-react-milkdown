@@ -264,8 +264,10 @@ export const createSlashMenuPlugin = async (portalContainer: HTMLElement, config
       event.preventDefault();
       // 点击节点。
       const target = event.target as HTMLElement | null;
+      // 当前命中的菜单项节点（允许点击子节点时向上查找）。
+      const matchedItem = target?.closest('.slash-menu-item') as HTMLElement | null;
       // 点击命令名。
-      const clickedCommand = target?.dataset.command ?? '';
+      const clickedCommand = matchedItem?.dataset.command ?? '';
       if (!clickedCommand) {
         return;
       }

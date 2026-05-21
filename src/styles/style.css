@@ -10,6 +10,7 @@
 @import "./modules/drop-cursor.css";
 @import "./modules/math-block.css";
 @import "./modules/blockquote.css";
+@import "./modules/inline-code.css";
 @import "./modules/task-list.css";
 @import "./modules/table.css";
 

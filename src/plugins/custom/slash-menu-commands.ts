@@ -202,6 +202,17 @@ const setCurrentListItemChecked = (view: any, checked: boolean): boolean => {
 };
 
 /**
+ * 从 schema marks 中按候选名解析 mark 类型。
+ */
+const resolveMarkType = (view: any, markNames: string[]): unknown | null => {
+  // 当前 schema mark 集合。
+  const marks = (view?.state?.schema?.marks ?? {}) as Record<string, unknown>;
+  // 命中的 mark 名称。
+  const matchedName = markNames.find((markName) => marks[markName]);
+  return matchedName ? marks[matchedName] ?? null : null;
+};
+
+/**
  * 运行 slash 命令并返回是否成功。
  */
 export const runSlashCommand = async (view: any, command: SlashMenuCommand): Promise<boolean> => {
@@ -217,9 +228,16 @@ export const runSlashCommand = async (view: any, command: SlashMenuCommand): Pro
   const setBlockType = getObjectValue(proseCommandsModule, 'setBlockType');
   // wrapIn 命令工厂。
   const wrapIn = getObjectValue(proseCommandsModule, 'wrapIn');
+  // toggleMark 命令工厂。
+  const toggleMark = getObjectValue(proseCommandsModule, 'toggleMark');
   // wrapInList 命令工厂。
   const wrapInList = getObjectValue(proseListModule, 'wrapInList');
-  if (typeof setBlockType !== 'function' || typeof wrapIn !== 'function' || typeof wrapInList !== 'function') {
+  if (
+    typeof setBlockType !== 'function' ||
+    typeof wrapIn !== 'function' ||
+    typeof wrapInList !== 'function' ||
+    typeof toggleMark !== 'function'
+  ) {
     return false;
   }
 
@@ -278,6 +296,19 @@ export const runSlashCommand = async (view: any, command: SlashMenuCommand): Pro
       return false;
     }
     return setCurrentListItemChecked(view, false);
+  }
+
+  if (command === 'inlineCode') {
+    // inline code mark 类型（兼容不同命名）。
+    const inlineCodeMarkType = resolveMarkType(view, ['inlineCode', 'code_inline']);
+    if (!inlineCodeMarkType) {
+      return false;
+    }
+    // 行内代码切换命令。
+    const inlineCodeCommand = (toggleMark as (markType: unknown, attrs?: Record<string, unknown>) => EditorCommandExecutor)(
+      inlineCodeMarkType
+    );
+    return runCommand(inlineCodeCommand, view);
   }
 
   if (command === 'mathBlock') {
