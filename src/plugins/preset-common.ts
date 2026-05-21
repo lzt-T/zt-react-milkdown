@@ -16,6 +16,8 @@ export interface PresetPluginExports {
   indent: unknown;
   /** 表格方向键进入插件实例。 */
   tableArrowEntry: unknown;
+  /** 公式块 Backspace 进入插件实例。 */
+  mathBackspaceEntry: unknown;
   /** 表格聚焦操作插件实例。 */
   tableFocusActions: unknown;
   /** 选中文本 tooltip 菜单插件实例。 */
@@ -78,6 +80,7 @@ export const resolvePresetPlugins = (
     appendPluginDescriptors(descriptors, 'indent', pluginExports.indent);
   }
   appendPluginDescriptors(descriptors, 'table-arrow-entry', pluginExports.tableArrowEntry);
+  appendPluginDescriptors(descriptors, 'math-backspace-entry', pluginExports.mathBackspaceEntry);
   appendPluginDescriptors(descriptors, 'table-focus-actions', pluginExports.tableFocusActions);
   appendPluginDescriptors(descriptors, 'selection-tooltip', pluginExports.selectionTooltip);
   appendPluginDescriptors(descriptors, 'gap-cursor', pluginExports.gapCursor);

@@ -1,11 +1,18 @@
 @layer components {
   .zt-md-editor .zt-md-image {
-    @apply relative inline-block max-w-full;
+    @apply relative block max-w-full;
+    width: fit-content;
+    margin-inline: auto;
+    line-height: 0;
   }
 
   .zt-md-editor .zt-md-image img {
     @apply block max-w-full;
     height: auto;
+  }
+
+  .zt-md-editor .zt-md-image[data-has-width='true'] img {
+    width: 100%;
   }
 
   .zt-md-editor .zt-md-image-actions {
@@ -32,5 +39,34 @@
 
   .zt-md-editor .zt-md-image-action-button svg {
     @apply size-4;
+  }
+
+  .zt-md-editor .zt-md-image-resize-handle {
+    @apply absolute top-1/2 z-10 opacity-0 transition-opacity duration-150;
+    width: 0.25rem;
+    height: 2.75rem;
+    max-height: calc(100% - 1rem);
+    min-height: 1.75rem;
+    background: var(--zt-primary);
+    border-radius: 999px;
+    box-shadow: 0 0 0 1px var(--zt-surface);
+    cursor: ew-resize;
+    pointer-events: none;
+    transform: translateY(-50%);
+  }
+
+  .zt-md-editor .zt-md-image-resize-handle-left {
+    left: 0.5rem;
+  }
+
+  .zt-md-editor .zt-md-image-resize-handle-right {
+    right: 0.5rem;
+  }
+
+  .zt-md-editor .zt-md-image[data-editable='true']:hover .zt-md-image-resize-handle,
+  .zt-md-editor .zt-md-image[data-editable='true']:focus-within .zt-md-image-resize-handle,
+  .zt-md-editor .zt-md-image[data-editable='true'][data-resizing='true'] .zt-md-image-resize-handle {
+    @apply opacity-100;
+    pointer-events: auto;
   }
 }

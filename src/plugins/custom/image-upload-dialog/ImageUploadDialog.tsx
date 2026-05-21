@@ -5,6 +5,7 @@ import { Button } from '../../../components/ui/button';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle
@@ -336,6 +337,9 @@ export const ImageUploadDialog = ({
       >
         <DialogHeader>
           <DialogTitle>{messages.imageUploadDialogTitle}</DialogTitle>
+          <DialogDescription className="sr-only">
+            {`${messages.imageUploadFileTab}，${messages.imageUploadUrlTab}`}
+          </DialogDescription>
         </DialogHeader>
 
         <div className="zt-md-image-upload-segmented" role="tablist" aria-label={messages.imageUploadDialogTitle}>

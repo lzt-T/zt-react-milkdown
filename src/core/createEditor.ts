@@ -5,7 +5,9 @@ import { assertKey } from '../utils/guard';
 import { dropCursorPlugin } from '../plugins/custom/drop-cursor';
 import { gapCursorPlugin } from '../plugins/custom/gap-cursor';
 import { createImageEditableNodeView } from '../plugins/custom/image-editable';
+import { configureImageResizableSchema } from '../plugins/custom/image-resizable-schema';
 import { createMathBlockEditableNodeView } from '../plugins/custom/math-block-editable';
+import { mathBackspaceEntryPlugin } from '../plugins/custom/math-backspace-entry';
 import { math } from '../plugins/custom/math-plugin';
 import { createSelectionTooltipPlugin } from '../plugins/custom/selection-tooltip';
 import { createSlashMenuPlugin } from '../plugins/custom/slash-menu';
@@ -92,6 +94,7 @@ export const createEditor = async (options: CreateEditorOptions): Promise<Editor
     clipboard,
     indent,
     tableArrowEntry: tableArrowEntryPlugin,
+    mathBackspaceEntry: mathBackspaceEntryPlugin,
     tableFocusActions: tableFocusActionsPlugin,
     selectionTooltip: selectionTooltipPlugin,
     gapCursor: gapCursorPlugin,
@@ -122,6 +125,7 @@ export const createEditor = async (options: CreateEditorOptions): Promise<Editor
   /** 编辑器实例。 */
   const editor = Editor.make();
   editor.config((ctx: any) => {
+    configureImageResizableSchema(ctx);
     ctx.set(rootCtx, options.root);
     ctx.set(defaultValueCtx, options.markdown);
     ctx.set(editorViewOptionsCtx, {
