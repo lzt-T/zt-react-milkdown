@@ -76,11 +76,18 @@ const handleBackspaceIntoMathBlock = (view: EditorView, event: KeyboardEvent): b
     return false;
   }
 
+  // 仅在空段落时删除当前块，避免误删有内容段落。
+  const isCurrentParagraphEmpty = resolvedPosition.parent.textContent.length === 0;
+  const currentBlockStart = resolvedPosition.before(resolvedPosition.depth);
+  const currentBlockEnd = currentBlockStart + resolvedPosition.parent.nodeSize;
+
   event.preventDefault();
   // 选中上一块公式节点，交由 NodeView.selectNode 进入编辑态。
-  const transaction = view.state.tr
-    .setSelection(NodeSelection.create(view.state.doc, targetMathBlock.previousBlockStart))
-    .scrollIntoView();
+  const transaction = view.state.tr;
+  if (isCurrentParagraphEmpty) {
+    transaction.delete(currentBlockStart, currentBlockEnd);
+  }
+  transaction.setSelection(NodeSelection.create(transaction.doc, targetMathBlock.previousBlockStart)).scrollIntoView();
   view.dispatch(transaction);
   // 这里不要再调用 view.focus，否则会覆盖 NodeView.selectNode 内部的 textarea.focus。
   return true;

@@ -8,6 +8,7 @@ import { createImageEditableNodeView } from '../plugins/custom/image-editable';
 import { configureImageResizableSchema } from '../plugins/custom/image-resizable-schema';
 import { createMathBlockEditableNodeView } from '../plugins/custom/math-block-editable';
 import { mathBackspaceEntryPlugin } from '../plugins/custom/math-backspace-entry';
+import { blockquoteBackspaceLiftPlugin } from '../plugins/custom/blockquote-backspace-lift';
 import { math } from '../plugins/custom/math-plugin';
 import { createSelectionTooltipPlugin } from '../plugins/custom/selection-tooltip';
 import { createSlashMenuPlugin } from '../plugins/custom/slash-menu';
@@ -95,6 +96,7 @@ export const createEditor = async (options: CreateEditorOptions): Promise<Editor
     indent,
     tableArrowEntry: tableArrowEntryPlugin,
     mathBackspaceEntry: mathBackspaceEntryPlugin,
+    blockquoteBackspaceLift: blockquoteBackspaceLiftPlugin,
     tableFocusActions: tableFocusActionsPlugin,
     selectionTooltip: selectionTooltipPlugin,
     gapCursor: gapCursorPlugin,

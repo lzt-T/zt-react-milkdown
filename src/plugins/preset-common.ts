@@ -18,6 +18,8 @@ export interface PresetPluginExports {
   tableArrowEntry: unknown;
   /** 公式块 Backspace 进入插件实例。 */
   mathBackspaceEntry: unknown;
+  /** 引用块首段 Backspace 提升插件实例。 */
+  blockquoteBackspaceLift: unknown;
   /** 表格聚焦操作插件实例。 */
   tableFocusActions: unknown;
   /** 选中文本 tooltip 菜单插件实例。 */
@@ -81,6 +83,7 @@ export const resolvePresetPlugins = (
   }
   appendPluginDescriptors(descriptors, 'table-arrow-entry', pluginExports.tableArrowEntry);
   appendPluginDescriptors(descriptors, 'math-backspace-entry', pluginExports.mathBackspaceEntry);
+  appendPluginDescriptors(descriptors, 'blockquote-backspace-lift', pluginExports.blockquoteBackspaceLift);
   appendPluginDescriptors(descriptors, 'table-focus-actions', pluginExports.tableFocusActions);
   appendPluginDescriptors(descriptors, 'selection-tooltip', pluginExports.selectionTooltip);
   appendPluginDescriptors(descriptors, 'gap-cursor', pluginExports.gapCursor);
