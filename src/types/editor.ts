@@ -56,9 +56,13 @@ export interface EditorI18nMessages {
  * 定义 slash 菜单支持的命令类型。
  */
 export type SlashMenuCommand =
+  | 'paragraph'
   | 'heading1'
   | 'heading2'
   | 'heading3'
+  | 'heading4'
+  | 'heading5'
+  | 'heading6'
   | 'bulletList'
   | 'orderedList'
   | 'taskList'

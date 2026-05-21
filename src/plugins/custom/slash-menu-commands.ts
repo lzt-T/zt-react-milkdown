@@ -249,13 +249,29 @@ export const runSlashCommand = async (view: any, command: SlashMenuCommand): Pro
   const headingLevelMap: Partial<Record<SlashMenuCommand, number>> = {
     heading1: 1,
     heading2: 2,
-    heading3: 3
+    heading3: 3,
+    heading4: 4,
+    heading5: 5,
+    heading6: 6
   };
   // 列表节点映射。
   const listTypeMap: Partial<Record<SlashMenuCommand, string>> = {
     bulletList: 'bullet_list',
     orderedList: 'ordered_list'
   };
+
+  if (command === 'paragraph') {
+    // paragraph 节点类型。
+    const paragraphType = nodes.paragraph;
+    if (!paragraphType) {
+      return false;
+    }
+    // paragraph 转换命令。
+    const paragraphCommand = (setBlockType as (type: unknown, attrs?: Record<string, unknown>) => EditorCommandExecutor)(
+      paragraphType
+    );
+    return runCommand(paragraphCommand, view);
+  }
 
   if (command in headingLevelMap) {
     // heading 节点类型。

@@ -7,12 +7,16 @@ import {
   Heading1,
   Heading2,
   Heading3,
+  Heading4,
+  Heading5,
+  Heading6,
   List,
   ListOrdered,
   ListTodo,
   Sigma,
   Table,
   TextQuote,
+  Type,
   type LucideIcon
 } from 'lucide-react';
 import { createOverlayRepositionScheduler, toPortalPosition, type OverlayPlacement } from '../../lib/editor-overlay-position';
@@ -26,9 +30,13 @@ type SlashMenuPlacement = OverlayPlacement;
  * slash 菜单支持的 lucide 图标映射表。
  */
 const SLASH_MENU_ICON_MAP: Record<string, LucideIcon> = {
+  Type,
   Heading1,
   Heading2,
   Heading3,
+  Heading4,
+  Heading5,
+  Heading6,
   List,
   ListOrdered,
   ListTodo,

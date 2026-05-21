@@ -141,6 +141,20 @@
     margin: 0;
   }
 
+  .zt-md-editor .ProseMirror h1,
+  .zt-md-editor .ProseMirror h2,
+  .zt-md-editor .ProseMirror h3,
+  .zt-md-editor .ProseMirror h4,
+  .zt-md-editor .ProseMirror h5,
+  .zt-md-editor .ProseMirror h6 {
+    margin: 0;
+    line-height: 1.28;
+  }
+
+  .zt-md-editor .ProseMirror :is(h1, h2, h3, h4, h5, h6) + :is(h1, h2, h3, h4, h5, h6) {
+    margin-top: 0.62em;
+  }
+
   .zt-md-editor .ProseMirror:focus,
   .zt-md-editor .ProseMirror:focus-visible {
     outline: none !important;

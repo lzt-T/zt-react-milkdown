@@ -14,9 +14,13 @@ export interface SlashMenuState {
  * 默认 slash 菜单项。
  */
 const DEFAULT_SLASH_MENU_ITEMS: SlashMenuItem[] = [
+  { id: 'paragraph', label: '普通文本', group: '标题', icon: 'Type', command: 'paragraph' },
   { id: 'heading-1', label: '标题 1', group: '标题', icon: 'Heading1', command: 'heading1' },
   { id: 'heading-2', label: '标题 2', group: '标题', icon: 'Heading2', command: 'heading2' },
   { id: 'heading-3', label: '标题 3', group: '标题', icon: 'Heading3', command: 'heading3' },
+  { id: 'heading-4', label: '标题 4', group: '标题', icon: 'Heading4', command: 'heading4' },
+  { id: 'heading-5', label: '标题 5', group: '标题', icon: 'Heading5', command: 'heading5' },
+  { id: 'heading-6', label: '标题 6', group: '标题', icon: 'Heading6', command: 'heading6' },
   { id: 'bullet-list', label: '无序列表', group: '列表', icon: 'List', command: 'bulletList' },
   { id: 'ordered-list', label: '有序列表', group: '列表', icon: 'ListOrdered', command: 'orderedList' },
   { id: 'task-list', label: '任务列表', group: '列表', icon: 'ListTodo', command: 'taskList' },
