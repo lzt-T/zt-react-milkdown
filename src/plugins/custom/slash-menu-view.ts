@@ -14,6 +14,7 @@ import {
   List,
   ListOrdered,
   ListTodo,
+  SquareCode,
   Sigma,
   Table,
   TextQuote,
@@ -43,6 +44,7 @@ const SLASH_MENU_ICON_MAP: Record<string, LucideIcon> = {
   ListOrdered,
   ListTodo,
   Code,
+  SquareCode,
   TextQuote,
   Sigma,
   Table

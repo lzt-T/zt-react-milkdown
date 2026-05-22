@@ -10,12 +10,16 @@ import { createMathBlockEditableNodeView } from '../plugins/custom/math-block-ed
 import { mathBackspaceEntryPlugin } from '../plugins/custom/math-backspace-entry';
 import { blockquoteBackspaceLiftPlugin } from '../plugins/custom/blockquote-backspace-lift';
 import { math } from '../plugins/custom/math-plugin';
+import { codeBlockPrismPlugin } from '../plugins/custom/code-block-prism';
+import { createCodeBlockLanguagePickerPlugin } from '../plugins/custom/code-block-language-picker';
+import { createCodeBlockEditableNodeView } from '../plugins/custom/code-block-editable';
 import { createSelectionTooltipPlugin } from '../plugins/custom/selection-tooltip';
 import { createSlashMenuPlugin } from '../plugins/custom/slash-menu';
 import { tableArrowEntryPlugin } from '../plugins/custom/table-arrow-entry';
 import { createTableFocusActionsPlugin } from '../plugins/custom/table-focus-actions';
 import { taskListToggle } from '../plugins/custom/task-list-toggle';
 import { tabSpaceIndentPlugin } from '../plugins/custom/tab-space-indent';
+import { codeBlockModASelectPlugin } from '../plugins/custom/code-block-mod-a-select';
 import { resolveEditorMessages } from '../local/i18n';
 import type { PresetPluginExports } from '../plugins/preset-common';
 // slash 菜单调试日志前缀。
@@ -81,6 +85,8 @@ export const createEditor = async (options: CreateEditorOptions): Promise<Editor
   const tableFocusActionsPlugin = createTableFocusActionsPlugin(options.portalContainer, messages);
   /** 选区 tooltip 菜单插件实例。 */
   const selectionTooltipPlugin = createSelectionTooltipPlugin(options.portalContainer, messages);
+  /** 代码块语言选择器插件实例。 */
+  const codeBlockLanguagePickerPlugin = createCodeBlockLanguagePickerPlugin(messages, options.portalContainer);
 
   /** 默认插件集合。 */
   const slashSetup = await createSlashMenuPlugin(
@@ -101,6 +107,8 @@ export const createEditor = async (options: CreateEditorOptions): Promise<Editor
     listener,
     commonmark,
     gfm,
+    codeBlockPrism: codeBlockPrismPlugin,
+    codeBlockLanguagePicker: codeBlockLanguagePickerPlugin,
     clipboard,
     indent,
     tableArrowEntry: tableArrowEntryPlugin,
@@ -113,6 +121,7 @@ export const createEditor = async (options: CreateEditorOptions): Promise<Editor
     math,
     taskListToggle,
     tabSpaceIndent: tabSpaceIndentPlugin,
+    codeBlockModASelect: codeBlockModASelectPlugin,
     slash: slashPlugins.length > 0 ? slashPlugins : null
   };
   /** 启动阶段插件集合（不含运行时延迟插件）。 */
@@ -177,7 +186,8 @@ export const createEditor = async (options: CreateEditorOptions): Promise<Editor
     ctx.set(nodeViewCtx, [
       ...currentNodeViews,
       ['image', createImageEditableNodeView(messages)],
-      ['math_block', createMathBlockEditableNodeView(messages)]
+      ['math_block', createMathBlockEditableNodeView(messages)],
+      ['code_block', createCodeBlockEditableNodeView(messages)]
     ]);
 
     /** 监听器管理器。 */

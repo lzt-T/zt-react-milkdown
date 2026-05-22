@@ -13,6 +13,8 @@
 @import "./modules/math-block.css";
 @import "./modules/blockquote.css";
 @import "./modules/inline-code.css";
+@import "./modules/code-block.css";
+@import "./modules/code-block-language-picker.css";
 @import "./modules/task-list.css";
 @import "./modules/table.css";
 

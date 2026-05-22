@@ -1,0 +1,142 @@
+@layer components {
+  .zt-md-editor .zt-md-code-block {
+    position: relative;
+  }
+
+  .zt-md-editor .zt-md-code-block-actions {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 3;
+    display: none;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .zt-md-editor .zt-md-code-block:hover .zt-md-code-block-actions,
+  .zt-md-editor .zt-md-code-block:focus-within .zt-md-code-block-actions {
+    display: inline-flex;
+  }
+
+  .zt-md-editor .zt-md-code-block[data-editable='false'] .zt-md-code-block-actions {
+    display: none;
+  }
+
+  .zt-md-editor .zt-md-code-block-action-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border: 1px solid color-mix(in srgb, var(--zt-border) 82%, var(--zt-fg));
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--zt-surface) 96%, transparent);
+    color: var(--zt-fg);
+    transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+    cursor: pointer;
+  }
+
+  .zt-md-editor .zt-md-code-block-action-button:hover {
+    background: color-mix(in srgb, var(--zt-primary) 15%, var(--zt-surface));
+    border-color: color-mix(in srgb, var(--zt-primary) 44%, var(--zt-border));
+  }
+
+  .zt-md-editor .zt-md-code-block-action-button[data-copied='true'] {
+    background: color-mix(in srgb, var(--zt-primary) 18%, var(--zt-surface));
+    border-color: color-mix(in srgb, var(--zt-primary) 50%, var(--zt-border));
+    color: var(--zt-primary);
+  }
+
+  .zt-md-editor .zt-md-code-block-action-button-danger:hover {
+    background: color-mix(in srgb, var(--zt-destructive) 18%, var(--zt-surface));
+    border-color: color-mix(in srgb, var(--zt-destructive) 44%, var(--zt-border));
+    color: var(--zt-destructive);
+  }
+
+  .zt-md-editor .zt-md-code-block-action-button svg {
+    pointer-events: none;
+  }
+
+  .zt-md-editor .ProseMirror pre {
+    @apply my-3 overflow-x-auto rounded-[var(--zt-radius)] border border-zt-border px-4 py-3;
+    background: color-mix(in srgb, var(--zt-bg) 92%, var(--zt-primary));
+    color: var(--zt-fg);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+    font-size: 0.92em;
+    line-height: 1.7;
+    tab-size: 4;
+    white-space: pre;
+  }
+
+  .zt-md-editor .ProseMirror pre code {
+    display: block;
+    min-width: max-content;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    white-space: pre;
+  }
+
+  .zt-md-editor .ProseMirror pre[data-language]:not([data-language=''])::before {
+    content: attr(data-language);
+    display: block;
+    margin-bottom: 0.5rem;
+    color: var(--zt-muted);
+    font-family: var(--zt-font);
+    font-size: 0.78em;
+    line-height: 1.2;
+  }
+
+  .zt-md-editor .ProseMirror pre .token.comment,
+  .zt-md-editor .ProseMirror pre .token.prolog,
+  .zt-md-editor .ProseMirror pre .token.doctype,
+  .zt-md-editor .ProseMirror pre .token.cdata {
+    color: color-mix(in srgb, var(--zt-muted) 82%, var(--zt-fg));
+  }
+
+  .zt-md-editor .ProseMirror pre .token.punctuation,
+  .zt-md-editor .ProseMirror pre .token.operator {
+    color: color-mix(in srgb, var(--zt-fg) 72%, var(--zt-muted));
+  }
+
+  .zt-md-editor .ProseMirror pre .token.property,
+  .zt-md-editor .ProseMirror pre .token.tag,
+  .zt-md-editor .ProseMirror pre .token.boolean,
+  .zt-md-editor .ProseMirror pre .token.number,
+  .zt-md-editor .ProseMirror pre .token.constant,
+  .zt-md-editor .ProseMirror pre .token.symbol {
+    color: color-mix(in srgb, var(--zt-primary) 82%, var(--zt-fg));
+  }
+
+  .zt-md-editor .ProseMirror pre .token.selector,
+  .zt-md-editor .ProseMirror pre .token.attr-name,
+  .zt-md-editor .ProseMirror pre .token.string,
+  .zt-md-editor .ProseMirror pre .token.char,
+  .zt-md-editor .ProseMirror pre .token.builtin,
+  .zt-md-editor .ProseMirror pre .token.inserted {
+    color: color-mix(in srgb, var(--zt-secondary) 80%, var(--zt-fg));
+  }
+
+  .zt-md-editor .ProseMirror pre .token.atrule,
+  .zt-md-editor .ProseMirror pre .token.attr-value,
+  .zt-md-editor .ProseMirror pre .token.keyword {
+    color: color-mix(in srgb, var(--zt-primary) 72%, var(--zt-secondary));
+  }
+
+  .zt-md-editor .ProseMirror pre .token.function,
+  .zt-md-editor .ProseMirror pre .token.class-name {
+    color: color-mix(in srgb, var(--zt-fg) 80%, var(--zt-primary));
+  }
+
+  .zt-md-editor .ProseMirror pre .token.regex,
+  .zt-md-editor .ProseMirror pre .token.important,
+  .zt-md-editor .ProseMirror pre .token.variable {
+    color: color-mix(in srgb, var(--zt-secondary) 64%, var(--zt-primary));
+  }
+
+  .zt-md-editor .ProseMirror pre .token.deleted {
+    color: var(--zt-destructive);
+  }
+}

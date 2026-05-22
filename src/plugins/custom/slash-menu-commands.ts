@@ -327,6 +327,20 @@ export const runSlashCommand = async (view: any, command: SlashMenuCommand): Pro
     return runCommand(inlineCodeCommand, view);
   }
 
+  if (command === 'codeBlock') {
+    // 代码块节点类型。
+    const codeBlockType = nodes.code_block;
+    if (!codeBlockType) {
+      return false;
+    }
+    // 代码块转换命令。
+    const codeBlockCommand = (setBlockType as (type: unknown, attrs?: Record<string, unknown>) => EditorCommandExecutor)(
+      codeBlockType,
+      { language: 'text' }
+    );
+    return runCommand(codeBlockCommand, view);
+  }
+
   if (command === 'mathBlock') {
     // 公式块节点类型。
     const mathBlockType = nodes.math_block;

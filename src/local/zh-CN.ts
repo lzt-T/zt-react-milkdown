@@ -52,5 +52,9 @@ export const zhCNMessages: EditorI18nMessages = {
   selectionTooltipLinkTitle: '链接',
   selectionLinkInputPlaceholder: '输入或粘贴链接',
   selectionLinkSaveAriaLabel: '保存链接',
-  selectionLinkRemoveAriaLabel: '移除链接'
+  selectionLinkRemoveAriaLabel: '移除链接',
+  codeBlockLanguageSearchPlaceholder: '搜索语言',
+  codeBlockLanguagePlainText: 'text',
+  codeBlockCopyAriaLabel: '复制代码块',
+  codeBlockDeleteAriaLabel: '删除代码块'
 };

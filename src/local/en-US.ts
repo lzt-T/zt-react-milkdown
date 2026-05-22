@@ -52,5 +52,9 @@ export const enUSMessages: EditorI18nMessages = {
   selectionTooltipLinkTitle: 'Link',
   selectionLinkInputPlaceholder: 'Type or paste a link',
   selectionLinkSaveAriaLabel: 'Save link',
-  selectionLinkRemoveAriaLabel: 'Remove link'
+  selectionLinkRemoveAriaLabel: 'Remove link',
+  codeBlockLanguageSearchPlaceholder: 'Search languages',
+  codeBlockLanguagePlainText: 'text',
+  codeBlockCopyAriaLabel: 'Copy code block',
+  codeBlockDeleteAriaLabel: 'Delete code block'
 };

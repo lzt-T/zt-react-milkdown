@@ -336,6 +336,27 @@ export const updateSelectionTooltipActiveState = (
 };
 
 /**
+ * 判断当前选区是否涉及代码块节点。
+ */
+const hasCodeBlockInSelection = (view: EditorView): boolean => {
+  // 当前选区范围。
+  const { from, to } = view.state.selection;
+  // 是否命中代码块节点。
+  let matchedCodeBlock = false;
+
+  view.state.doc.nodesBetween(from, to, (node) => {
+    if (node.type.name !== 'code_block') {
+      return true;
+    }
+
+    matchedCodeBlock = true;
+    return false;
+  });
+
+  return matchedCodeBlock;
+};
+
+/**
  * 创建 tooltip 展示判断函数。
  */
 export const createSelectionTooltipShouldShow = (
@@ -355,6 +376,10 @@ export const createSelectionTooltipShouldShow = (
     }
 
     if (!view.hasFocus() && !isTooltipFocused && !isPinned()) {
+      return false;
+    }
+
+    if (hasCodeBlockInSelection(view)) {
       return false;
     }
 

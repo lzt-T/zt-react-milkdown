@@ -112,6 +112,14 @@ export interface EditorI18nMessages {
   selectionLinkSaveAriaLabel: string;
   /** 选区链接移除按钮无障碍文案。 */
   selectionLinkRemoveAriaLabel: string;
+  /** 代码块语言搜索占位文案。 */
+  codeBlockLanguageSearchPlaceholder: string;
+  /** 代码块纯文本语言文案（text）。 */
+  codeBlockLanguagePlainText: string;
+  /** 代码块复制按钮无障碍标签。 */
+  codeBlockCopyAriaLabel: string;
+  /** 代码块删除按钮无障碍标签。 */
+  codeBlockDeleteAriaLabel: string;
 }
 
 /**
@@ -130,6 +138,7 @@ export type SlashMenuCommand =
   | 'taskList'
   | 'blockquote'
   | 'inlineCode'
+  | 'codeBlock'
   | 'mathBlock'
   | 'table'
   | 'image';

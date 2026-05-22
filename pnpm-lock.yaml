@@ -29,9 +29,6 @@ importers:
       '@milkdown/plugin-listener':
         specifier: ^7.20.0
         version: 7.20.0
-      '@milkdown/plugin-prism':
-        specifier: ^7.20.0
-        version: 7.21.0
       '@milkdown/plugin-slash':
         specifier: ^7.20.0
         version: 7.20.0
@@ -77,6 +74,9 @@ importers:
       radix-ui:
         specifier: ^1.4.3
         version: 1.4.3(@types/react-dom@18.3.7(@types/react@18.3.28))(@types/react@18.3.28)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      refractor:
+        specifier: 5.0.0
+        version: 5.0.0
       remark-math:
         specifier: ^6.0.0
         version: 6.0.0
@@ -654,9 +654,6 @@ packages:
 
   '@milkdown/plugin-listener@7.20.0':
     resolution: {integrity: sha512-Sj+B63JfM3NVVS3uGXTPkoz8xx8MQYrR28pI9AaqX5q60tvCvOJw9E1ODvSsBEjeqnN4kablDthIugLlBhOlwQ==}
-
-  '@milkdown/plugin-prism@7.21.0':
-    resolution: {integrity: sha512-aXi2+h0NwJuYxGUWT1AUB24gT0fWkr5p1prr/nik9+muqqKGfzv6ZB4WYXJF5j8vsbwJkcTD8/FNAP/p7uKn2g==}
 
   '@milkdown/plugin-slash@7.20.0':
     resolution: {integrity: sha512-Qm3/ZxkGYd5XN+J/X91lGGu7SBzuQBOTOLjuJdg4qDBZmdEHlGojB+5BhCSAMB3WGyCpQQGbSqKOelUrXtj68w==}
@@ -5142,16 +5139,6 @@ snapshots:
       '@milkdown/prose': 7.20.0
       '@types/lodash-es': 4.17.12
       lodash-es: 4.18.1
-    transitivePeerDependencies:
-      - supports-color
-
-  '@milkdown/plugin-prism@7.21.0':
-    dependencies:
-      '@milkdown/ctx': 7.21.0
-      '@milkdown/prose': 7.21.0
-      '@milkdown/utils': 7.21.0
-      '@types/hast': 3.0.4
-      refractor: 5.0.0
     transitivePeerDependencies:
       - supports-color
 
