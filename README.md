@@ -2,6 +2,7 @@
 
 基于 Milkdown 的 React Markdown 编辑器组件库。  
 提供开箱即用的编辑能力、主题切换与国际化支持。
+GitHub 仓库：[lzt-T/zt-react-milkdown](https://github.com/lzt-T/zt-react-milkdown)
 
 ## 安装
 
