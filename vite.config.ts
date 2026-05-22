@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite';
+import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import dts from 'vite-plugin-dts';
@@ -19,7 +19,18 @@ export default defineConfig({
     dts({
       include: ['src'],
       outDir: 'dist',
-      insertTypesEntry: true
+      insertTypesEntry: true,
+      // 修正入口声明文件，避免生成空的 dist/index.d.ts。
+      beforeWriteFile: (filePath, content) => {
+        if (filePath.endsWith('dist/index.d.ts')) {
+          return {
+            filePath,
+            content: "export * from './src/index';\n"
+          };
+        }
+
+        return { filePath, content };
+      }
     })
   ],
   build: {
