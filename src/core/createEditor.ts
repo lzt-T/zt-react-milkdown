@@ -19,8 +19,6 @@ import { taskListToggle } from '../plugins/custom/list';
 import { tabSpaceIndentPlugin } from '../plugins/custom/indent';
 import { resolveEditorMessages } from '../local/i18n';
 import type { PresetPluginExports } from '../plugins/preset-common';
-// slash 菜单调试日志前缀。
-const SLASH_DEBUG_PREFIX = '[zt-md/slash-debug]';
 
 /**
  * 创建并初始化 Milkdown 编辑器实例。
@@ -95,10 +93,6 @@ export const createEditor = async (options: CreateEditorOptions): Promise<Editor
   );
   /** slash 插件实例列表。 */
   const slashPlugins = slashSetup.plugins;
-  console.log(`${SLASH_DEBUG_PREFIX} CREATE_EDITOR_SLASH_PLUGIN`, {
-    isNull: slashPlugins.length === 0,
-    pluginCount: slashPlugins.length
-  });
   /** 预设插件导出集合。 */
   const presetPluginExports: PresetPluginExports = {
     listener,
@@ -133,12 +127,6 @@ export const createEditor = async (options: CreateEditorOptions): Promise<Editor
   const runtimePluginDescriptors = runtimePlugins.filter((descriptor) =>
     descriptor.name === 'clipboard' || descriptor.name === 'indent'
   );
-  console.log(`${SLASH_DEBUG_PREFIX} PRESET_PLUGIN_NAMES`, {
-    names: bootstrapPlugins.map((descriptor) => descriptor.name)
-  });
-  console.log(`${SLASH_DEBUG_PREFIX} RUNTIME_PLUGIN_NAMES`, {
-    names: runtimePluginDescriptors.map((descriptor) => descriptor.name)
-  });
 
   /** 编辑器实例。 */
   const editor = Editor.make();
@@ -214,14 +202,8 @@ export const createEditor = async (options: CreateEditorOptions): Promise<Editor
           });
         });
       }
-      console.log(`${SLASH_DEBUG_PREFIX} RUNTIME_PLUGIN_REGISTERED`, {
-        name: descriptor.name
-      });
     } catch (error) {
-      console.error(`${SLASH_DEBUG_PREFIX} RUNTIME_PLUGIN_REGISTER_FAILED`, {
-        name: descriptor.name,
-        error
-      });
+      console.error(error);
     }
   });
 
