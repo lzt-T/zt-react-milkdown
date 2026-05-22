@@ -6,8 +6,8 @@ import { GapCursor } from '@milkdown/prose/gapcursor';
 import type { Node as ProseNode, ResolvedPos } from '@milkdown/prose/model';
 import { TextSelection, type Selection } from '@milkdown/prose/state';
 import type { EditorView, NodeView, NodeViewConstructor } from '@milkdown/prose/view';
-import type { EditorI18nMessages } from '../../types/editor';
-import { resolveEditorMessages } from '../../local/i18n';
+import type { EditorI18nMessages } from '../../../types/editor';
+import { resolveEditorMessages } from '../../../local/i18n';
 
 /**
  * math_block 节点类型名。
@@ -571,3 +571,4 @@ export const createMathBlockEditableNodeView = (
     return new MathBlockEditableNodeView(node, view, resolvedGetPos, messages);
   };
 };
+

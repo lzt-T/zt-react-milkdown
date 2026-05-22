@@ -1,4 +1,4 @@
-import type { SlashMenuCommand } from '../../types/editor';
+import type { SlashMenuCommand } from '../../../types/editor';
 
 /**
  * slash 命令执行器类型。
@@ -412,3 +412,4 @@ export const runSlashCommand = async (view: any, command: SlashMenuCommand): Pro
 
   return false;
 };
+

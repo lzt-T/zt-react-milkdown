@@ -5,8 +5,8 @@ import { AlignCenter, AlignLeft, AlignRight, Trash2 } from 'lucide-react';
 import { Plugin, PluginKey } from '@milkdown/prose/state';
 import type { EditorView } from '@milkdown/prose/view';
 import { $prose } from '@milkdown/utils';
-import type { EditorI18nMessages } from '../../types/editor';
-import { resolveEditorMessages } from '../../local/i18n';
+import type { EditorI18nMessages } from '../../../types/editor';
+import { resolveEditorMessages } from '../../../local/i18n';
 import { TableMoreActions } from './table-more-actions';
 import { deleteFocusedTableColumn, deleteFocusedTableRow } from './table-deletion-actions';
 import {
@@ -24,7 +24,7 @@ import {
   toPortalPosition,
   type OverlayContentAnchor,
   type OverlayPlacement
-} from '../../lib/editor-overlay-position';
+} from '../../../lib/editor-overlay-position';
 
 // 表格操作插件唯一键。
 const TABLE_FOCUS_ACTIONS_PLUGIN_KEY = 'zt-md-table-focus-actions';
@@ -536,3 +536,4 @@ export const createTableFocusActionsPlugin = (portalContainer: HTMLElement, mess
     });
   });
 };
+

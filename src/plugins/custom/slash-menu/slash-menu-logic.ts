@@ -1,4 +1,4 @@
-import type { EditorLocale, SlashMenuConfig, SlashMenuItem } from '../../types/editor';
+import type { EditorLocale, SlashMenuConfig, SlashMenuItem } from '../../../types/editor';
 
 /**
  * slash 菜单当前状态。
@@ -195,3 +195,4 @@ export const removeSlashQueryAtCursor = (view: any): boolean => {
   view.dispatch(tr.scrollIntoView());
   return true;
 };
+

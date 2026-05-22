@@ -1,4 +1,4 @@
-import type { SlashMenuItem } from '../../types/editor';
+import type { SlashMenuItem } from '../../../types/editor';
 import { createElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import {
@@ -21,7 +21,7 @@ import {
   Type,
   type LucideIcon
 } from 'lucide-react';
-import { createOverlayRepositionScheduler, toPortalPosition, type OverlayPlacement } from '../../lib/editor-overlay-position';
+import { createOverlayRepositionScheduler, toPortalPosition, type OverlayPlacement } from '../../../lib/editor-overlay-position';
 
 /**
  * slash 菜单展开方向。
@@ -323,3 +323,4 @@ export const createSlashMenuViewController = (portalContainer: HTMLElement): Sla
     destroy
   };
 };
+

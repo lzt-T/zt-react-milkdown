@@ -6,15 +6,15 @@ import { Check, ChevronDown, Search } from 'lucide-react';
 import { createElement, useEffect, useMemo, useState, type MouseEvent as ReactMouseEvent, type ReactElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { refractor } from 'refractor';
-import type { EditorI18nMessages } from '../../types/editor';
-import { Popover, PopoverContent, PopoverTrigger } from '../../components/ui/popover';
-import { useCloseOnGlobalScroll } from '../../react/hooks/useCloseOnGlobalScroll';
+import type { EditorI18nMessages } from '../../../types/editor';
+import { Popover, PopoverContent, PopoverTrigger } from '../../../components/ui/popover';
+import { useCloseOnGlobalScroll } from '../../../react/hooks/useCloseOnGlobalScroll';
 import {
   createOverlayRepositionScheduler,
   resolveEditorWrapper,
   toContentAnchor,
   toPortalPosition
-} from '../../lib/editor-overlay-position';
+} from '../../../lib/editor-overlay-position';
 
 // 代码块节点名称。
 const CODE_BLOCK_NODE_NAME = 'code_block';
@@ -577,3 +577,4 @@ export const createCodeBlockLanguagePickerPlugin = (
     });
   });
 };
+

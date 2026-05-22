@@ -1,7 +1,7 @@
 import { AlertCircle, ImageOff, ImagePlus, Loader2 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { DragEvent, KeyboardEvent } from 'react';
-import { Button } from '../../../components/ui/button';
+import { Button } from '../../../../components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -9,8 +9,8 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle
-} from '../../../components/ui/dialog';
-import type { EditorI18nMessages, ImageUploadConfig } from '../../../types/editor';
+} from '../../../../components/ui/dialog';
+import type { EditorI18nMessages, ImageUploadConfig } from '../../../../types/editor';
 
 /**
  * 定义图片弹窗上传方式。
@@ -500,3 +500,4 @@ export const ImageUploadDialog = ({
     </Dialog>
   );
 };
+

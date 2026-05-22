@@ -4,8 +4,8 @@ import { Check, Copy, Trash2 } from 'lucide-react';
 import type { Node as ProseNode } from '@milkdown/prose/model';
 import { TextSelection } from '@milkdown/prose/state';
 import type { EditorView, NodeView, NodeViewConstructor } from '@milkdown/prose/view';
-import type { EditorI18nMessages } from '../../types/editor';
-import { resolveEditorMessages } from '../../local/i18n';
+import type { EditorI18nMessages } from '../../../types/editor';
+import { resolveEditorMessages } from '../../../local/i18n';
 
 // 代码块节点类型名。
 const CODE_BLOCK_NODE_NAME = 'code_block';
@@ -282,3 +282,4 @@ export const createCodeBlockEditableNodeView = (
     return new CodeBlockEditableNodeView(node, view, resolvedGetPos, messages);
   };
 };
+

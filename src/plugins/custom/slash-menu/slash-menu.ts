@@ -1,6 +1,6 @@
-import type { EditorI18nMessages, EditorLocale, ImageUploadConfig, SlashMenuConfig, SlashMenuItem } from '../../types/editor';
-import { resolveEditorWrapper, resolvePlacement, toContentAnchor } from '../../lib/editor-overlay-position';
-import { showImageUploadDialog } from './image-upload-dialog';
+import type { EditorI18nMessages, EditorLocale, ImageUploadConfig, SlashMenuConfig, SlashMenuItem } from '../../../types/editor';
+import { resolveEditorWrapper, resolvePlacement, toContentAnchor } from '../../../lib/editor-overlay-position';
+import { showImageUploadDialog } from '../image/image-upload-dialog';
 import { runSlashCommand } from './slash-menu-commands';
 import { removeSlashQueryAtCursor, resolveMenuState, resolveSlashMenuItems } from './slash-menu-logic';
 import { createSlashMenuViewController } from './slash-menu-view';
@@ -326,3 +326,4 @@ export const createSlashMenuPlugin = async (
     return { plugins: [], config: null };
   }
 };
+

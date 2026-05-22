@@ -1,9 +1,9 @@
 import { createElement, useState, type MouseEvent as ReactMouseEvent, type ReactElement } from 'react';
 import { EllipsisVertical } from 'lucide-react';
-import type { EditorI18nMessages } from '../../types/editor';
-import { Button } from '../../components/ui/button';
-import { Popover, PopoverContent, PopoverTrigger } from '../../components/ui/popover';
-import { useCloseOnGlobalScroll } from '../../react/hooks/useCloseOnGlobalScroll';
+import type { EditorI18nMessages } from '../../../types/editor';
+import { Button } from '../../../components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '../../../components/ui/popover';
+import { useCloseOnGlobalScroll } from '../../../react/hooks/useCloseOnGlobalScroll';
 
 /**
  * 表格更多菜单属性。
@@ -244,3 +244,4 @@ export const TableMoreActions = (props: TableMoreActionsProps): ReactElement => 
     )
   );
 };
+

@@ -2,24 +2,21 @@ import type { CreateEditorOptions, EditorController } from '../types/editor';
 import { createReplaceAllExecutor } from './commands';
 import { resolvePresetPlugins } from '../plugins/preset-common';
 import { assertKey } from '../utils/guard';
-import { dropCursorPlugin } from '../plugins/custom/drop-cursor';
-import { gapCursorPlugin } from '../plugins/custom/gap-cursor';
-import { createImageEditableNodeView } from '../plugins/custom/image-editable';
-import { configureImageResizableSchema } from '../plugins/custom/image-resizable-schema';
-import { createMathBlockEditableNodeView } from '../plugins/custom/math-block-editable';
-import { mathBackspaceEntryPlugin } from '../plugins/custom/math-backspace-entry';
-import { blockquoteBackspaceLiftPlugin } from '../plugins/custom/blockquote-backspace-lift';
-import { math } from '../plugins/custom/math-plugin';
-import { codeBlockPrismPlugin } from '../plugins/custom/code-block-prism';
-import { createCodeBlockLanguagePickerPlugin } from '../plugins/custom/code-block-language-picker';
-import { createCodeBlockEditableNodeView } from '../plugins/custom/code-block-editable';
+import { dropCursorPlugin, gapCursorPlugin } from '../plugins/custom/cursor';
+import { createImageEditableNodeView, configureImageResizableSchema } from '../plugins/custom/image';
+import { createMathBlockEditableNodeView, math, mathBackspaceEntryPlugin } from '../plugins/custom/math';
+import { blockquoteBackspaceLiftPlugin } from '../plugins/custom/blockquote';
+import {
+  codeBlockModASelectPlugin,
+  codeBlockPrismPlugin,
+  createCodeBlockEditableNodeView,
+  createCodeBlockLanguagePickerPlugin
+} from '../plugins/custom/code-block';
 import { createSelectionTooltipPlugin } from '../plugins/custom/selection-tooltip';
 import { createSlashMenuPlugin } from '../plugins/custom/slash-menu';
-import { tableArrowEntryPlugin } from '../plugins/custom/table-arrow-entry';
-import { createTableFocusActionsPlugin } from '../plugins/custom/table-focus-actions';
-import { taskListToggle } from '../plugins/custom/task-list-toggle';
-import { tabSpaceIndentPlugin } from '../plugins/custom/tab-space-indent';
-import { codeBlockModASelectPlugin } from '../plugins/custom/code-block-mod-a-select';
+import { createTableFocusActionsPlugin, tableArrowEntryPlugin } from '../plugins/custom/table';
+import { taskListToggle } from '../plugins/custom/list';
+import { tabSpaceIndentPlugin } from '../plugins/custom/indent';
 import { resolveEditorMessages } from '../local/i18n';
 import type { PresetPluginExports } from '../plugins/preset-common';
 // slash 菜单调试日志前缀。

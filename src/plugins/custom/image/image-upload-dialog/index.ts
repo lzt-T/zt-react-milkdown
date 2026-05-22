@@ -1,6 +1,6 @@
 import { createElement } from 'react';
 import { createRoot } from 'react-dom/client';
-import type { EditorI18nMessages, ImageUploadConfig } from '../../../types/editor';
+import type { EditorI18nMessages, ImageUploadConfig } from '../../../../types/editor';
 import { ImageUploadDialog } from './ImageUploadDialog';
 
 /**
@@ -90,3 +90,4 @@ export const showImageUploadDialog = (options: ImageUploadDialogOptions): void =
     })
   );
 };
+

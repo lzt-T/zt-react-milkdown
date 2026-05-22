@@ -3,8 +3,8 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { Trash2 } from 'lucide-react';
 import type { Node as ProseNode } from '@milkdown/prose/model';
 import type { EditorView, NodeView, NodeViewConstructor } from '@milkdown/prose/view';
-import type { EditorI18nMessages } from '../../types/editor';
-import { resolveEditorMessages } from '../../local/i18n';
+import type { EditorI18nMessages } from '../../../types/editor';
+import { resolveEditorMessages } from '../../../local/i18n';
 import {
   clampImageWidthPercent,
   formatImageWidthStyle,
@@ -447,3 +447,4 @@ export const createImageEditableNodeView = (
     return new ImageEditableNodeView(node, view, resolvedGetPos, messages);
   };
 };
+
