@@ -2,7 +2,7 @@ import type { EditorI18nMessages, EditorLocale, ImageUploadConfig, SlashMenuConf
 import { resolveEditorWrapper, resolvePlacement, toContentAnchor } from '../../../lib/editor-overlay-position';
 import { showImageUploadDialog } from '../image/image-upload-dialog';
 import { runSlashCommand } from './slash-menu-commands';
-import { removeSlashQueryAtCursor, resolveMenuState, resolveSlashMenuItems } from './slash-menu-logic';
+import { isEditorViewEditable, removeSlashQueryAtCursor, resolveMenuState, resolveSlashMenuItems } from './slash-menu-logic';
 import { createSlashMenuViewController } from './slash-menu-view';
 
 /**
@@ -189,6 +189,14 @@ export const createSlashMenuPlugin = async (
      * 按当前编辑器状态同步菜单显隐、数据与渲染。
      */
     const syncMenuState = (view: any): void => {
+      if (!isEditorViewEditable(view)) {
+        visibleItems = [];
+        menuInteractable = false;
+        menuView.updatePositionContext(null);
+        menuView.setVisible(false);
+        return;
+      }
+
       // 当前菜单状态。
       const nextState = resolveMenuState(view, items);
       visibleItems = nextState.visibleItems;
@@ -235,6 +243,13 @@ export const createSlashMenuPlugin = async (
      * 根据索引执行命令。
      */
     const runActiveCommand = async (): Promise<void> => {
+      if (!isEditorViewEditable(currentView)) {
+        menuInteractable = false;
+        menuView.updatePositionContext(null);
+        menuView.setVisible(false);
+        return;
+      }
+
       if (!currentView || activeIndex < 0 || activeIndex >= visibleItems.length) {
         return;
       }

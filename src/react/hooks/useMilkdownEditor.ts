@@ -13,8 +13,8 @@ export interface UseMilkdownEditorOptions {
   markdown: string;
   /** 编辑器内部浮层 Portal 容器。 */
   portalContainer: HTMLElement;
-  /** 当前是否可编辑。 */
-  editable: boolean;
+  /** 当前是否只读。 */
+  readOnly: boolean;
   /** 内容变更外发的防抖时长（毫秒）。 */
   debounceMs: number;
   /** 编辑器文案。 */
@@ -106,7 +106,7 @@ export const useMilkdownEditor = (options: UseMilkdownEditorOptions): void => {
           root: rootElement,
           portalContainer: options.portalContainer,
           markdown: latestMarkdownRef.current,
-          editable: options.editable,
+          readOnly: options.readOnly,
           messages: options.messages,
           locale: options.locale,
           slashMenu: options.slashMenu,
@@ -145,7 +145,7 @@ export const useMilkdownEditor = (options: UseMilkdownEditorOptions): void => {
       }
       localController = null;
     };
-  }, [options.root, options.editable, options.messages, options.locale, options.portalContainer, options.slashMenu, options.imageUpload]);
+  }, [options.root, options.readOnly, options.messages, options.locale, options.portalContainer, options.slashMenu, options.imageUpload]);
 
   useEffect(() => {
     /** 当前控制器。 */

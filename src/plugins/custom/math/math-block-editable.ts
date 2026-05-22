@@ -108,6 +108,13 @@ class MathBlockEditableNodeView implements NodeView {
   private copyFeedbackTimer: ReturnType<typeof setTimeout> | null = null;
 
   /**
+   * 同步公式块可编辑状态标记，供样式层判断只读态。
+   */
+  private syncEditableState(): void {
+    this.dom.dataset.editable = isEditorViewEditable(this.view) ? 'true' : 'false';
+  }
+
+  /**
    * 初始化公式块视图。
    */
   constructor(
@@ -129,6 +136,7 @@ class MathBlockEditableNodeView implements NodeView {
     this.dom = document.createElement('div');
     this.dom.dataset.type = MATH_BLOCK_NODE_NAME;
     this.dom.className = 'zt-md-math-block';
+    this.syncEditableState();
 
     // 源码编辑容器。
     this.sourceContainer = document.createElement('div');
@@ -237,6 +245,9 @@ class MathBlockEditableNodeView implements NodeView {
   private readonly handleCopyClick = (event: MouseEvent): void => {
     event.preventDefault();
     event.stopPropagation();
+    if (!isEditorViewEditable(this.view)) {
+      return;
+    }
 
     // 当前公式源码。
     const sourceValue = typeof this.node.attrs.value === 'string' ? this.node.attrs.value : '';
@@ -270,6 +281,9 @@ class MathBlockEditableNodeView implements NodeView {
   private readonly handleDeleteClick = (event: MouseEvent): void => {
     event.preventDefault();
     event.stopPropagation();
+    if (!isEditorViewEditable(this.view)) {
+      return;
+    }
 
     this.deleteCurrentMathBlock();
   };
@@ -492,6 +506,7 @@ class MathBlockEditableNodeView implements NodeView {
     }
 
     this.node = node;
+    this.syncEditableState();
     this.syncFromNode(node);
     return true;
   }

@@ -135,7 +135,7 @@ export const createEditor = async (options: CreateEditorOptions): Promise<Editor
     ctx.set(rootCtx, options.root);
     ctx.set(defaultValueCtx, options.markdown);
     ctx.set(editorViewOptionsCtx, {
-      editable: () => options.editable,
+      editable: () => !options.readOnly,
       handleClick: (_view: unknown, _position: number, event: MouseEvent) => {
         // 当前点击目标节点。
         const target = event.target;

@@ -29,6 +29,10 @@ interface PlaygroundTexts {
   zhLabel: string;
   /** 切换英文文案。 */
   enLabel: string;
+  /** 设为只读按钮文案。 */
+  setReadOnlyLabel: string;
+  /** 设为可编辑按钮文案。 */
+  setEditableLabel: string;
 }
 
 /**
@@ -41,6 +45,8 @@ const playgroundTexts: Record<PlaygroundLocale, PlaygroundTexts> = {
     darkThemeLabel: "切换深色",
     zhLabel: "中文",
     enLabel: "英文",
+    setReadOnlyLabel: "设为只读",
+    setEditableLabel: "设为可编辑",
   },
   "en-US": {
     description:
@@ -49,6 +55,8 @@ const playgroundTexts: Record<PlaygroundLocale, PlaygroundTexts> = {
     darkThemeLabel: "Dark theme",
     zhLabel: "Chinese",
     enLabel: "English",
+    setReadOnlyLabel: "Set read-only",
+    setEditableLabel: "Set editable",
   },
 };
 
@@ -60,6 +68,8 @@ const App = (): JSX.Element => {
   const [theme, setTheme] = useState<PlaygroundTheme>("light");
   // 当前语言状态。
   const [locale, setLocale] = useState<PlaygroundLocale>("zh-CN");
+  // 当前只读状态。
+  const [readOnly, setReadOnly] = useState<boolean>(false);
   // 示例 markdown 状态。
   const [value, setValue] = useState<string>(
     [
@@ -85,6 +95,10 @@ const App = (): JSX.Element => {
     : texts.darkThemeLabel;
   // 语言切换文案。
   const localeButtonLabel = locale === "zh-CN" ? texts.enLabel : texts.zhLabel;
+  // 只读切换按钮文案。
+  const readOnlyButtonLabel = readOnly
+    ? texts.setEditableLabel
+    : texts.setReadOnlyLabel;
   /**
    * 切换浅色与深色主题。
    */
@@ -98,6 +112,12 @@ const App = (): JSX.Element => {
     setLocale((currentLocale) =>
       currentLocale === "zh-CN" ? "en-US" : "zh-CN",
     );
+  }, []);
+  /**
+   * 切换编辑器只读状态。
+   */
+  const handleReadOnlyToggle = useCallback((): void => {
+    setReadOnly((currentReadOnly) => !currentReadOnly);
   }, []);
 
   return (
@@ -126,6 +146,13 @@ const App = (): JSX.Element => {
             >
               {localeButtonLabel}
             </button>
+            <button
+              type="button"
+              className="playground-theme-toggle"
+              onClick={handleReadOnlyToggle}
+            >
+              {readOnlyButtonLabel}
+            </button>
           </div>
         </header>
 
@@ -136,8 +163,14 @@ const App = (): JSX.Element => {
               console.log("Markdown changed:", markdown);
               setValue(markdown);
             }}
+            imageUpload={{
+              upload: () => {
+                return "https://picsum.photos/seed/1/300/200";
+              },
+            }}
             theme={theme}
             locale={locale}
+            readOnly={readOnly}
             maxHeight={400}
           />
         </section>

@@ -209,8 +209,8 @@ export interface MilkdownEditorProps {
   className?: string;
   /** 占位提示文案。 */
   placeholder?: string;
-  /** 是否可编辑。 */
-  editable?: boolean;
+  /** 是否只读。 */
+  readOnly?: boolean;
   /** 编辑区最大高度，超出后在编辑区内部滚动。 */
   maxHeight?: CSSProperties['maxHeight'];
   /** 内容变更回调的防抖时长（毫秒）。 */
@@ -233,8 +233,8 @@ export interface CreateEditorOptions {
   portalContainer: HTMLElement;
   /** 初始 Markdown 内容。 */
   markdown: string;
-  /** 是否允许编辑。 */
-  editable: boolean;
+  /** 是否只读。 */
+  readOnly: boolean;
   /** 编辑器文案。 */
   messages?: EditorI18nMessages;
   /** 编辑器语言。 */

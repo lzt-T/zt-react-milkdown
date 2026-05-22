@@ -20,8 +20,8 @@
     pointer-events: none;
   }
 
-  .zt-md-editor .zt-md-image:hover .zt-md-image-actions,
-  .zt-md-editor .zt-md-image:focus-within .zt-md-image-actions {
+  .zt-md-editor .zt-md-image[data-editable='true']:hover .zt-md-image-actions,
+  .zt-md-editor .zt-md-image[data-editable='true']:focus-within .zt-md-image-actions {
     @apply opacity-100;
     pointer-events: auto;
   }

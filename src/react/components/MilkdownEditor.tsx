@@ -32,7 +32,7 @@ const MilkdownRuntime = (props: {
   onRootRef: (node: HTMLDivElement | null) => void;
   markdown: string;
   locale: MilkdownEditorProps['locale'];
-  editable: boolean;
+  readOnly: boolean;
   debounceMs: number;
   messages: ReturnType<typeof resolveEditorMessages>;
   slashMenu: MilkdownEditorProps['slashMenu'];
@@ -47,7 +47,7 @@ const MilkdownRuntime = (props: {
     root: props.root,
     markdown: props.markdown,
     portalContainer: props.portalContainer,
-    editable: props.editable,
+    readOnly: props.readOnly,
     debounceMs: props.debounceMs,
     messages: props.messages,
     locale: props.locale,
@@ -60,7 +60,7 @@ const MilkdownRuntime = (props: {
 
   return (
     <div
-      className={clsx('zt-md-editor', props.editable ? 'zt-md-editable' : 'zt-md-readonly')}
+      className={clsx('zt-md-editor', props.readOnly ? 'zt-md-readonly' : 'zt-md-editable')}
       aria-label={props.messages.editorAriaLabel}
       style={props.editorStyle}
     >
@@ -81,8 +81,8 @@ export const MilkdownEditor = (props: MilkdownEditorProps): JSX.Element => {
   const [root, setRoot] = useState<HTMLDivElement | null>(null);
   /** 当前主题。 */
   const theme = props.theme ?? 'light';
-  /** 当前可编辑状态。 */
-  const editable = props.editable ?? true;
+  /** 当前只读状态。 */
+  const readOnly = props.readOnly ?? false;
   /** 内容变更防抖时长。 */
   const debounceMs = props.debounceMs ?? DEFAULT_DEBOUNCE_MS;
 
@@ -150,7 +150,7 @@ export const MilkdownEditor = (props: MilkdownEditorProps): JSX.Element => {
             markdown={markdown}
             locale={props.locale}
             portalContainer={portalContainer}
-            editable={editable}
+            readOnly={readOnly}
             debounceMs={debounceMs}
             messages={messages}
             slashMenu={props.slashMenu}

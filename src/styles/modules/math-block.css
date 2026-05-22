@@ -38,6 +38,11 @@
     pointer-events: auto;
   }
 
+  .zt-md-editor .zt-md-math-block[data-editable='false'] .zt-md-math-block-actions {
+    @apply opacity-0;
+    pointer-events: none;
+  }
+
   .zt-md-editor .zt-md-math-block-action-button {
     @apply inline-flex size-7 items-center justify-center rounded-md border border-zt-border bg-zt-surface text-zt-muted;
     cursor: pointer;

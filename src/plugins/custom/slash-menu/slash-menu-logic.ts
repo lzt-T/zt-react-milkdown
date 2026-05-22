@@ -11,6 +11,17 @@ export interface SlashMenuState {
 }
 
 /**
+ * 判断当前编辑器是否可编辑。
+ */
+export const isEditorViewEditable = (view: any): boolean => {
+  if (typeof view?.props?.editable === 'function') {
+    return view.props.editable(view.state);
+  }
+
+  return Boolean(view?.editable);
+};
+
+/**
  * 默认 slash 菜单项。
  */
 const DEFAULT_SLASH_MENU_ITEMS_ZH_CN: SlashMenuItem[] = [
@@ -155,6 +166,10 @@ const filterSlashMenuItems = (items: SlashMenuItem[], query: string | null): Sla
  * 计算当前菜单状态。
  */
 export const resolveMenuState = (view: any, items: SlashMenuItem[]): SlashMenuState => {
+  if (!isEditorViewEditable(view)) {
+    return { visibleItems: [], shouldShow: false };
+  }
+
   // 当前 slash 查询词。
   const query = getSlashQueryAtCursor(view);
   // 当前过滤后的菜单项。
