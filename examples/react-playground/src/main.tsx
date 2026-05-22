@@ -66,9 +66,6 @@ const App = (): JSX.Element => {
       "# Hello Milkdown",
       "",
       "在这里写你的灵感、文档、公式与注释。",
-      "",
-      "行内公式：$E=mc^2$",
-      "",
       "块级公式：",
       "$$",
       "\\int_0^1 x^2 dx",
@@ -135,18 +132,21 @@ const App = (): JSX.Element => {
         <section className="playground-editor-wrap">
           <MilkdownEditor
             value={value}
-            onChange={setValue}
+            onChange={(markdown) => {
+              console.log("Markdown changed:", markdown);
+              setValue(markdown);
+            }}
             theme={theme}
             locale={locale}
             maxHeight={400}
           />
         </section>
       </main>
-      <div style={{
-        height:"900px"
-      }}>
-
-      </div>
+      <div
+        style={{
+          height: "900px",
+        }}
+      ></div>
     </div>
   );
 };

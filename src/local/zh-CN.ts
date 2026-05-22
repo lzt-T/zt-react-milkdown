@@ -44,5 +44,13 @@ export const zhCNMessages: EditorI18nMessages = {
   imageUploadInvalidUrl: '请输入有效的图片链接。',
   imageUploadUrlRequired: '请输入图片链接。',
   imageUploadSelectOrEnterImage: '请选择图片或输入图片链接。',
-  imageUploadUploadingWait: '图片正在上传，请稍候。'
+  imageUploadUploadingWait: '图片正在上传，请稍候。',
+  selectionTooltipStrongTitle: '加粗',
+  selectionTooltipEmTitle: '斜体',
+  selectionTooltipStrikeTitle: '删除线',
+  selectionTooltipInlineCodeTitle: '行内代码',
+  selectionTooltipLinkTitle: '链接',
+  selectionLinkInputPlaceholder: '输入或粘贴链接',
+  selectionLinkSaveAriaLabel: '保存链接',
+  selectionLinkRemoveAriaLabel: '移除链接'
 };

@@ -1,4 +1,4 @@
-import type { EditorI18nMessages, ImageUploadConfig, SlashMenuConfig, SlashMenuItem } from '../../types/editor';
+import type { EditorI18nMessages, EditorLocale, ImageUploadConfig, SlashMenuConfig, SlashMenuItem } from '../../types/editor';
 import { resolveEditorWrapper, resolvePlacement, toContentAnchor } from '../../lib/editor-overlay-position';
 import { showImageUploadDialog } from './image-upload-dialog';
 import { runSlashCommand } from './slash-menu-commands';
@@ -93,7 +93,8 @@ export const createSlashMenuPlugin = async (
   portalContainer: HTMLElement,
   config?: SlashMenuConfig,
   messages?: EditorI18nMessages,
-  imageUpload?: ImageUploadConfig
+  imageUpload?: ImageUploadConfig,
+  locale: EditorLocale = 'zh-CN'
 ): Promise<SlashPluginSetup> => {
   if (config?.enabled === false) {
     return { plugins: [], config: null };
@@ -107,7 +108,7 @@ export const createSlashMenuPlugin = async (
     }
 
     // 最终菜单项配置。
-    const items = resolveSlashMenuItems(config);
+    const items = resolveSlashMenuItems(config, locale);
     // slash 菜单视图控制器。
     const menuView = createSlashMenuViewController(portalContainer);
     // 当前高亮索引。

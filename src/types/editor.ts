@@ -96,6 +96,22 @@ export interface EditorI18nMessages {
   imageUploadSelectOrEnterImage: string;
   /** 图片上传等待提示。 */
   imageUploadUploadingWait: string;
+  /** 选区工具栏加粗按钮标题。 */
+  selectionTooltipStrongTitle: string;
+  /** 选区工具栏斜体按钮标题。 */
+  selectionTooltipEmTitle: string;
+  /** 选区工具栏删除线按钮标题。 */
+  selectionTooltipStrikeTitle: string;
+  /** 选区工具栏行内代码按钮标题。 */
+  selectionTooltipInlineCodeTitle: string;
+  /** 选区工具栏链接按钮标题。 */
+  selectionTooltipLinkTitle: string;
+  /** 选区链接输入占位文案。 */
+  selectionLinkInputPlaceholder: string;
+  /** 选区链接保存按钮无障碍文案。 */
+  selectionLinkSaveAriaLabel: string;
+  /** 选区链接移除按钮无障碍文案。 */
+  selectionLinkRemoveAriaLabel: string;
 }
 
 /**
@@ -212,6 +228,8 @@ export interface CreateEditorOptions {
   editable: boolean;
   /** 编辑器文案。 */
   messages?: EditorI18nMessages;
+  /** 编辑器语言。 */
+  locale?: EditorLocale;
   /** slash 菜单配置。 */
   slashMenu?: SlashMenuConfig;
   /** 图片上传配置。 */

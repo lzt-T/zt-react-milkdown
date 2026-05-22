@@ -1,6 +1,7 @@
 import type { MarkType } from '@milkdown/prose/model';
 import type { EditorView } from '@milkdown/prose/view';
 import type { Bold } from 'lucide-react';
+import type { EditorI18nMessages } from '../../../types/editor';
 
 /**
  * 选区菜单图标组件类型。
@@ -56,4 +57,6 @@ export interface LinkPopoverControlProps {
   open: boolean;
   /** 链接弹层开关回调。 */
   onOpenChange: (nextOpen: boolean) => void;
+  /** 编辑器文案。 */
+  messages: EditorI18nMessages;
 }

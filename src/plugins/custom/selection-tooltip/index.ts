@@ -4,10 +4,12 @@ import type { EditorView } from '@milkdown/prose/view';
 import { $prose } from '@milkdown/utils';
 import { createElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
+import type { EditorI18nMessages } from '../../../types/editor';
 import {
   SELECTION_TOOLTIP_ICON_SIZE,
   SELECTION_TOOLTIP_ICON_STROKE_WIDTH,
-  SELECTION_TOOLTIP_ID
+  SELECTION_TOOLTIP_ID,
+  resolveSelectionTooltipItems
 } from './constants';
 import { isMarkActive, resolveMarkType } from './mark-logic';
 import {
@@ -22,8 +24,11 @@ import {
  */
 const createSelectionTooltipPluginView = (
   view: EditorView,
-  portalContainer: HTMLElement
+  portalContainer: HTMLElement,
+  messages: EditorI18nMessages
 ): PluginView => {
+  // 当前语言下的选区菜单项。
+  const items = resolveSelectionTooltipItems(messages);
   // 当前编辑器视图引用。
   let currentView: EditorView | null = view;
   // 链接 Popover 展开状态。
@@ -74,13 +79,14 @@ const createSelectionTooltipPluginView = (
           linkTriggerButton = element;
         },
         open: isLinkPopoverOpen,
-        onOpenChange: setLinkPopoverOpen
+        onOpenChange: setLinkPopoverOpen,
+        messages
       })
     );
   };
 
   // 选区菜单 DOM。
-  const tooltip = createSelectionTooltipElement(view, () => currentView, toggleLinkPopover, iconRoots);
+  const tooltip = createSelectionTooltipElement(view, items, () => currentView, toggleLinkPopover, iconRoots);
   if (resolveMarkType(view, ['link'])) {
     tooltip.append(linkControlHost);
     renderLinkControl();
@@ -103,7 +109,7 @@ const createSelectionTooltipPluginView = (
       if (currentView.state.selection.empty) {
         setLinkPopoverOpen(false);
       }
-      updateSelectionTooltipActiveState(tooltip, currentView);
+      updateSelectionTooltipActiveState(tooltip, currentView, items);
       if (linkTriggerButton) {
         // 链接 mark 类型。
         const linkType = resolveMarkType(currentView, ['link']);
@@ -126,11 +132,14 @@ const createSelectionTooltipPluginView = (
 /**
  * 创建选区 tooltip 菜单插件。
  */
-export const createSelectionTooltipPlugin = (portalContainer: HTMLElement): ReturnType<typeof $prose> => {
+export const createSelectionTooltipPlugin = (
+  portalContainer: HTMLElement,
+  messages: EditorI18nMessages
+): ReturnType<typeof $prose> => {
   return $prose(() => {
     return new Plugin({
       key: new PluginKey(SELECTION_TOOLTIP_ID),
-      view: (view) => createSelectionTooltipPluginView(view as EditorView, portalContainer)
+      view: (view) => createSelectionTooltipPluginView(view as EditorView, portalContainer, messages)
     });
   });
 };

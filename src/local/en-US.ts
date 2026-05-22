@@ -44,5 +44,13 @@ export const enUSMessages: EditorI18nMessages = {
   imageUploadInvalidUrl: 'Please enter a valid image URL.',
   imageUploadUrlRequired: 'Please enter an image URL.',
   imageUploadSelectOrEnterImage: 'Please select an image or enter an image URL.',
-  imageUploadUploadingWait: 'Image is uploading, please wait.'
+  imageUploadUploadingWait: 'Image is uploading, please wait.',
+  selectionTooltipStrongTitle: 'Bold',
+  selectionTooltipEmTitle: 'Italic',
+  selectionTooltipStrikeTitle: 'Strikethrough',
+  selectionTooltipInlineCodeTitle: 'Inline code',
+  selectionTooltipLinkTitle: 'Link',
+  selectionLinkInputPlaceholder: 'Type or paste a link',
+  selectionLinkSaveAriaLabel: 'Save link',
+  selectionLinkRemoveAriaLabel: 'Remove link'
 };

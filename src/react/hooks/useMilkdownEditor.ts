@@ -1,6 +1,6 @@
 import { debounce } from 'es-toolkit/function';
 import { useEffect, useRef } from 'react';
-import type { EditorController, EditorI18nMessages, ImageUploadConfig, SlashMenuConfig } from '../../types/editor';
+import type { EditorController, EditorI18nMessages, EditorLocale, ImageUploadConfig, SlashMenuConfig } from '../../types/editor';
 import { createEditor } from '../../core/createEditor';
 
 /**
@@ -19,6 +19,8 @@ export interface UseMilkdownEditorOptions {
   debounceMs: number;
   /** 编辑器文案。 */
   messages?: EditorI18nMessages;
+  /** 编辑器语言。 */
+  locale?: EditorLocale;
   /** slash 菜单配置。 */
   slashMenu?: SlashMenuConfig;
   /** 图片上传配置。 */
@@ -106,6 +108,7 @@ export const useMilkdownEditor = (options: UseMilkdownEditorOptions): void => {
           markdown: latestMarkdownRef.current,
           editable: options.editable,
           messages: options.messages,
+          locale: options.locale,
           slashMenu: options.slashMenu,
           imageUpload: options.imageUpload,
           onChange: (nextMarkdown) => {
@@ -142,7 +145,7 @@ export const useMilkdownEditor = (options: UseMilkdownEditorOptions): void => {
       }
       localController = null;
     };
-  }, [options.root, options.editable, options.messages, options.portalContainer, options.slashMenu, options.imageUpload]);
+  }, [options.root, options.editable, options.messages, options.locale, options.portalContainer, options.slashMenu, options.imageUpload]);
 
   useEffect(() => {
     /** 当前控制器。 */

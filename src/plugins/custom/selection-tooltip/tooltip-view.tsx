@@ -8,8 +8,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '../../../components/ui/
 import { useCloseOnGlobalScroll } from '../../../react/hooks/useCloseOnGlobalScroll';
 import {
   SELECTION_TOOLTIP_ICON_SIZE,
-  SELECTION_TOOLTIP_ICON_STROKE_WIDTH,
-  SELECTION_TOOLTIP_ITEMS
+  SELECTION_TOOLTIP_ICON_STROKE_WIDTH
 } from './constants';
 import {
   isEditorViewEditable,
@@ -76,6 +75,7 @@ const createSelectionTooltipButton = (
  */
 export const createSelectionTooltipElement = (
   view: EditorView,
+  items: SelectionTooltipItem[],
   getCurrentView: () => EditorView | null,
   toggleLinkPopover: (view: EditorView) => void,
   iconRoots: Root[]
@@ -84,7 +84,7 @@ export const createSelectionTooltipElement = (
   const tooltip = document.createElement('div');
   tooltip.className = 'zt-md-selection-tooltip';
 
-  SELECTION_TOOLTIP_ITEMS.forEach((item) => {
+  items.forEach((item) => {
     // 当前菜单项 mark 类型。
     const markType = resolveMarkType(view, item.markNames);
     if (!markType) {
@@ -219,8 +219,8 @@ export const LinkPopoverControl = (props: LinkPopoverControlProps): ReactElement
           type: 'button',
           className: 'zt-md-selection-tooltip-button',
           'data-command': 'link',
-          title: '链接',
-          'aria-label': '链接',
+          title: props.messages.selectionTooltipLinkTitle,
+          'aria-label': props.messages.selectionTooltipLinkTitle,
           onMouseDown: preventMouseDown
         },
         createElement(
@@ -259,7 +259,7 @@ export const LinkPopoverControl = (props: LinkPopoverControlProps): ReactElement
           ref: inputRef,
           type: 'text',
           value: inputValue,
-          placeholder: '输入或粘贴链接',
+          placeholder: props.messages.selectionLinkInputPlaceholder,
           className: 'zt-md-selection-link-popover-input',
           onChange: (event) => setInputValue(event.currentTarget.value),
           onKeyDown: (event) => {
@@ -281,7 +281,7 @@ export const LinkPopoverControl = (props: LinkPopoverControlProps): ReactElement
               'zt-md-selection-link-popover-action cursor-pointer bg-transparent hover:bg-transparent focus-visible:ring-0',
             onMouseDown: preventMouseDown,
             onClick: () => commitLink(inputValue.trim()),
-            'aria-label': '保存链接'
+            'aria-label': props.messages.selectionLinkSaveAriaLabel
           },
           createElement(Check, {
             size: props.iconSize,
@@ -298,7 +298,7 @@ export const LinkPopoverControl = (props: LinkPopoverControlProps): ReactElement
               'zt-md-selection-link-popover-action cursor-pointer bg-transparent hover:bg-transparent focus-visible:ring-0',
             onMouseDown: preventMouseDown,
             onClick: () => commitLink(''),
-            'aria-label': '移除链接'
+            'aria-label': props.messages.selectionLinkRemoveAriaLabel
           },
           createElement(Trash2, {
             size: props.iconSize,
@@ -313,8 +313,12 @@ export const LinkPopoverControl = (props: LinkPopoverControlProps): ReactElement
 /**
  * 刷新菜单按钮激活态。
  */
-export const updateSelectionTooltipActiveState = (tooltip: HTMLElement, view: EditorView): void => {
-  SELECTION_TOOLTIP_ITEMS.forEach((item) => {
+export const updateSelectionTooltipActiveState = (
+  tooltip: HTMLElement,
+  view: EditorView,
+  items: SelectionTooltipItem[]
+): void => {
+  items.forEach((item) => {
     // 当前菜单项 mark 类型。
     const markType = resolveMarkType(view, item.markNames);
     if (!markType) {

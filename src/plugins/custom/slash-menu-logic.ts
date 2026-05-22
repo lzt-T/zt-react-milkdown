@@ -1,4 +1,4 @@
-import type { SlashMenuConfig, SlashMenuItem } from '../../types/editor';
+import type { EditorLocale, SlashMenuConfig, SlashMenuItem } from '../../types/editor';
 
 /**
  * slash 菜单当前状态。
@@ -13,7 +13,7 @@ export interface SlashMenuState {
 /**
  * 默认 slash 菜单项。
  */
-const DEFAULT_SLASH_MENU_ITEMS: SlashMenuItem[] = [
+const DEFAULT_SLASH_MENU_ITEMS_ZH_CN: SlashMenuItem[] = [
   { id: 'paragraph', label: '普通文本', group: '标题', icon: 'Type', command: 'paragraph' },
   { id: 'heading-1', label: '标题 1', group: '标题', icon: 'Heading1', command: 'heading1' },
   { id: 'heading-2', label: '标题 2', group: '标题', icon: 'Heading2', command: 'heading2' },
@@ -32,14 +32,35 @@ const DEFAULT_SLASH_MENU_ITEMS: SlashMenuItem[] = [
 ];
 
 /**
+ * 英文默认 slash 菜单项。
+ */
+const DEFAULT_SLASH_MENU_ITEMS_EN_US: SlashMenuItem[] = [
+  { id: 'paragraph', label: 'Paragraph', group: 'Headings', icon: 'Type', command: 'paragraph' },
+  { id: 'heading-1', label: 'Heading 1', group: 'Headings', icon: 'Heading1', command: 'heading1' },
+  { id: 'heading-2', label: 'Heading 2', group: 'Headings', icon: 'Heading2', command: 'heading2' },
+  { id: 'heading-3', label: 'Heading 3', group: 'Headings', icon: 'Heading3', command: 'heading3' },
+  { id: 'heading-4', label: 'Heading 4', group: 'Headings', icon: 'Heading4', command: 'heading4' },
+  { id: 'heading-5', label: 'Heading 5', group: 'Headings', icon: 'Heading5', command: 'heading5' },
+  { id: 'heading-6', label: 'Heading 6', group: 'Headings', icon: 'Heading6', command: 'heading6' },
+  { id: 'bullet-list', label: 'Bullet list', group: 'Lists', icon: 'List', command: 'bulletList' },
+  { id: 'ordered-list', label: 'Ordered list', group: 'Lists', icon: 'ListOrdered', command: 'orderedList' },
+  { id: 'task-list', label: 'Task list', group: 'Lists', icon: 'ListTodo', command: 'taskList' },
+  { id: 'blockquote', label: 'Blockquote', group: 'Insert', icon: 'TextQuote', command: 'blockquote' },
+  { id: 'inline-code', label: 'Inline code', group: 'Insert', icon: 'Code', command: 'inlineCode' },
+  { id: 'math-block', label: 'Math block', group: 'Insert', icon: 'Sigma', command: 'mathBlock' },
+  { id: 'table', label: 'Table', group: 'Insert', icon: 'Table', command: 'table' },
+  { id: 'image', label: 'Image', group: 'Media', icon: 'Image', command: 'image' }
+];
+
+/**
  * 构建最终菜单项配置。
  */
-export const resolveSlashMenuItems = (config?: SlashMenuConfig): SlashMenuItem[] => {
+export const resolveSlashMenuItems = (config?: SlashMenuConfig, locale: EditorLocale = 'zh-CN'): SlashMenuItem[] => {
   if (config?.items && config.items.length > 0) {
     return config.items;
   }
 
-  return DEFAULT_SLASH_MENU_ITEMS;
+  return locale === 'en-US' ? DEFAULT_SLASH_MENU_ITEMS_EN_US : DEFAULT_SLASH_MENU_ITEMS_ZH_CN;
 };
 
 /**

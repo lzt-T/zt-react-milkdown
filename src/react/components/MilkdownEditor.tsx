@@ -31,6 +31,7 @@ const MilkdownRuntime = (props: {
   root: HTMLElement | null;
   onRootRef: (node: HTMLDivElement | null) => void;
   markdown: string;
+  locale: MilkdownEditorProps['locale'];
   editable: boolean;
   debounceMs: number;
   messages: ReturnType<typeof resolveEditorMessages>;
@@ -49,6 +50,7 @@ const MilkdownRuntime = (props: {
     editable: props.editable,
     debounceMs: props.debounceMs,
     messages: props.messages,
+    locale: props.locale,
     slashMenu: props.slashMenu,
     imageUpload: props.imageUpload,
     onMarkdownChange: props.onMarkdownChange,
@@ -146,6 +148,7 @@ export const MilkdownEditor = (props: MilkdownEditorProps): JSX.Element => {
             root={root}
             onRootRef={handleRootRef}
             markdown={markdown}
+            locale={props.locale}
             portalContainer={portalContainer}
             editable={editable}
             debounceMs={debounceMs}
