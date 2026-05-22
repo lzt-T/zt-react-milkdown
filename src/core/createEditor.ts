@@ -15,6 +15,7 @@ import { createSlashMenuPlugin } from '../plugins/custom/slash-menu';
 import { tableArrowEntryPlugin } from '../plugins/custom/table-arrow-entry';
 import { createTableFocusActionsPlugin } from '../plugins/custom/table-focus-actions';
 import { taskListToggle } from '../plugins/custom/task-list-toggle';
+import { tabSpaceIndentPlugin } from '../plugins/custom/tab-space-indent';
 import { resolveEditorMessages } from '../local/i18n';
 import type { PresetPluginExports } from '../plugins/preset-common';
 // slash 菜单调试日志前缀。
@@ -66,6 +67,8 @@ export const createEditor = async (options: CreateEditorOptions): Promise<Editor
   const clipboard = assertKey(clipboardKit, 'clipboard');
   /** indent 插件导出对象。 */
   const indent = assertKey(indentKit, 'indent');
+  /** indent 配置上下文。 */
+  const indentConfig = assertKey(indentKit, 'indentConfig');
   /** commonmark 插件导出对象。 */
   const commonmark = assertKey(commonmarkKit, 'commonmark');
   /** gfm 插件导出对象。 */
@@ -103,6 +106,7 @@ export const createEditor = async (options: CreateEditorOptions): Promise<Editor
     dropCursor: dropCursorPlugin,
     math,
     taskListToggle,
+    tabSpaceIndent: tabSpaceIndentPlugin,
     slash: slashPlugins.length > 0 ? slashPlugins : null
   };
   /** 启动阶段插件集合（不含运行时延迟插件）。 */
@@ -189,6 +193,14 @@ export const createEditor = async (options: CreateEditorOptions): Promise<Editor
   runtimePluginDescriptors.forEach((descriptor) => {
     try {
       editor.use(descriptor.plugin);
+      if (descriptor.name === 'indent') {
+        editor.action((ctx: any) => {
+          ctx.set(indentConfig, {
+            type: 'space',
+            size: 4
+          });
+        });
+      }
       console.log(`${SLASH_DEBUG_PREFIX} RUNTIME_PLUGIN_REGISTERED`, {
         name: descriptor.name
       });

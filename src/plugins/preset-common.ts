@@ -32,6 +32,8 @@ export interface PresetPluginExports {
   math: unknown | unknown[];
   /** 任务列表交互插件实例。 */
   taskListToggle: unknown;
+  /** 全局 Tab 空格缩进插件实例。 */
+  tabSpaceIndent: unknown;
   /** slash 插件实例（可为 null 表示关闭）。 */
   slash?: unknown | null;
 }
@@ -90,6 +92,7 @@ export const resolvePresetPlugins = (
   appendPluginDescriptors(descriptors, 'drop-cursor', pluginExports.dropCursor);
   appendPluginDescriptors(descriptors, 'math', pluginExports.math);
   appendPluginDescriptors(descriptors, 'task-list-toggle', pluginExports.taskListToggle);
+  appendPluginDescriptors(descriptors, 'tab-space-indent', pluginExports.tabSpaceIndent);
   if (pluginExports.slash) {
     appendPluginDescriptors(descriptors, 'slash', pluginExports.slash);
   }
