@@ -43,6 +43,14 @@ export const useMilkdownEditor = (options: UseMilkdownEditorOptions): void => {
   const currentMarkdownRef = useRef<string>(options.markdown);
   /** 当前最新 markdown 入参引用。 */
   const latestMarkdownRef = useRef<string>(options.markdown);
+  /** 当前最新文案配置引用。 */
+  const latestMessagesRef = useRef<EditorI18nMessages | undefined>(options.messages);
+  /** 当前最新语言配置引用。 */
+  const latestLocaleRef = useRef<EditorLocale | undefined>(options.locale);
+  /** 当前最新 slash 菜单配置引用。 */
+  const latestSlashMenuRef = useRef<SlashMenuConfig | undefined>(options.slashMenu);
+  /** 当前最新图片上传配置引用。 */
+  const latestImageUploadRef = useRef<ImageUploadConfig | undefined>(options.imageUpload);
   /** markdown 变更回调引用。 */
   const onMarkdownChangeRef = useRef<(markdown: string) => void>(options.onMarkdownChange);
   /** 初始化失败回调引用。 */
@@ -57,6 +65,22 @@ export const useMilkdownEditor = (options: UseMilkdownEditorOptions): void => {
   useEffect(() => {
     latestMarkdownRef.current = options.markdown;
   }, [options.markdown]);
+
+  useEffect(() => {
+    latestMessagesRef.current = options.messages;
+  }, [options.messages]);
+
+  useEffect(() => {
+    latestLocaleRef.current = options.locale;
+  }, [options.locale]);
+
+  useEffect(() => {
+    latestSlashMenuRef.current = options.slashMenu;
+  }, [options.slashMenu]);
+
+  useEffect(() => {
+    latestImageUploadRef.current = options.imageUpload;
+  }, [options.imageUpload]);
 
   useEffect(() => {
     onMarkdownChangeRef.current = options.onMarkdownChange;
@@ -107,10 +131,10 @@ export const useMilkdownEditor = (options: UseMilkdownEditorOptions): void => {
           portalContainer: options.portalContainer,
           markdown: latestMarkdownRef.current,
           readOnly: options.readOnly,
-          messages: options.messages,
-          locale: options.locale,
-          slashMenu: options.slashMenu,
-          imageUpload: options.imageUpload,
+          messages: latestMessagesRef.current,
+          locale: latestLocaleRef.current,
+          slashMenu: latestSlashMenuRef.current,
+          imageUpload: latestImageUploadRef.current,
           onChange: (nextMarkdown) => {
             currentMarkdownRef.current = nextMarkdown;
             debouncedEmitRef.current?.(nextMarkdown);
@@ -145,7 +169,15 @@ export const useMilkdownEditor = (options: UseMilkdownEditorOptions): void => {
       }
       localController = null;
     };
-  }, [options.root, options.readOnly, options.messages, options.locale, options.portalContainer, options.slashMenu, options.imageUpload]);
+    /**
+     * 仅结构性依赖触发编辑器重建：
+     * - root / portalContainer：宿主容器变化，必须重建。
+     * - readOnly：编辑模式切换，按现有行为重建。
+     * - locale：语言切换时重建，刷新初始化时注入的插件文案。
+     * 内容变化不重建；messages/slashMenu/imageUpload 通过 ref 读取，
+     * 避免父组件重渲染时对象引用变化导致输入失焦。
+     */
+  }, [options.root, options.readOnly, options.portalContainer, options.locale]);
 
   useEffect(() => {
     /** 当前控制器。 */
