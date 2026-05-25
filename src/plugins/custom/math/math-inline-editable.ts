@@ -101,8 +101,21 @@ class MathInlineEditableNodeView implements NodeView {
 
     this.dom.append(this.previewContainer, this.errorContainer);
     this.syncFromNode(node);
+    this.dom.addEventListener('mousedown', this.handleMouseDown);
     this.dom.addEventListener('click', this.handleClick);
   }
+
+  /**
+   * 只读模式下阻断按下事件，避免 ProseMirror 进入节点选中态。
+   */
+  private readonly handleMouseDown = (event: MouseEvent): void => {
+    if (isEditorViewEditable(this.view)) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+  };
 
   /**
    * 响应行内公式点击，交给独立插件打开编辑器。
@@ -192,6 +205,7 @@ class MathInlineEditableNodeView implements NodeView {
    * 销毁时解绑监听器。
    */
   destroy(): void {
+    this.dom.removeEventListener('mousedown', this.handleMouseDown);
     this.dom.removeEventListener('click', this.handleClick);
   }
 }

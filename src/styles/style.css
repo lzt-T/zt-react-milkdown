@@ -195,6 +195,14 @@
     bottom: -1px;
   }
 
+  .zt-md-readonly .zt-md-editor .ProseMirror-selectednode {
+    outline: none !important;
+  }
+
+  .zt-md-readonly .zt-md-editor li.ProseMirror-selectednode:after {
+    border: none !important;
+  }
+
   /* 统一编辑器内部滚动条样式，新增滚动容器默认自动继承。 */
   .zt-md * {
     scrollbar-width: thin;

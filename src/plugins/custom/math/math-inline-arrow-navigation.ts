@@ -2,6 +2,7 @@ import type { Node as ProseNode } from '@milkdown/prose/model';
 import { NodeSelection, Plugin, PluginKey, TextSelection } from '@milkdown/prose/state';
 import type { EditorView } from '@milkdown/prose/view';
 import { $prose } from '@milkdown/utils';
+import { openMathInlineEditor } from './math-inline-edit-plugin';
 
 /**
  * math_inline 节点类型名。
@@ -14,9 +15,17 @@ const MATH_INLINE_ARROW_NAVIGATION_PLUGIN_KEY = 'zt-md-math-inline-arrow-navigat
 /**
  * 方向键对应的选择偏移配置。
  */
-const ARROW_NAVIGATION_DIRECTION_MAP: Record<string, { positionKey: 'from' | 'to'; bias: -1 | 1 }> = {
-  ArrowLeft: { positionKey: 'from', bias: -1 },
-  ArrowRight: { positionKey: 'to', bias: 1 }
+const ARROW_NAVIGATION_DIRECTION_MAP: Record<string, { positionKey: 'from' | 'to' }> = {
+  ArrowLeft: { positionKey: 'from' },
+  ArrowRight: { positionKey: 'to' }
+};
+
+/**
+ * 方向键进入行内公式编辑时的光标落点映射。
+ */
+const ARROW_TO_CARET_POSITION_MAP: Record<string, 'start' | 'end'> = {
+  ArrowLeft: 'end',
+  ArrowRight: 'start'
 };
 /**
  * 删除键对应的相邻节点方向。
@@ -77,12 +86,40 @@ const handleMathInlineArrowNavigation = (view: EditorView, event: KeyboardEvent)
   }
 
   event.preventDefault();
-  // 目标位置。
-  const targetPosition = selection[direction.positionKey];
-  // 目标文本选区。
-  const textSelection = TextSelection.near(view.state.doc.resolve(targetPosition), direction.bias);
-  view.dispatch(view.state.tr.setSelection(textSelection).scrollIntoView());
-  view.focus();
+  // 选中态下直接进入行内公式编辑，避免再退回文本光标。
+  openMathInlineEditor(view, selection.from, { caret: ARROW_TO_CARET_POSITION_MAP[event.key] ?? 'end' });
+  return true;
+};
+
+/**
+ * 处理光标位于行内公式边界时的方向键进入编辑。
+ */
+const handleMathInlineArrowOpen = (view: EditorView, event: KeyboardEvent): boolean => {
+  // 当前方向配置。
+  const direction = ARROW_NAVIGATION_DIRECTION_MAP[event.key];
+  if (!direction || isInsideMathInlineEditor(event.target)) {
+    return false;
+  }
+
+  // 当前选区。
+  const { selection } = view.state;
+  if (!selection.empty) {
+    return false;
+  }
+
+  // 当前光标位置。
+  const resolvedPosition = selection.$from;
+  // 相邻节点。
+  const adjacentNode = direction.positionKey === 'from' ? resolvedPosition.nodeBefore : resolvedPosition.nodeAfter;
+  if (!isMathInlineNode(adjacentNode)) {
+    return false;
+  }
+
+  event.preventDefault();
+  // 相邻行内公式起始位置。
+  const mathInlinePosition =
+    direction.positionKey === 'from' ? selection.from - adjacentNode.nodeSize : selection.from;
+  openMathInlineEditor(view, mathInlinePosition, { caret: ARROW_TO_CARET_POSITION_MAP[event.key] ?? 'end' });
   return true;
 };
 
@@ -207,6 +244,10 @@ export const mathInlineArrowNavigationPlugin = $prose(() => {
     key: new PluginKey(MATH_INLINE_ARROW_NAVIGATION_PLUGIN_KEY),
     props: {
       handleKeyDown: (view, event) => {
+        if (handleMathInlineArrowOpen(view as EditorView, event)) {
+          return true;
+        }
+
         if (handleMathInlineDeletion(view as EditorView, event)) {
           return true;
         }

@@ -48,6 +48,10 @@ export default function Demo() {
   - 基于 CommonMark + GFM，支持任务列表、表格等常用语法。
 
 - 公式支持
+  - 行内公式：
+    ```md
+    爱因斯坦质能方程：$E=mc^2$
+    ```
   - 块级公式：
     ```md
     $$
