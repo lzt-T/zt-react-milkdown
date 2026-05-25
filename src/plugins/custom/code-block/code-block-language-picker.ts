@@ -255,7 +255,18 @@ const CodeBlockLanguagePicker = (props: CodeBlockLanguagePickerProps): ReactElem
     setOpen(false);
   };
 
-  useCloseOnGlobalScroll(open, handleCloseOnScroll);
+  /**
+   * 判断滚动是否发生在语言选择器面板内部。
+   */
+  const shouldIgnorePanelScroll = (event: Event): boolean => {
+    if (!(event.target instanceof HTMLElement)) {
+      return false;
+    }
+
+    return event.target.closest('.zt-md-code-language-picker-panel') !== null;
+  };
+
+  useCloseOnGlobalScroll(open, handleCloseOnScroll, shouldIgnorePanelScroll);
 
   return createElement(
     Popover,

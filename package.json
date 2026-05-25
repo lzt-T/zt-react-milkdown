@@ -1,6 +1,6 @@
 {
   "name": "zt-react-milkdown",
-  "version": "0.1.0",
+  "version": "0.1.5",
   "description": "A React Markdown editor package powered by Milkdown.",
   "license": "MIT",
   "type": "module",
@@ -32,7 +32,8 @@
     "lint": "npm run typecheck",
     "test": "TMPDIR=/tmp TEMP=/tmp TMP=/tmp vitest run",
     "test:watch": "TMPDIR=/tmp TEMP=/tmp TMP=/tmp vitest",
-    "pack:check": "npm_config_cache=.npm-cache npm pack --dry-run"
+    "pack:check": "npm_config_cache=.npm-cache npm pack --dry-run",
+    "prepublishOnly": "pnpm run build"
   },
   "peerDependencies": {
     "react": ">=18",

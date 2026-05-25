@@ -1,7 +1,7 @@
 /**
  * 全局滚动订阅回调。
  */
-export type GlobalScrollListener = () => void;
+export type GlobalScrollListener = (event: Event) => void;
 
 // 当前全局滚动订阅者集合。
 const globalScrollListeners = new Set<GlobalScrollListener>();
@@ -18,10 +18,10 @@ const canUseDocument = (): boolean => {
 /**
  * 分发全局滚动事件给当前订阅者。
  */
-const handleGlobalScroll = (): void => {
+const handleGlobalScroll = (event: Event): void => {
   // 固化本轮订阅者快照，避免回调中取消订阅影响迭代。
   const listeners = Array.from(globalScrollListeners);
-  listeners.forEach((listener) => listener());
+  listeners.forEach((listener) => listener(event));
 };
 
 /**

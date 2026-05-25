@@ -4,6 +4,15 @@ import tailwindcss from '@tailwindcss/vite';
 import dts from 'vite-plugin-dts';
 import { resolve } from 'node:path';
 
+/** 判断依赖是否应作为 peer 保留在消费端。 */
+const isExternalPeerDependency = (id: string): boolean =>
+  id === 'react' ||
+  id.startsWith('react/') ||
+  id === 'react-dom' ||
+  id.startsWith('react-dom/') ||
+  id === '@milkdown/kit' ||
+  id.startsWith('@milkdown/kit/');
+
 /**
  * 创建 Vite 的库构建配置。
  */
@@ -41,13 +50,7 @@ export default defineConfig({
       fileName: (format) => (format === 'es' ? 'index.mjs' : 'index.cjs')
     },
     rollupOptions: {
-      external: [
-        'react',
-        'react-dom',
-        'react/jsx-runtime',
-        'react/jsx-dev-runtime',
-        '@milkdown/kit'
-      ],
+      external: isExternalPeerDependency,
       output: {
         globals: {
           react: 'React',

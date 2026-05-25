@@ -4,9 +4,8 @@
 
 GitHub 仓库：[lzt-T/zt-react-milkdown](https://github.com/lzt-T/zt-react-milkdown)
 
-示图：
+在线示例：[https://markdown.xjoker.top/](https://markdown.xjoker.top/)
 
-![image-20260525150748313](.\assets\image-20260525150748313.png)
 
 ## 安装
 
