@@ -60,6 +60,90 @@
     line-height: 1;
   }
 
+  .zt-md-selection-transform-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 28px;
+    border: 0;
+    border-radius: 6px;
+    padding: 0 8px;
+    background: color-mix(in srgb, var(--zt-primary) 16%, var(--zt-surface));
+    color: var(--zt-primary);
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .zt-md-selection-transform-trigger:hover {
+    background: color-mix(in srgb, var(--zt-primary) 22%, var(--zt-surface));
+  }
+
+  .zt-md-selection-transform-trigger:focus-visible {
+    outline: 1px solid color-mix(in srgb, var(--zt-primary) 60%, var(--zt-border));
+    outline-offset: 1px;
+  }
+
+  .zt-md-selection-transform-trigger-label {
+    max-width: 92px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 13px;
+    line-height: 1;
+  }
+
+  .zt-md-selection-transform-popover {
+    border: 1px solid var(--zt-border);
+    background: var(--zt-surface);
+  }
+
+  .zt-md-selection-transform-popover-title {
+    margin: 2px 6px 6px;
+    color: var(--zt-muted);
+    font-size: 12px;
+    line-height: 1.4;
+  }
+
+  .zt-md-selection-transform-popover-list {
+    display: grid;
+    gap: 2px;
+  }
+
+  .zt-md-selection-transform-item {
+    display: inline-flex;
+    width: 100%;
+    height: 30px;
+    align-items: center;
+    gap: 8px;
+    border: 0;
+    border-radius: 6px;
+    padding: 0 8px;
+    background: transparent;
+    color: var(--zt-fg);
+    cursor: pointer;
+    text-align: left;
+  }
+
+  .zt-md-selection-transform-item:hover,
+  .zt-md-selection-transform-item[data-active='true'] {
+    background: color-mix(in srgb, var(--zt-primary) 12%, var(--zt-surface));
+    color: var(--zt-primary);
+  }
+
+  .zt-md-selection-transform-item:focus-visible {
+    outline: 1px solid color-mix(in srgb, var(--zt-primary) 55%, var(--zt-border));
+    outline-offset: 1px;
+  }
+
+  .zt-md-selection-transform-item-icon {
+    flex: 0 0 auto;
+  }
+
+  .zt-md-selection-transform-item-label {
+    font-size: 13px;
+    line-height: 1;
+  }
+
   .zt-md-selection-link-popover {
     width: auto;
     min-width: 0;

@@ -1,11 +1,12 @@
 import type { MarkType } from '@milkdown/prose/model';
 import type { EditorView } from '@milkdown/prose/view';
-import { Check, Link2, Trash2 } from 'lucide-react';
+import { Check, ChevronDown, Link2, Trash2 } from 'lucide-react';
 import { createElement, useEffect, useRef, useState, type MouseEvent as ReactMouseEvent, type ReactElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { Button } from '../../../components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '../../../components/ui/popover';
 import { useCloseOnGlobalScroll } from '../../../react/hooks/useCloseOnGlobalScroll';
+import { runBlockTransformCommand, resolveCurrentBlockTransformCommand } from '../block-transform';
 import {
   SELECTION_TOOLTIP_ICON_SIZE,
   SELECTION_TOOLTIP_ICON_STROKE_WIDTH
@@ -17,7 +18,8 @@ import {
   resolveSelectedLinkHref,
   runSelectionTooltipCommand
 } from './mark-logic';
-import type { LinkPopoverControlProps, SelectionTooltipItem } from './types';
+import type { BlockTransformCommand } from '../../../types/editor';
+import type { LinkPopoverControlProps, SelectionBlockTransformItem, SelectionTooltipItem } from './types';
 
 /**
  * 创建选区菜单按钮。
@@ -78,11 +80,13 @@ export const createSelectionTooltipElement = (
   items: SelectionTooltipItem[],
   getCurrentView: () => EditorView | null,
   toggleLinkPopover: (view: EditorView) => void,
+  blockTransformControlHost: HTMLElement,
   iconRoots: Root[]
 ): HTMLDivElement => {
   // 菜单容器节点。
   const tooltip = document.createElement('div');
   tooltip.className = 'zt-md-selection-tooltip';
+  tooltip.append(blockTransformControlHost);
 
   items.forEach((item) => {
     // 当前菜单项 mark 类型。
@@ -99,6 +103,131 @@ export const createSelectionTooltipElement = (
   });
 
   return tooltip;
+};
+
+/**
+ * 块级转换 Popover 控件属性。
+ */
+interface BlockTransformPopoverControlProps {
+  /** 编辑器视图读取函数。 */
+  getCurrentView: () => EditorView | null;
+  /** Popover Portal 挂载容器。 */
+  portalContainer: HTMLElement;
+  /** 图标尺寸。 */
+  iconSize: number;
+  /** 图标线宽。 */
+  iconStrokeWidth: number;
+  /** 转换菜单标题。 */
+  menuTitle: string;
+  /** 转换菜单项。 */
+  items: SelectionBlockTransformItem[];
+  /** 当前按钮文案。 */
+  activeLabel: string;
+  /** 弹层展开状态。 */
+  open: boolean;
+  /** 开关回调。 */
+  onOpenChange: (nextOpen: boolean) => void;
+  /** 当前激活命令集合。 */
+  activeCommands: ReadonlySet<BlockTransformCommand>;
+}
+
+/**
+ * 块级转换 Popover 控件。
+ */
+export const BlockTransformPopoverControl = (props: BlockTransformPopoverControlProps): ReactElement => {
+  /**
+   * 滚动时关闭块级转换 Popover。
+   */
+  const handleCloseOnScroll = (): void => {
+    props.onOpenChange(false);
+  };
+
+  useCloseOnGlobalScroll(props.open, handleCloseOnScroll);
+
+  /**
+   * 阻止交互破坏当前选区。
+   */
+  const preventMouseDown = (event: ReactMouseEvent): void => {
+    event.preventDefault();
+  };
+
+  /**
+   * 执行块级转换命令。
+   */
+  const applyBlockTransform = (command: BlockTransformCommand): void => {
+    // 当前编辑器视图。
+    const view = props.getCurrentView();
+    if (!view || view.state.selection.empty) {
+      props.onOpenChange(false);
+      return;
+    }
+
+    void runBlockTransformCommand(view, command).then(() => {
+      props.onOpenChange(false);
+      view.focus();
+    });
+  };
+
+  return createElement(
+    Popover,
+    {
+      open: props.open,
+      onOpenChange: props.onOpenChange
+    },
+    createElement(
+      PopoverTrigger,
+      { asChild: true },
+      createElement(
+        'button',
+        {
+          type: 'button',
+          className: 'zt-md-selection-transform-trigger',
+          'aria-label': props.menuTitle,
+          title: props.menuTitle,
+          onMouseDown: preventMouseDown
+        },
+        createElement('span', { className: 'zt-md-selection-transform-trigger-label' }, props.activeLabel),
+        createElement(ChevronDown, { size: props.iconSize, strokeWidth: props.iconStrokeWidth, 'aria-hidden': 'true' })
+      )
+    ),
+    createElement(
+      PopoverContent,
+        {
+          container: props.portalContainer,
+          align: 'start',
+          sideOffset: 8,
+          className: 'zt-md-selection-transform-popover !w-[176px] p-1',
+          onOpenAutoFocus: (event) => event.preventDefault(),
+          onCloseAutoFocus: (event) => event.preventDefault()
+        },
+      createElement('p', { className: 'zt-md-selection-transform-popover-title' }, props.menuTitle),
+      createElement(
+        'div',
+        { className: 'zt-md-selection-transform-popover-list' },
+        ...props.items.map((item) => {
+          const isActive = props.activeCommands.has(item.command);
+          return createElement(
+            'button',
+            {
+              key: item.command,
+              type: 'button',
+              className: 'zt-md-selection-transform-item',
+              'data-active': isActive ? 'true' : 'false',
+              onMouseDown: preventMouseDown,
+              onClick: () => applyBlockTransform(item.command)
+            },
+            createElement(item.icon, {
+              size: props.iconSize,
+              strokeWidth: props.iconStrokeWidth,
+              className: 'zt-md-selection-transform-item-icon',
+              'aria-hidden': 'true'
+            }),
+            createElement('span', { className: 'zt-md-selection-transform-item-label' }, item.label)
+          );
+        })
+      )
+    )
+  );
 };
 
 /**
@@ -361,7 +490,8 @@ const hasCodeBlockInSelection = (view: EditorView): boolean => {
  */
 export const createSelectionTooltipShouldShow = (
   tooltip: HTMLElement,
-  isPinned: () => boolean
+  isPinned: () => boolean,
+  isBlockTransformOpen: () => boolean
 ): ((view: EditorView) => boolean) => {
   /**
    * 判断 tooltip 是否应该展示。
@@ -375,7 +505,7 @@ export const createSelectionTooltipShouldShow = (
       return false;
     }
 
-    if (!view.hasFocus() && !isTooltipFocused && !isPinned()) {
+    if (!view.hasFocus() && !isTooltipFocused && !isPinned() && !isBlockTransformOpen()) {
       return false;
     }
 

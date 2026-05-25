@@ -1,4 +1,6 @@
 import type { SlashMenuCommand } from '../../../types/editor';
+import type { BlockTransformCommand } from '../../../types/editor';
+import { runBlockTransformCommand } from '../block-transform';
 import { mathInlineEditPluginKey } from '../math/math-inline-edit-plugin';
 
 /**
@@ -166,43 +168,6 @@ const insertDefaultTable = async (view: any): Promise<boolean> => {
 };
 
 /**
- * 设置当前列表项的任务完成状态。
- */
-const setCurrentListItemChecked = (view: any, checked: boolean): boolean => {
-  // 当前选区起点。
-  const from = view?.state?.selection?.$from;
-  if (!from || !view?.dispatch) {
-    return false;
-  }
-
-  for (let depth = from.depth; depth > 0; depth -= 1) {
-    // 当前层级节点。
-    const node = from.node(depth);
-    if (node?.type?.name !== 'list_item') {
-      continue;
-    }
-
-    // 当前列表项 attrs 定义。
-    const attrsSpec = node.type?.spec?.attrs as Record<string, unknown> | undefined;
-    if (!attrsSpec?.checked) {
-      return false;
-    }
-
-    // 当前列表项位置。
-    const itemPosition = from.before(depth);
-    view.dispatch(
-      view.state.tr.setNodeMarkup(itemPosition, undefined, {
-        ...node.attrs,
-        checked
-      })
-    );
-    return true;
-  }
-
-  return false;
-};
-
-/**
  * 从 schema marks 中按候选名解析 mark 类型。
  */
 const resolveMarkType = (view: any, markNames: string[]): unknown | null => {
@@ -211,6 +176,31 @@ const resolveMarkType = (view: any, markNames: string[]): unknown | null => {
   // 命中的 mark 名称。
   const matchedName = markNames.find((markName) => marks[markName]);
   return matchedName ? marks[matchedName] ?? null : null;
+};
+
+/**
+ * 块级转换命令集合。
+ */
+const BLOCK_TRANSFORM_COMMAND_SET: ReadonlySet<BlockTransformCommand> = new Set([
+  'paragraph',
+  'heading1',
+  'heading2',
+  'heading3',
+  'heading4',
+  'heading5',
+  'heading6',
+  'bulletList',
+  'orderedList',
+  'taskList',
+  'blockquote',
+  'codeBlock'
+]);
+
+/**
+ * 判断命令是否为块级转换命令。
+ */
+const isBlockTransformCommand = (command: SlashMenuCommand): command is BlockTransformCommand => {
+  return BLOCK_TRANSFORM_COMMAND_SET.has(command as BlockTransformCommand);
 };
 
 /**
@@ -246,22 +236,11 @@ export const runSlashCommand = async (view: any, command: SlashMenuCommand): Pro
 
   // prose commands 模块导出集合。
   const proseCommandsModule = (await import('@milkdown/prose/commands')) as Record<string, unknown>;
-  // prose schema-list 模块导出集合。
-  const proseListModule = (await import('@milkdown/prose/schema-list')) as Record<string, unknown>;
   // setBlockType 命令工厂。
   const setBlockType = getObjectValue(proseCommandsModule, 'setBlockType');
-  // wrapIn 命令工厂。
-  const wrapIn = getObjectValue(proseCommandsModule, 'wrapIn');
   // toggleMark 命令工厂。
   const toggleMark = getObjectValue(proseCommandsModule, 'toggleMark');
-  // wrapInList 命令工厂。
-  const wrapInList = getObjectValue(proseListModule, 'wrapInList');
-  if (
-    typeof setBlockType !== 'function' ||
-    typeof wrapIn !== 'function' ||
-    typeof wrapInList !== 'function' ||
-    typeof toggleMark !== 'function'
-  ) {
+  if (typeof setBlockType !== 'function' || typeof toggleMark !== 'function') {
     return false;
   }
 
@@ -269,73 +248,8 @@ export const runSlashCommand = async (view: any, command: SlashMenuCommand): Pro
   const schema = view.state.schema as Record<string, unknown>;
   // 节点类型集合。
   const nodes = (schema?.nodes ?? {}) as Record<string, unknown>;
-  // 标题层级映射。
-  const headingLevelMap: Partial<Record<SlashMenuCommand, number>> = {
-    heading1: 1,
-    heading2: 2,
-    heading3: 3,
-    heading4: 4,
-    heading5: 5,
-    heading6: 6
-  };
-  // 列表节点映射。
-  const listTypeMap: Partial<Record<SlashMenuCommand, string>> = {
-    bulletList: 'bullet_list',
-    orderedList: 'ordered_list'
-  };
-
-  if (command === 'paragraph') {
-    // paragraph 节点类型。
-    const paragraphType = nodes.paragraph;
-    if (!paragraphType) {
-      return false;
-    }
-    // paragraph 转换命令。
-    const paragraphCommand = (setBlockType as (type: unknown, attrs?: Record<string, unknown>) => EditorCommandExecutor)(
-      paragraphType
-    );
-    return runCommand(paragraphCommand, view);
-  }
-
-  if (command in headingLevelMap) {
-    // heading 节点类型。
-    const headingType = nodes.heading;
-    // heading 层级。
-    const level = headingLevelMap[command];
-    if (!headingType || typeof level !== 'number') {
-      return false;
-    }
-    // heading 转换命令。
-    const headingCommand = (setBlockType as (type: unknown, attrs?: Record<string, unknown>) => EditorCommandExecutor)(
-      headingType,
-      { level }
-    );
-    return runCommand(headingCommand, view);
-  }
-
-  if (command === 'blockquote') {
-    // blockquote 节点类型。
-    const quoteType = nodes.blockquote;
-    if (!quoteType) {
-      return false;
-    }
-    // 引用包裹命令。
-    const quoteCommand = (wrapIn as (type: unknown, attrs?: Record<string, unknown>) => EditorCommandExecutor)(quoteType);
-    return runCommand(quoteCommand, view);
-  }
-
-  if (command === 'taskList') {
-    // 任务列表基于无序列表和 list_item checked 属性实现。
-    const listType = nodes.bullet_list;
-    if (!listType) {
-      return false;
-    }
-    // 无序列表包裹命令。
-    const listCommand = (wrapInList as (type: unknown, attrs?: Record<string, unknown>) => EditorCommandExecutor)(listType);
-    if (!runCommand(listCommand, view)) {
-      return false;
-    }
-    return setCurrentListItemChecked(view, false);
+  if (isBlockTransformCommand(command)) {
+    return runBlockTransformCommand(view, command);
   }
 
   if (command === 'inlineCode') {
@@ -353,20 +267,6 @@ export const runSlashCommand = async (view: any, command: SlashMenuCommand): Pro
 
   if (command === 'inlineMath') {
     return insertInlineMath(view);
-  }
-
-  if (command === 'codeBlock') {
-    // 代码块节点类型。
-    const codeBlockType = nodes.code_block;
-    if (!codeBlockType) {
-      return false;
-    }
-    // 代码块转换命令。
-    const codeBlockCommand = (setBlockType as (type: unknown, attrs?: Record<string, unknown>) => EditorCommandExecutor)(
-      codeBlockType,
-      { language: 'text' }
-    );
-    return runCommand(codeBlockCommand, view);
   }
 
   if (command === 'mathBlock') {
@@ -425,17 +325,6 @@ export const runSlashCommand = async (view: any, command: SlashMenuCommand): Pro
 
   if (command === 'table') {
     return insertDefaultTable(view);
-  }
-
-  if (command in listTypeMap) {
-    // 列表节点类型。
-    const listType = nodes[listTypeMap[command] as string];
-    if (!listType) {
-      return false;
-    }
-    // 列表包裹命令。
-    const listCommand = (wrapInList as (type: unknown, attrs?: Record<string, unknown>) => EditorCommandExecutor)(listType);
-    return runCommand(listCommand, view);
   }
 
   return false;

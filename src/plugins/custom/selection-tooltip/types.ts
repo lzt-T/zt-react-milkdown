@@ -1,7 +1,7 @@
 import type { MarkType } from '@milkdown/prose/model';
 import type { EditorView } from '@milkdown/prose/view';
 import type { Bold } from 'lucide-react';
-import type { EditorI18nMessages } from '../../../types/editor';
+import type { BlockTransformCommand, EditorI18nMessages } from '../../../types/editor';
 
 /**
  * 选区菜单图标组件类型。
@@ -12,6 +12,11 @@ export type SelectionTooltipIcon = typeof Bold;
  * 选区菜单命令键名。
  */
 export type SelectionTooltipCommand = 'strong' | 'em' | 'strike' | 'inlineCode' | 'link';
+
+/**
+ * 块级转换菜单图标组件类型。
+ */
+export type BlockTransformIcon = typeof Bold;
 
 /**
  * 选区菜单项配置。
@@ -25,6 +30,18 @@ export interface SelectionTooltipItem {
   title: string;
   /** schema mark 候选名。 */
   markNames: string[];
+}
+
+/**
+ * 块级转换菜单项配置。
+ */
+export interface SelectionBlockTransformItem {
+  /** 命令键名。 */
+  command: BlockTransformCommand;
+  /** 按钮图标组件。 */
+  icon: BlockTransformIcon;
+  /** 展示文案。 */
+  label: string;
 }
 
 /**

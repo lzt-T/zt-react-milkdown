@@ -4,15 +4,18 @@ import type { EditorView } from '@milkdown/prose/view';
 import { $prose } from '@milkdown/utils';
 import { createElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import type { EditorI18nMessages } from '../../../types/editor';
+import type { BlockTransformCommand, EditorI18nMessages } from '../../../types/editor';
 import {
   SELECTION_TOOLTIP_ICON_SIZE,
   SELECTION_TOOLTIP_ICON_STROKE_WIDTH,
   SELECTION_TOOLTIP_ID,
+  resolveSelectionBlockTransformItems,
   resolveSelectionTooltipItems
 } from './constants';
+import { resolveActiveBlockTransformCommands, resolveCurrentBlockTransformCommand } from '../block-transform';
 import { isMarkActive, resolveMarkType } from './mark-logic';
 import {
+  BlockTransformPopoverControl,
   createSelectionTooltipElement,
   createSelectionTooltipShouldShow,
   LinkPopoverControl,
@@ -29,12 +32,20 @@ const createSelectionTooltipPluginView = (
 ): PluginView => {
   // 当前语言下的选区菜单项。
   const items = resolveSelectionTooltipItems(messages);
+  // 当前语言下的块级转换菜单项。
+  const blockTransformItems = resolveSelectionBlockTransformItems(messages);
   // 当前编辑器视图引用。
   let currentView: EditorView | null = view;
   // 链接 Popover 展开状态。
   let isLinkPopoverOpen = false;
+  // 块级转换 Popover 展开状态。
+  let isBlockTransformPopoverOpen = false;
   // 图标渲染根节点集合。
   const iconRoots: Root[] = [];
+  // 块级转换按钮 React 挂载容器。
+  const blockTransformControlHost = document.createElement('span');
+  // 块级转换按钮 React 根节点。
+  const blockTransformControlRoot = createRoot(blockTransformControlHost);
   // 链接按钮 React 挂载容器。
   const linkControlHost = document.createElement('span');
   // 链接按钮 DOM 引用。
@@ -55,6 +66,18 @@ const createSelectionTooltipPluginView = (
   };
 
   /**
+   * 控制块级转换 Popover 展开状态。
+   */
+  const setBlockTransformPopoverOpen = (nextOpen: boolean): void => {
+    if (isBlockTransformPopoverOpen === nextOpen) {
+      return;
+    }
+
+    isBlockTransformPopoverOpen = nextOpen;
+    renderBlockTransformControl();
+  };
+
+  /**
    * 触发链接 Popover 开关。
    */
   const toggleLinkPopover = (nextView: EditorView): void => {
@@ -63,6 +86,34 @@ const createSelectionTooltipPluginView = (
     }
 
     setLinkPopoverOpen(!isLinkPopoverOpen);
+  };
+
+  /**
+   * 渲染块级转换控件。
+   */
+  const renderBlockTransformControl = (): void => {
+    // 当前激活的块级命令集合。
+    const activeCommands = currentView
+      ? resolveActiveBlockTransformCommands(currentView)
+      : new Set<BlockTransformCommand>(['paragraph']);
+    // 当前激活的块级命令。
+    const activeCommand = currentView ? resolveCurrentBlockTransformCommand(currentView) : 'paragraph';
+    // 当前激活命令菜单项。
+    const activeItem = blockTransformItems.find((item) => item.command === activeCommand) ?? blockTransformItems[0];
+    blockTransformControlRoot.render(
+      createElement(BlockTransformPopoverControl, {
+        getCurrentView: () => currentView,
+        portalContainer,
+        iconSize: SELECTION_TOOLTIP_ICON_SIZE,
+        iconStrokeWidth: SELECTION_TOOLTIP_ICON_STROKE_WIDTH,
+        menuTitle: messages.selectionTooltipTransformLabel,
+        items: blockTransformItems,
+        activeLabel: activeItem?.label ?? messages.selectionTooltipTransformParagraphLabel,
+        open: isBlockTransformPopoverOpen,
+        onOpenChange: setBlockTransformPopoverOpen,
+        activeCommands
+      })
+    );
   };
 
   /**
@@ -86,7 +137,15 @@ const createSelectionTooltipPluginView = (
   };
 
   // 选区菜单 DOM。
-  const tooltip = createSelectionTooltipElement(view, items, () => currentView, toggleLinkPopover, iconRoots);
+  const tooltip = createSelectionTooltipElement(
+    view,
+    items,
+    () => currentView,
+    toggleLinkPopover,
+    blockTransformControlHost,
+    iconRoots
+  );
+  renderBlockTransformControl();
   if (resolveMarkType(view, ['link'])) {
     tooltip.append(linkControlHost);
     renderLinkControl();
@@ -97,7 +156,11 @@ const createSelectionTooltipPluginView = (
     debounce: 80,
     offset: 8,
     root: portalContainer,
-    shouldShow: createSelectionTooltipShouldShow(tooltip, () => isLinkPopoverOpen),
+    shouldShow: createSelectionTooltipShouldShow(
+      tooltip,
+      () => isLinkPopoverOpen,
+      () => isBlockTransformPopoverOpen
+    ),
     floatingUIOptions: {
       placement: 'top'
     }
@@ -108,8 +171,10 @@ const createSelectionTooltipPluginView = (
       currentView = nextView as EditorView;
       if (currentView.state.selection.empty) {
         setLinkPopoverOpen(false);
+        setBlockTransformPopoverOpen(false);
       }
       updateSelectionTooltipActiveState(tooltip, currentView, items);
+      renderBlockTransformControl();
       if (linkTriggerButton) {
         // 链接 mark 类型。
         const linkType = resolveMarkType(currentView, ['link']);
@@ -119,6 +184,7 @@ const createSelectionTooltipPluginView = (
     },
     destroy: () => {
       currentView = null;
+      blockTransformControlRoot.unmount();
       linkControlRoot.unmount();
       iconRoots.splice(0).forEach((iconRoot) => {
         iconRoot.unmount();

@@ -106,6 +106,32 @@ export interface EditorI18nMessages {
   selectionTooltipInlineCodeTitle: string;
   /** 选区工具栏链接按钮标题。 */
   selectionTooltipLinkTitle: string;
+  /** 选区工具栏块转换标题。 */
+  selectionTooltipTransformLabel: string;
+  /** 选区工具栏段落文案。 */
+  selectionTooltipTransformParagraphLabel: string;
+  /** 选区工具栏标题 1 文案。 */
+  selectionTooltipTransformHeading1Label: string;
+  /** 选区工具栏标题 2 文案。 */
+  selectionTooltipTransformHeading2Label: string;
+  /** 选区工具栏标题 3 文案。 */
+  selectionTooltipTransformHeading3Label: string;
+  /** 选区工具栏标题 4 文案。 */
+  selectionTooltipTransformHeading4Label: string;
+  /** 选区工具栏标题 5 文案。 */
+  selectionTooltipTransformHeading5Label: string;
+  /** 选区工具栏标题 6 文案。 */
+  selectionTooltipTransformHeading6Label: string;
+  /** 选区工具栏无序列表文案。 */
+  selectionTooltipTransformBulletListLabel: string;
+  /** 选区工具栏有序列表文案。 */
+  selectionTooltipTransformOrderedListLabel: string;
+  /** 选区工具栏任务列表文案。 */
+  selectionTooltipTransformTaskListLabel: string;
+  /** 选区工具栏引用块文案。 */
+  selectionTooltipTransformBlockquoteLabel: string;
+  /** 选区工具栏代码块文案。 */
+  selectionTooltipTransformCodeBlockLabel: string;
   /** 选区链接输入占位文案。 */
   selectionLinkInputPlaceholder: string;
   /** 选区链接保存按钮无障碍文案。 */
@@ -143,6 +169,23 @@ export type SlashMenuCommand =
   | 'mathBlock'
   | 'table'
   | 'image';
+
+/**
+ * 定义块级转换支持的命令类型。
+ */
+export type BlockTransformCommand =
+  | 'paragraph'
+  | 'heading1'
+  | 'heading2'
+  | 'heading3'
+  | 'heading4'
+  | 'heading5'
+  | 'heading6'
+  | 'bulletList'
+  | 'orderedList'
+  | 'taskList'
+  | 'blockquote'
+  | 'codeBlock';
 
 /**
  * 定义图片文件上传处理函数。
