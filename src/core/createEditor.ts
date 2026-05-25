@@ -39,6 +39,8 @@ export const createEditor = async (options: CreateEditorOptions): Promise<Editor
   const indentKit = (await import('@milkdown/plugin-indent')) as Record<string, unknown>;
   /** listener 子模块导出。 */
   const listenerKit = (await import('@milkdown/plugin-listener')) as Record<string, unknown>;
+  /** history 子模块导出。 */
+  const historyKit = (await import('@milkdown/plugin-history')) as Record<string, unknown>;
   /** commonmark 子模块导出。 */
   const commonmarkKit = (await import('@milkdown/preset-commonmark')) as Record<string, unknown>;
   /** gfm 子模块导出。 */
@@ -69,6 +71,8 @@ export const createEditor = async (options: CreateEditorOptions): Promise<Editor
   const listenerCtx = assertKey(listenerKit, 'listenerCtx');
   /** listener 插件导出对象。 */
   const listener = assertKey(listenerKit, 'listener');
+  /** history 插件导出对象。 */
+  const history = assertKey(historyKit, 'history');
   /** clipboard 插件导出对象。 */
   const clipboard = assertKey(clipboardKit, 'clipboard');
   /** indent 插件导出对象。 */
@@ -107,6 +111,7 @@ export const createEditor = async (options: CreateEditorOptions): Promise<Editor
     listener,
     commonmark,
     gfm,
+    history,
     codeBlockPrism: codeBlockPrismPlugin,
     codeBlockLanguagePicker: codeBlockLanguagePickerPlugin,
     clipboard,

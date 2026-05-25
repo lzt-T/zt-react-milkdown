@@ -10,6 +10,8 @@ export interface PresetPluginExports {
   commonmark: unknown;
   /** gfm 插件实例。 */
   gfm: unknown;
+  /** history 插件实例。 */
+  history: unknown;
   /** 代码块 prism 高亮插件实例。 */
   codeBlockPrism: unknown;
   /** 代码块语言选择器插件实例。 */
@@ -89,6 +91,7 @@ export const resolvePresetPlugins = (
   appendPluginDescriptors(descriptors, 'listener', pluginExports.listener);
   appendPluginDescriptors(descriptors, 'commonmark', pluginExports.commonmark);
   appendPluginDescriptors(descriptors, 'gfm', pluginExports.gfm);
+  appendPluginDescriptors(descriptors, 'history', pluginExports.history);
   appendPluginDescriptors(descriptors, 'code-block-prism', pluginExports.codeBlockPrism);
   appendPluginDescriptors(descriptors, 'code-block-language-picker', pluginExports.codeBlockLanguagePicker);
   if (includeRuntime) {
