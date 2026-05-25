@@ -282,13 +282,14 @@ export const createSlashMenuPlugin = async (
       if (item.command === 'mathBlock') {
         // 菜单收起后补一次输入框级聚焦，避免浮层交互导致焦点丢失。
         queueMicrotask(() => {
-          const sourceTextarea = currentView?.dom?.querySelector?.(
+          // 当前公式源码输入控件。
+          const sourceInput = currentView?.dom?.querySelector?.(
             '.zt-md-math-block-editing .zt-md-math-block-textarea'
-          ) as HTMLTextAreaElement | null;
-          if (!sourceTextarea || document.activeElement === sourceTextarea) {
+          ) as HTMLTextAreaElement | HTMLInputElement | null;
+          if (!sourceInput || document.activeElement === sourceInput) {
             return;
           }
-          sourceTextarea.focus();
+          sourceInput.focus();
         });
       }
     };

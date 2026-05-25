@@ -138,6 +138,7 @@ export type SlashMenuCommand =
   | 'taskList'
   | 'blockquote'
   | 'inlineCode'
+  | 'inlineMath'
   | 'codeBlock'
   | 'mathBlock'
   | 'table'

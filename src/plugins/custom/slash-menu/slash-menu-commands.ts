@@ -1,4 +1,5 @@
 import type { SlashMenuCommand } from '../../../types/editor';
+import { mathInlineEditPluginKey } from '../math/math-inline-edit-plugin';
 
 /**
  * slash 命令执行器类型。
@@ -213,6 +214,29 @@ const resolveMarkType = (view: any, markNames: string[]): unknown | null => {
 };
 
 /**
+ * 插入空行内公式并选中该节点。
+ */
+const insertInlineMath = async (view: any): Promise<boolean> => {
+  // 行内公式节点类型。
+  const mathInlineType = view?.state?.schema?.nodes?.math_inline;
+  if (!mathInlineType || !view?.dispatch) {
+    return false;
+  }
+
+  // 插入位置。
+  const insertPosition = view.state.selection.from;
+  // 空行内公式节点。
+  const mathInlineNode = mathInlineType.create({ value: '' });
+  view.dispatch(
+    view.state.tr
+      .replaceSelectionWith(mathInlineNode)
+      .setMeta(mathInlineEditPluginKey, { type: 'open', position: insertPosition })
+      .scrollIntoView()
+  );
+  return true;
+};
+
+/**
  * 运行 slash 命令并返回是否成功。
  */
 export const runSlashCommand = async (view: any, command: SlashMenuCommand): Promise<boolean> => {
@@ -325,6 +349,10 @@ export const runSlashCommand = async (view: any, command: SlashMenuCommand): Pro
       inlineCodeMarkType
     );
     return runCommand(inlineCodeCommand, view);
+  }
+
+  if (command === 'inlineMath') {
+    return insertInlineMath(view);
   }
 
   if (command === 'codeBlock') {

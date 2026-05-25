@@ -1,0 +1,45 @@
+@layer components {
+  .zt-md-editor .zt-md-math-inline {
+    @apply inline-flex max-w-full items-baseline gap-1 rounded-sm px-1 align-baseline;
+    background: color-mix(in srgb, var(--zt-primary) 8%, transparent);
+    cursor: pointer;
+  }
+
+  .zt-md-editor .zt-md-math-inline[data-editing='true'] {
+    background: color-mix(in srgb, var(--zt-primary) 12%, var(--zt-surface));
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--zt-primary) 45%, var(--zt-border));
+  }
+
+  .zt-md-editor .zt-md-math-inline[data-editable='false'] {
+    cursor: default;
+  }
+
+  .zt-md-editor .zt-md-math-inline[data-editing='true'] > .zt-md-math-inline-preview,
+  .zt-md-editor .zt-md-math-inline[data-editing='true'] > .zt-md-math-inline-error {
+    @apply hidden;
+  }
+
+  .zt-md-editor .zt-md-math-inline-preview {
+    @apply max-w-full overflow-x-auto overflow-y-hidden;
+  }
+
+  .zt-md-editor .zt-md-math-inline-error {
+    @apply ml-1 text-xs text-red-500;
+  }
+
+  .zt-md-editor .zt-md-math-inline-editor {
+    @apply inline-flex max-w-full items-center gap-2 rounded-sm px-1;
+  }
+
+  .zt-md-editor .zt-md-math-inline-editor-input {
+    @apply h-6 min-w-[120px] max-w-[180px] border-0 bg-transparent font-mono text-sm leading-6 text-zt-fg outline-none;
+  }
+
+  .zt-md-editor .zt-md-math-inline-editor-preview {
+    @apply max-w-[160px] overflow-x-auto overflow-y-hidden whitespace-nowrap;
+  }
+
+  .zt-md-editor .zt-md-math-inline-editor-error {
+    @apply whitespace-nowrap text-xs text-red-500;
+  }
+}

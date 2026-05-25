@@ -4,7 +4,14 @@ import { resolvePresetPlugins } from '../plugins/preset-common';
 import { assertKey } from '../utils/guard';
 import { dropCursorPlugin, gapCursorPlugin } from '../plugins/custom/cursor';
 import { createImageEditableNodeView, configureImageResizableSchema } from '../plugins/custom/image';
-import { createMathBlockEditableNodeView, math, mathBackspaceEntryPlugin } from '../plugins/custom/math';
+import {
+  createMathBlockEditableNodeView,
+  createMathInlineEditPlugin,
+  createMathInlineEditableNodeView,
+  math,
+  mathInlineArrowNavigationPlugin,
+  mathBackspaceEntryPlugin
+} from '../plugins/custom/math';
 import { blockquoteBackspaceLiftPlugin } from '../plugins/custom/blockquote';
 import {
   codeBlockModASelectPlugin,
@@ -82,6 +89,8 @@ export const createEditor = async (options: CreateEditorOptions): Promise<Editor
   const selectionTooltipPlugin = createSelectionTooltipPlugin(options.portalContainer, messages);
   /** 代码块语言选择器插件实例。 */
   const codeBlockLanguagePickerPlugin = createCodeBlockLanguagePickerPlugin(messages, options.portalContainer);
+  /** 行内公式编辑插件实例。 */
+  const mathInlineEditPlugin = createMathInlineEditPlugin(messages, options.portalContainer);
 
   /** 默认插件集合。 */
   const slashSetup = await createSlashMenuPlugin(
@@ -110,6 +119,8 @@ export const createEditor = async (options: CreateEditorOptions): Promise<Editor
     gapCursor: gapCursorPlugin,
     dropCursor: dropCursorPlugin,
     math,
+    mathInlineEdit: mathInlineEditPlugin,
+    mathInlineArrowNavigation: mathInlineArrowNavigationPlugin,
     taskListToggle,
     tabSpaceIndent: tabSpaceIndentPlugin,
     codeBlockModASelect: codeBlockModASelectPlugin,
@@ -172,6 +183,7 @@ export const createEditor = async (options: CreateEditorOptions): Promise<Editor
       ...currentNodeViews,
       ['image', createImageEditableNodeView(messages)],
       ['math_block', createMathBlockEditableNodeView(messages)],
+      ['math_inline', createMathInlineEditableNodeView(messages)],
       ['code_block', createCodeBlockEditableNodeView(messages)]
     ]);
 

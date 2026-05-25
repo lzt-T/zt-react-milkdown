@@ -11,6 +11,7 @@
 @import "./modules/gap-cursor.css";
 @import "./modules/drop-cursor.css";
 @import "./modules/math-block.css";
+@import "./modules/math-inline.css";
 @import "./modules/blockquote.css";
 @import "./modules/inline-code.css";
 @import "./modules/code-block.css";
@@ -151,6 +152,12 @@
     display: block;
     max-width: 100%;
     height: auto;
+  }
+
+  .zt-md-editor .ProseMirror img.ProseMirror-separator {
+    display: inline !important;
+    border: none !important;
+    margin: 0 !important;
   }
 
   .zt-md-editor .ProseMirror h1,

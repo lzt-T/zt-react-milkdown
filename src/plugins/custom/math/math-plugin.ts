@@ -1,7 +1,5 @@
 import type { MilkdownPlugin } from '@milkdown/ctx';
-import { nodeRule } from '@milkdown/prose';
 import { InputRule } from '@milkdown/prose/inputrules';
-import { Fragment } from '@milkdown/prose/model';
 import { $ctx, $inputRule, $nodeSchema, $remark } from '@milkdown/utils';
 import type { KatexOptions } from 'katex';
 import katex from 'katex';
@@ -45,24 +43,28 @@ export const katexOptionsCtx = $ctx<KatexOptions, 'katexOptions'>({}, 'katexOpti
 export const mathInlineSchema = $nodeSchema(MATH_INLINE_NODE_NAME, (ctx) => {
   return {
     group: 'inline',
-    content: 'text*',
     inline: true,
     atom: true,
+    attrs: {
+      value: {
+        default: ''
+      }
+    },
     parseDOM: [
       {
         tag: `span[data-type="${MATH_INLINE_NODE_NAME}"]`,
-        getContent: (dom, schema) => {
+        getAttrs: (dom) => {
           // 行内公式容器节点。
           const element = dom as HTMLElement;
-          // 行内公式源码。
-          const inlineValue = element.dataset.value ?? '';
-          return Fragment.from(schema.text(inlineValue));
+          return {
+            value: element.dataset.value ?? element.textContent ?? ''
+          };
         }
       }
     ],
     toDOM: (node) => {
       // 行内公式源码。
-      const code = node.textContent;
+      const code = String(node.attrs.value ?? node.textContent ?? '');
       // 行内公式容器。
       const dom = document.createElement('span');
       dom.dataset.type = MATH_INLINE_NODE_NAME;
@@ -77,7 +79,7 @@ export const mathInlineSchema = $nodeSchema(MATH_INLINE_NODE_NAME, (ctx) => {
       runner: (state, node, type) => {
         // 行内公式源码。
         const inlineValue = String(node.value ?? '');
-        state.openNode(type).addText(inlineValue).closeNode();
+        state.addNode(type, { value: inlineValue });
       }
     },
     toMarkdown: {
@@ -85,7 +87,9 @@ export const mathInlineSchema = $nodeSchema(MATH_INLINE_NODE_NAME, (ctx) => {
         return node.type.name === MATH_INLINE_NODE_NAME;
       },
       runner: (state, node) => {
-        state.addNode('inlineMath', undefined, node.textContent);
+        // 行内公式源码。
+        const inlineValue = String(node.attrs.value ?? node.textContent ?? '');
+        state.addNode('inlineMath', undefined, inlineValue);
       }
     }
   };
@@ -157,12 +161,18 @@ export const mathBlockSchema = $nodeSchema(MATH_BLOCK_NODE_NAME, (ctx) => {
  * 行内公式输入规则插件。
  */
 export const mathInlineInputRule = $inputRule((ctx) => {
-  return nodeRule(MATH_INLINE_INPUT_RULE_REGEX, mathInlineSchema.type(ctx), {
-    beforeDispatch: ({ tr, match, start }) => {
-      // 行内公式实际文本。
-      const inlineValue = match[1] ?? '';
-      tr.insertText(inlineValue, start + 1);
+  return new InputRule(MATH_INLINE_INPUT_RULE_REGEX, (state, match, start, end) => {
+    // 行内公式节点类型。
+    const inlineType = mathInlineSchema.type(ctx);
+    // 行内公式实际文本。
+    const inlineValue = match[1] ?? '';
+    // 当前起点解析结果。
+    const startPosition = state.doc.resolve(start);
+    if (!startPosition.parent.canReplaceWith(startPosition.index(), startPosition.indexAfter(), inlineType)) {
+      return null;
     }
+
+    return state.tr.replaceWith(start, end, inlineType.create({ value: inlineValue }));
   });
 });
 

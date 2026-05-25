@@ -34,6 +34,10 @@ export interface PresetPluginExports {
   dropCursor: unknown;
   /** math 插件实例（可为单个插件或插件数组）。 */
   math: unknown | unknown[];
+  /** 行内公式编辑插件实例。 */
+  mathInlineEdit: unknown;
+  /** 行内公式方向键导航插件实例。 */
+  mathInlineArrowNavigation: unknown;
   /** 任务列表交互插件实例。 */
   taskListToggle: unknown;
   /** 全局 Tab 空格缩进插件实例。 */
@@ -99,6 +103,8 @@ export const resolvePresetPlugins = (
   appendPluginDescriptors(descriptors, 'gap-cursor', pluginExports.gapCursor);
   appendPluginDescriptors(descriptors, 'drop-cursor', pluginExports.dropCursor);
   appendPluginDescriptors(descriptors, 'math', pluginExports.math);
+  appendPluginDescriptors(descriptors, 'math-inline-edit', pluginExports.mathInlineEdit);
+  appendPluginDescriptors(descriptors, 'math-inline-arrow-navigation', pluginExports.mathInlineArrowNavigation);
   appendPluginDescriptors(descriptors, 'task-list-toggle', pluginExports.taskListToggle);
   appendPluginDescriptors(descriptors, 'tab-space-indent', pluginExports.tabSpaceIndent);
   appendPluginDescriptors(descriptors, 'code-block-mod-a-select', pluginExports.codeBlockModASelect);

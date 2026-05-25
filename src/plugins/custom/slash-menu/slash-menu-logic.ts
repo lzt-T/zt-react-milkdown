@@ -38,8 +38,9 @@ const DEFAULT_SLASH_MENU_ITEMS_ZH_CN: SlashMenuItem[] = [
   { id: 'blockquote', label: '引用块', group: '插入', icon: 'TextQuote', command: 'blockquote' },
   { id: 'inline-code', label: '行内代码', group: '插入', icon: 'Code', command: 'inlineCode' },
   { id: 'code-block', label: '代码块', group: '插入', icon: 'SquareCode', command: 'codeBlock' },
-  { id: 'math-block', label: '公式块', group: '插入', icon: 'Sigma', command: 'mathBlock' },
   { id: 'table', label: '表格', group: '插入', icon: 'Table', command: 'table' },
+  { id: 'inline-math', label: '行内公式', group: '公式', icon: 'Sigma', command: 'inlineMath' },
+  { id: 'math-block', label: '公式块', group: '公式', icon: 'SquareFunction', command: 'mathBlock' },
   { id: 'image', label: '图片', group: '媒体', icon: 'Image', command: 'image' }
 ];
 
@@ -60,8 +61,9 @@ const DEFAULT_SLASH_MENU_ITEMS_EN_US: SlashMenuItem[] = [
   { id: 'blockquote', label: 'Blockquote', group: 'Insert', icon: 'TextQuote', command: 'blockquote' },
   { id: 'inline-code', label: 'Inline code', group: 'Insert', icon: 'Code', command: 'inlineCode' },
   { id: 'code-block', label: 'Code block', group: 'Insert', icon: 'SquareCode', command: 'codeBlock' },
-  { id: 'math-block', label: 'Math block', group: 'Insert', icon: 'Sigma', command: 'mathBlock' },
   { id: 'table', label: 'Table', group: 'Insert', icon: 'Table', command: 'table' },
+  { id: 'inline-math', label: 'Inline math', group: 'Math', icon: 'Sigma', command: 'inlineMath' },
+  { id: 'math-block', label: 'Math block', group: 'Math', icon: 'SquareFunction', command: 'mathBlock' },
   { id: 'image', label: 'Image', group: 'Media', icon: 'Image', command: 'image' }
 ];
 
