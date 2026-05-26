@@ -1,3 +1,5 @@
+import { setBlockType, wrapIn } from '@milkdown/prose/commands';
+import { wrapInList } from '@milkdown/prose/schema-list';
 import type { EditorView } from '@milkdown/prose/view';
 import type { BlockTransformCommand } from '../../../types/editor';
 
@@ -100,20 +102,6 @@ const BLOCK_TRANSFORM_COMMAND_PRIORITY: BlockTransformCommand[] = [
  */
 export const runBlockTransformCommand = async (view: EditorView, command: BlockTransformCommand): Promise<boolean> => {
   if (!view?.state || !view?.dispatch) {
-    return false;
-  }
-
-  // prose commands 模块导出集合。
-  const proseCommandsModule = (await import('@milkdown/prose/commands')) as Record<string, unknown>;
-  // prose schema-list 模块导出集合。
-  const proseListModule = (await import('@milkdown/prose/schema-list')) as Record<string, unknown>;
-  // setBlockType 命令工厂。
-  const setBlockType = proseCommandsModule.setBlockType;
-  // wrapIn 命令工厂。
-  const wrapIn = proseCommandsModule.wrapIn;
-  // wrapInList 命令工厂。
-  const wrapInList = proseListModule.wrapInList;
-  if (typeof setBlockType !== 'function' || typeof wrapIn !== 'function' || typeof wrapInList !== 'function') {
     return false;
   }
 

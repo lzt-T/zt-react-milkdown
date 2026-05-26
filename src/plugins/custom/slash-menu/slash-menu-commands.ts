@@ -1,3 +1,5 @@
+import { setBlockType, toggleMark } from '@milkdown/prose/commands';
+import { NodeSelection, TextSelection } from '@milkdown/prose/state';
 import type { SlashMenuCommand } from '../../../types/editor';
 import type { BlockTransformCommand } from '../../../types/editor';
 import { runBlockTransformCommand } from '../block-transform';
@@ -7,17 +9,6 @@ import { mathInlineEditPluginKey } from '../math/math-inline-edit-plugin';
  * slash 命令执行器类型。
  */
 type EditorCommandExecutor = (state: unknown, dispatch: unknown, view: unknown) => boolean;
-
-/**
- * 从 unknown 值中安全读取对象字段。
- */
-const getObjectValue = (value: unknown, key: string): unknown => {
-  if (!value || typeof value !== 'object') {
-    return undefined;
-  }
-
-  return (value as Record<string, unknown>)[key];
-};
 
 /**
  * 执行 ProseMirror 命令。
@@ -147,19 +138,6 @@ const insertDefaultTable = async (view: any): Promise<boolean> => {
     return true;
   }
 
-  // prose state 模块导出集合。
-  const proseStateModule = (await import('@milkdown/prose/state')) as Record<string, unknown>;
-  // TextSelection 构造器。
-  const TextSelection = getObjectValue(proseStateModule, 'TextSelection') as
-    | {
-        create: (doc: unknown, from: number, to?: number) => unknown;
-        near: (resolvedPos: unknown, bias?: number) => unknown;
-      }
-    | undefined;
-  if (!TextSelection || typeof TextSelection.near !== 'function') {
-    return true;
-  }
-
   // 从首个单元格起点向前找最近可编辑文本位置，确保进入单元格内部可输入态。
   const textSelection = TextSelection.near(view.state.doc.resolve(firstCellStartPos), 1);
   view.dispatch(view.state.tr.setSelection(textSelection).scrollIntoView());
@@ -234,16 +212,6 @@ export const runSlashCommand = async (view: any, command: SlashMenuCommand): Pro
     return false;
   }
 
-  // prose commands 模块导出集合。
-  const proseCommandsModule = (await import('@milkdown/prose/commands')) as Record<string, unknown>;
-  // setBlockType 命令工厂。
-  const setBlockType = getObjectValue(proseCommandsModule, 'setBlockType');
-  // toggleMark 命令工厂。
-  const toggleMark = getObjectValue(proseCommandsModule, 'toggleMark');
-  if (typeof setBlockType !== 'function' || typeof toggleMark !== 'function') {
-    return false;
-  }
-
   // 编辑器 schema。
   const schema = view.state.schema as Record<string, unknown>;
   // 节点类型集合。
@@ -283,16 +251,6 @@ export const runSlashCommand = async (view: any, command: SlashMenuCommand): Pro
     const converted = runCommand(mathBlockCommand, view);
     if (!converted) {
       return false;
-    }
-
-    // prose state 模块导出集合。
-    const proseStateModule = (await import('@milkdown/prose/state')) as Record<string, unknown>;
-    // NodeSelection 构造器。
-    const NodeSelection = getObjectValue(proseStateModule, 'NodeSelection') as
-      | { create: (doc: unknown, from: number) => unknown }
-      | undefined;
-    if (!NodeSelection || typeof NodeSelection.create !== 'function') {
-      return true;
     }
 
     // 当前选区起点（转换后的选区解析对象）。
