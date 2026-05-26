@@ -26,18 +26,26 @@ interface ImageSchemaConfigContext {
 }
 
 /**
- * 解析段落中独立存在的 Markdown 图片。
+ * 解析段落中独立存在的图片节点。
  */
 const resolveStandaloneMarkdownImage = (node: any): any | null => {
   // 段落子节点列表。
   const children = Array.isArray(node.children) ? node.children : [];
   // 段落内唯一子节点。
   const child = children[0];
-  if (children.length !== 1 || child?.type !== 'image') {
+  if (children.length !== 1) {
     return null;
   }
 
-  return child;
+  if (child?.type === 'image') {
+    return child;
+  }
+
+  if (child?.type === 'html' && parseSafeImageHtml(child.value, normalizeImageWidthStyle) !== null) {
+    return child;
+  }
+
+  return null;
 };
 
 /**

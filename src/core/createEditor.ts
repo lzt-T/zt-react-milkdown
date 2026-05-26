@@ -1,4 +1,5 @@
 import type { CreateEditorOptions, EditorController } from '../types/editor';
+import type { Node as ProseNode } from '@milkdown/prose/model';
 import { createReplaceAllExecutor } from './commands';
 import { resolvePresetPlugins } from '../plugins/preset-common';
 import { assertKey } from '../utils/guard';
@@ -31,6 +32,73 @@ import { tabSpaceIndentPlugin } from '../plugins/custom/indent';
 import { resolveEditorMessages } from '../local/i18n';
 import type { PresetPluginExports } from '../plugins/preset-common';
 import { normalizeSafeUrl } from '../utils/security';
+
+/**
+ * 获取当前事件命中的链接元素。
+ */
+const resolveEventAnchor = (event: MouseEvent): HTMLAnchorElement | null => {
+  // 当前点击目标节点。
+  const target = event.target;
+  if (!(target instanceof Element)) {
+    return null;
+  }
+
+  // 当前点击命中的链接元素。
+  const anchor = target.closest('a[href]');
+  return anchor instanceof HTMLAnchorElement ? anchor : null;
+};
+
+/**
+ * 判断当前节点是否为图片节点。
+ */
+const isImageNode = (node: ProseNode | null | undefined): boolean => {
+  return node?.type.name === 'image';
+};
+
+/**
+ * 处理编辑器内链接点击跳转。
+ */
+const handleEditorLinkClick = (event: MouseEvent, readOnly: boolean): boolean => {
+  // 当前点击命中的链接元素。
+  const anchor = resolveEventAnchor(event);
+  if (!anchor) {
+    return false;
+  }
+
+  // 当前链接地址。
+  const href = normalizeSafeUrl(anchor.getAttribute('href'));
+  if (!href) {
+    return false;
+  }
+
+  // 只读态下禁用编辑器内链接点击跳转。
+  if (readOnly) {
+    return false;
+  }
+
+  // 仅在 Ctrl+点击 时触发链接跳转。
+  if (!event.ctrlKey) {
+    return false;
+  }
+
+  event.preventDefault();
+  event.stopPropagation();
+  window.open(href, '_blank', 'noopener,noreferrer');
+  return true;
+};
+
+/**
+ * 只读态下拦截原生链接点击，避免浏览器默认跳转。
+ */
+const blockReadonlyLinkClick = (event: MouseEvent, readOnly: boolean): boolean => {
+  if (!readOnly || !resolveEventAnchor(event)) {
+    return false;
+  }
+
+  event.preventDefault();
+  event.stopPropagation();
+  return true;
+};
 
 /**
  * 创建并初始化 Milkdown 编辑器实例。
@@ -158,34 +226,40 @@ export const createEditor = async (options: CreateEditorOptions): Promise<Editor
     ctx.set(defaultValueCtx, options.markdown);
     ctx.set(editorViewOptionsCtx, {
       editable: () => !options.readOnly,
+      handleDOMEvents: {
+        mousedown: (_view: unknown, event: Event) => {
+          return event instanceof MouseEvent
+            ? blockReadonlyLinkClick(event, options.readOnly)
+            : false;
+        },
+        click: (_view: unknown, event: Event) => {
+          return event instanceof MouseEvent
+            ? blockReadonlyLinkClick(event, options.readOnly)
+            : false;
+        }
+      },
       handleClick: (_view: unknown, _position: number, event: MouseEvent) => {
-        // 当前点击目标节点。
-        const target = event.target;
-        if (!(target instanceof Element)) {
-          return false;
+        return handleEditorLinkClick(event, options.readOnly);
+      },
+      handleClickOn: (
+        _view: unknown,
+        _position: number,
+        node: ProseNode,
+        _nodePosition: number,
+        event: MouseEvent,
+        direct: boolean
+      ) => {
+        if (handleEditorLinkClick(event, options.readOnly)) {
+          return true;
         }
 
-        // 当前点击命中的链接元素。
-        const anchor = target.closest('a[href]');
-        if (!(anchor instanceof HTMLAnchorElement)) {
-          return false;
+        // 仅拦截直接点击到的只读图片节点，避免进入选中态。
+        if (options.readOnly && direct && isImageNode(node)) {
+          event.preventDefault();
+          return true;
         }
 
-        // 当前链接地址。
-        const href = normalizeSafeUrl(anchor.getAttribute('href'));
-        if (!href) {
-          return false;
-        }
-
-        // 仅在 Ctrl+点击 时触发链接跳转。
-        if (!event.ctrlKey) {
-          return false;
-        }
-
-        event.preventDefault();
-        event.stopPropagation();
-        window.open(href, '_blank', 'noopener,noreferrer');
-        return true;
+        return false;
       }
     });
     /** 当前 nodeView 注册列表。 */

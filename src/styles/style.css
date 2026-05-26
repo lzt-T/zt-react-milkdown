@@ -207,12 +207,21 @@
     bottom: -1px;
   }
 
-  .zt-md-readonly .zt-md-editor .ProseMirror-selectednode {
+  .zt-md-editor.zt-md-readonly .ProseMirror-selectednode {
     outline: none !important;
   }
 
-  .zt-md-readonly .zt-md-editor li.ProseMirror-selectednode:after {
+  .zt-md-editor.zt-md-readonly li.ProseMirror-selectednode:after {
     border: none !important;
+  }
+
+  /* 只读态覆盖浏览器默认锚点交互样式，避免出现手型与 active 红色。 */
+  .zt-md-editor.zt-md-readonly .ProseMirror a,
+  .zt-md-editor.zt-md-readonly .ProseMirror a:link,
+  .zt-md-editor.zt-md-readonly .ProseMirror a:visited,
+  .zt-md-editor.zt-md-readonly .ProseMirror a:hover,
+  .zt-md-editor.zt-md-readonly .ProseMirror a:active {
+    cursor: text;
   }
 
   /* 统一编辑器内部滚动条样式，新增滚动容器默认自动继承。 */
