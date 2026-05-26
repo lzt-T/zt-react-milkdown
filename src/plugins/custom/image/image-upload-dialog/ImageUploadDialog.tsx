@@ -96,6 +96,23 @@ const isValidUrl = (value: string): boolean => {
 };
 
 /**
+ * 预加载图片，确保插入编辑器前已经可渲染。
+ */
+const preloadImage = (src: string): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    // 预加载图片实例。
+    const image = new Image();
+    image.onload = () => {
+      resolve();
+    };
+    image.onerror = () => {
+      reject(new Error('Image load failed'));
+    };
+    image.src = src;
+  });
+};
+
+/**
  * 渲染图片上传弹窗。
  */
 export const ImageUploadDialog = ({
@@ -117,6 +134,8 @@ export const ImageUploadDialog = ({
   const [error, setError] = useState('');
   // 当前是否正在上传或读取。
   const [isUploading, setIsUploading] = useState(false);
+  // 当前是否正在准备插入图片。
+  const [isPreparingInsert, setIsPreparingInsert] = useState(false);
   // 当前是否处于拖拽悬停。
   const [isDragOver, setIsDragOver] = useState(false);
   // 文件输入框引用。
@@ -128,13 +147,13 @@ export const ImageUploadDialog = ({
   // 允许上传的最大文件体积。
   const maxFileSize = imageUpload?.maxFileSize ?? DEFAULT_MAX_FILE_SIZE;
   // 当前是否锁定交互。
-  const isInteractionLocked = isUploading;
+  const isInteractionLocked = isUploading || isPreparingInsert;
   // 是否保留重选提示高度。
-  const shouldReserveReselectHint = uploadType === 'file' && (isUploading || Boolean(imageUrl));
+  const shouldReserveReselectHint = uploadType === 'file' && (isInteractionLocked || Boolean(imageUrl));
   // 是否展示重选提示。
-  const shouldShowReselectHint = uploadType === 'file' && Boolean(imageUrl) && !isUploading;
+  const shouldShowReselectHint = uploadType === 'file' && Boolean(imageUrl) && !isInteractionLocked;
   // 是否禁用确认按钮。
-  const isConfirmDisabled = !imageUrl || Boolean(error) || isUploading || previewLoadError;
+  const isConfirmDisabled = !imageUrl || Boolean(error) || isInteractionLocked || previewLoadError;
 
   /**
    * 校验并处理图片文件。
@@ -275,8 +294,8 @@ export const ImageUploadDialog = ({
   /**
    * 处理确认插入。
    */
-  const handleConfirm = useCallback((): void => {
-    if (isUploading) {
+  const handleConfirm = useCallback(async (): Promise<void> => {
+    if (isInteractionLocked) {
       setError(messages.imageUploadUploadingWait);
       return;
     }
@@ -288,14 +307,33 @@ export const ImageUploadDialog = ({
       setError(messages.imageUploadInvalidUrl);
       return;
     }
-    onConfirm({
-      src: imageUrl,
-      alt: uploadType === 'file' ? selectedFile?.name ?? '' : ''
-    });
+
+    setError('');
+    setIsPreparingInsert(true);
+    try {
+      await preloadImage(imageUrl);
+      if (!mountedRef.current) {
+        return;
+      }
+      onConfirm({
+        src: imageUrl,
+        alt: uploadType === 'file' ? selectedFile?.name ?? '' : ''
+      });
+    } catch {
+      if (mountedRef.current) {
+        setPreviewLoadError(true);
+        setError(messages.imageUploadLoadFailed);
+      }
+    } finally {
+      if (mountedRef.current) {
+        setIsPreparingInsert(false);
+      }
+    }
   }, [
     imageUrl,
-    isUploading,
+    isInteractionLocked,
     messages.imageUploadInvalidUrl,
+    messages.imageUploadLoadFailed,
     messages.imageUploadSelectOrEnterImage,
     messages.imageUploadUploadingWait,
     onConfirm,
@@ -309,7 +347,7 @@ export const ImageUploadDialog = ({
   const handleKeyDown = useCallback((event: KeyboardEvent<HTMLDivElement>): void => {
     if (event.key === 'Enter' && !event.shiftKey && uploadType === 'url') {
       event.preventDefault();
-      handleConfirm();
+      void handleConfirm();
     }
   }, [handleConfirm, uploadType]);
 
@@ -492,9 +530,11 @@ export const ImageUploadDialog = ({
           <Button
             type="button"
             disabled={isConfirmDisabled}
-            onClick={handleConfirm}
+            onClick={() => {
+              void handleConfirm();
+            }}
           >
-            {isUploading ? messages.imageUploadUploadingLabel : messages.imageUploadConfirmLabel}
+            {isInteractionLocked ? messages.imageUploadUploadingLabel : messages.imageUploadConfirmLabel}
           </Button>
         </DialogFooter>
       </DialogContent>

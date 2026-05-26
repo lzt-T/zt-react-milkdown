@@ -2,6 +2,7 @@
   .zt-md-editor .zt-md-image {
     @apply relative block max-w-full;
     width: fit-content;
+    margin-block: 0.75rem;
     margin-inline: auto;
     line-height: 0;
   }
@@ -12,9 +13,43 @@
     box-shadow: 0 0 0 1px color-mix(in srgb, var(--zt-surface) 82%, transparent);
   }
 
+  .zt-md-editor .zt-md-image[data-loading='true'] {
+    width: min(100%, 320px);
+    aspect-ratio: 3 / 2;
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--zt-border) 78%, transparent);
+    border-radius: calc(var(--zt-radius) + 2px);
+    background: color-mix(in srgb, var(--zt-muted) 10%, var(--zt-surface));
+    pointer-events: none;
+  }
+
+  .zt-md-editor .zt-md-image[data-loading='true'][data-selected='true'] {
+    outline: 0;
+    box-shadow: none;
+  }
+
+  .zt-md-editor .zt-md-image[data-loading='true']::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      110deg,
+      transparent 0%,
+      transparent 28%,
+      color-mix(in srgb, var(--zt-surface) 62%, transparent) 45%,
+      transparent 62%,
+      transparent 100%
+    );
+    animation: zt-md-image-placeholder-shimmer 1.2s ease-in-out infinite;
+  }
+
   .zt-md-editor .zt-md-image img {
     @apply block max-w-full;
     height: auto;
+  }
+
+  .zt-md-editor .zt-md-image[data-loading='true'] img {
+    display: none;
   }
 
   .zt-md-editor .zt-md-image[data-has-width='true'] img {
@@ -30,6 +65,11 @@
   .zt-md-editor .zt-md-image[data-editable='true']:focus-within .zt-md-image-actions {
     @apply opacity-100;
     pointer-events: auto;
+  }
+
+  .zt-md-editor .zt-md-image[data-loading='true'] .zt-md-image-actions {
+    @apply opacity-0;
+    pointer-events: none;
   }
 
   .zt-md-editor .zt-md-image-action-button {
@@ -74,5 +114,20 @@
   .zt-md-editor .zt-md-image[data-editable='true'][data-resizing='true'] .zt-md-image-resize-handle {
     @apply opacity-100;
     pointer-events: auto;
+  }
+
+  .zt-md-editor .zt-md-image[data-loading='true'] .zt-md-image-resize-handle {
+    @apply opacity-0;
+    pointer-events: none;
+  }
+
+  @keyframes zt-md-image-placeholder-shimmer {
+    from {
+      transform: translateX(-100%);
+    }
+
+    to {
+      transform: translateX(100%);
+    }
   }
 }

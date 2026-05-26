@@ -28,6 +28,11 @@ const IMAGE_RESIZE_SIDE_LEFT = 'left';
 const IMAGE_RESIZE_SIDE_RIGHT = 'right';
 
 /**
+ * 图片加载占位符最短展示时长。
+ */
+const IMAGE_LOADING_PLACEHOLDER_MIN_DURATION = 160;
+
+/**
  * 图片缩放手柄方向。
  */
 type ImageResizeSide = typeof IMAGE_RESIZE_SIDE_LEFT | typeof IMAGE_RESIZE_SIDE_RIGHT;
@@ -114,6 +119,12 @@ class ImageEditableNodeView implements NodeView {
   private resizeState: ImageResizeState | null = null;
   // 当前图片是否处于节点选中态。
   private isSelected = false;
+  // 当前图片地址。
+  private currentImageSrc = '';
+  // 当前加载态开始时间。
+  private imageLoadingStartedAt = 0;
+  // 图片加载结束定时器。
+  private imageLoadingFinishTimer: number | null = null;
 
   /**
    * 初始化图片视图。
@@ -142,6 +153,8 @@ class ImageEditableNodeView implements NodeView {
 
     // 图片元素。
     this.imageElement = document.createElement('img');
+    this.imageElement.addEventListener('load', this.handleImageLoad);
+    this.imageElement.addEventListener('error', this.handleImageError);
 
     // 左侧缩放手柄。
     this.leftResizeHandle = this.createResizeHandle(IMAGE_RESIZE_SIDE_LEFT);
@@ -226,6 +239,68 @@ class ImageEditableNodeView implements NodeView {
   private syncSelectedState(): void {
     this.dom.dataset.selected = this.isSelected ? 'true' : 'false';
   }
+
+  /**
+   * 标记图片正在加载。
+   */
+  private markImageLoading(): void {
+    this.clearImageLoadingFinishTimer();
+    this.imageLoadingStartedAt = performance.now();
+    this.dom.dataset.loading = 'true';
+  }
+
+  /**
+   * 标记图片加载结束。
+   */
+  private finishImageLoading(): void {
+    this.clearImageLoadingFinishTimer();
+    delete this.dom.dataset.loading;
+  }
+
+  /**
+   * 延迟结束图片加载态，避免占位符一闪而过。
+   */
+  private finishImageLoadingWithMinimumDuration(): void {
+    // 占位符已展示时长。
+    const loadingDuration = performance.now() - this.imageLoadingStartedAt;
+    // 剩余最短展示时长。
+    const remainingDuration = Math.max(0, IMAGE_LOADING_PLACEHOLDER_MIN_DURATION - loadingDuration);
+    if (remainingDuration <= 0) {
+      this.finishImageLoading();
+      return;
+    }
+
+    this.clearImageLoadingFinishTimer();
+    this.imageLoadingFinishTimer = window.setTimeout(() => {
+      this.finishImageLoading();
+    }, remainingDuration);
+  }
+
+  /**
+   * 清理图片加载结束定时器。
+   */
+  private clearImageLoadingFinishTimer(): void {
+    if (this.imageLoadingFinishTimer === null) {
+      return;
+    }
+
+    window.clearTimeout(this.imageLoadingFinishTimer);
+    this.imageLoadingFinishTimer = null;
+  }
+
+  /**
+   * 响应图片加载完成。
+   */
+  private readonly handleImageLoad = (): void => {
+    this.finishImageLoadingWithMinimumDuration();
+  };
+
+  /**
+   * 响应图片加载失败。
+   */
+  private readonly handleImageError = (): void => {
+    this.finishImageLoadingWithMinimumDuration();
+  };
 
   /**
    * 响应图片缩放开始。
@@ -372,8 +447,15 @@ class ImageEditableNodeView implements NodeView {
     const style = normalizeImageWidthStyle(node.attrs.style);
     // 图片宽度百分比。
     const widthPercent = parseImageWidthPercent(style);
+    // 图片地址是否变化。
+    const isImageSrcChanged = src !== this.currentImageSrc;
+
+    if (isImageSrcChanged && src) {
+      this.markImageLoading();
+    }
 
     this.imageElement.setAttribute('src', src);
+    this.currentImageSrc = src;
     this.imageElement.setAttribute('alt', alt);
     if (title) {
       this.imageElement.title = title;
@@ -386,6 +468,11 @@ class ImageEditableNodeView implements NodeView {
     } else {
       this.dom.style.removeProperty('width');
       delete this.dom.dataset.hasWidth;
+    }
+    if (!src) {
+      this.finishImageLoading();
+    } else if (this.imageElement.complete && this.imageElement.naturalWidth > 0) {
+      this.finishImageLoadingWithMinimumDuration();
     }
   }
 
@@ -448,6 +535,9 @@ class ImageEditableNodeView implements NodeView {
    */
   destroy(): void {
     this.removeResizeWindowListeners();
+    this.clearImageLoadingFinishTimer();
+    this.imageElement.removeEventListener('load', this.handleImageLoad);
+    this.imageElement.removeEventListener('error', this.handleImageError);
     this.deleteButton.removeEventListener('click', this.handleDeleteClick);
     this.leftResizeHandle.removeEventListener('pointerdown', this.handleResizePointerDown);
     this.rightResizeHandle.removeEventListener('pointerdown', this.handleResizePointerDown);
