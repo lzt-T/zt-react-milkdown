@@ -1,5 +1,6 @@
 import { imageSchema } from '@milkdown/preset-commonmark';
 import type { GetNodeSchema } from '@milkdown/utils';
+import { normalizeSafeUrl, parseSafeImageHtml } from '../../../utils/security';
 
 /**
  * 图片宽度百分比最小值。
@@ -13,9 +14,6 @@ export const IMAGE_WIDTH_MAX_PERCENT = 100;
 
 // 图片宽度 style 匹配规则。
 const IMAGE_WIDTH_STYLE_PATTERN = /^\s*width\s*:\s*(\d{1,3})%\s*;?\s*$/i;
-
-// 图片 HTML 标签名。
-const IMAGE_HTML_TAG_NAME = 'img';
 
 /**
  * 图片 schema 配置上下文。
@@ -93,41 +91,25 @@ const escapeHtmlAttribute = (value: unknown): string => {
 };
 
 /**
- * 从 HTML 片段中解析图片属性。
- */
-const parseHtmlImageAttrs = (html: unknown): Record<string, string> | null => {
-  if (typeof html !== 'string') {
-    return null;
-  }
-
-  // HTML 解析容器。
-  const template = document.createElement('template');
-  template.innerHTML = html.trim();
-
-  // 图片元素。
-  const image = template.content.firstElementChild;
-  if (!(image instanceof HTMLImageElement) || image.tagName.toLowerCase() !== IMAGE_HTML_TAG_NAME) {
-    return null;
-  }
-
-  return {
-    src: image.getAttribute('src') ?? '',
-    alt: image.getAttribute('alt') ?? '',
-    title: image.getAttribute('title') ?? '',
-    style: normalizeImageWidthStyle(image.getAttribute('style') ?? '')
-  };
-};
-
-/**
  * 序列化图片 HTML。
  */
 const serializeImageHtml = (attrs: Record<string, unknown>): string => {
+  // 归一化后的图片地址。
+  const src = normalizeSafeUrl(attrs.src);
+  if (!src) {
+    return '';
+  }
+
+  // 归一化后的图片替代文本。
+  const alt = typeof attrs.alt === 'string' ? attrs.alt : '';
   // 图片标题。
   const title = typeof attrs.title === 'string' ? attrs.title : '';
   // 图片标题属性。
   const titleAttribute = title ? ` title="${escapeHtmlAttribute(title)}"` : '';
+  // 归一化后的图片宽度样式。
+  const style = normalizeImageWidthStyle(attrs.style);
 
-  return `<img src="${escapeHtmlAttribute(attrs.src)}" alt="${escapeHtmlAttribute(attrs.alt)}"${titleAttribute} style="${escapeHtmlAttribute(attrs.style)}">`;
+  return `<img src="${escapeHtmlAttribute(src)}" alt="${escapeHtmlAttribute(alt)}"${titleAttribute} style="${escapeHtmlAttribute(style)}">`;
 };
 
 /**
@@ -150,8 +132,14 @@ const createResizableImageSchema = (prevSchema: GetNodeSchema): GetNodeSchema =>
           getAttrs: (dom) => {
             // 图片 DOM 节点。
             const image = dom as HTMLImageElement;
+            // 归一化后的图片地址。
+            const src = normalizeSafeUrl(image.getAttribute('src') ?? '');
+            if (!src) {
+              return false;
+            }
+
             return {
-              src: image.getAttribute('src') ?? '',
+              src,
               alt: image.getAttribute('alt') ?? '',
               title: image.getAttribute('title') ?? image.getAttribute('alt') ?? '',
               style: normalizeImageWidthStyle(image.getAttribute('style') ?? '')
@@ -161,20 +149,29 @@ const createResizableImageSchema = (prevSchema: GetNodeSchema): GetNodeSchema =>
       ],
       parseMarkdown: {
         match: (node) => {
-          return node.type === 'image' || (node.type === 'html' && parseHtmlImageAttrs(node.value) !== null);
+          return (
+            node.type === 'image' ||
+            (node.type === 'html' && parseSafeImageHtml(node.value, normalizeImageWidthStyle) !== null)
+          );
         },
         runner: (state, node, type) => {
           if (node.type === 'html') {
             // HTML 图片属性。
-            const attrs = parseHtmlImageAttrs(node.value);
+            const attrs = parseSafeImageHtml(node.value, normalizeImageWidthStyle);
             if (attrs) {
               state.addNode(type, attrs);
             }
             return;
           }
 
+          // 归一化后的 Markdown 图片地址。
+          const src = normalizeSafeUrl(String(node.url ?? ''));
+          if (!src) {
+            return;
+          }
+
           state.addNode(type, {
-            src: String(node.url ?? ''),
+            src,
             alt: String(node.alt ?? ''),
             title: String(node.title ?? ''),
             style: ''
@@ -186,16 +183,26 @@ const createResizableImageSchema = (prevSchema: GetNodeSchema): GetNodeSchema =>
           return node.type.name === 'image';
         },
         runner: (state, node) => {
+          // 归一化后的图片地址。
+          const src = normalizeSafeUrl(node.attrs.src);
+          if (!src) {
+            return;
+          }
+
           // 图片宽度 style。
           const style = normalizeImageWidthStyle(node.attrs.style);
           if (style) {
-            state.addNode('html', undefined, serializeImageHtml({ ...node.attrs, style }));
+            // 序列化后的安全图片 HTML。
+            const html = serializeImageHtml({ ...node.attrs, src, style });
+            if (html) {
+              state.addNode('html', undefined, html);
+            }
             return;
           }
 
           state.addNode('image', undefined, undefined, {
             title: node.attrs.title,
-            url: node.attrs.src,
+            url: src,
             alt: node.attrs.alt
           });
         }

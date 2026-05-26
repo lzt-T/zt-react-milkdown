@@ -26,6 +26,7 @@ import { taskListToggle } from '../plugins/custom/list';
 import { tabSpaceIndentPlugin } from '../plugins/custom/indent';
 import { resolveEditorMessages } from '../local/i18n';
 import type { PresetPluginExports } from '../plugins/preset-common';
+import { normalizeSafeUrl } from '../utils/security';
 
 /**
  * 创建并初始化 Milkdown 编辑器实例。
@@ -166,7 +167,7 @@ export const createEditor = async (options: CreateEditorOptions): Promise<Editor
         }
 
         // 当前链接地址。
-        const href = anchor.getAttribute('href')?.trim();
+        const href = normalizeSafeUrl(anchor.getAttribute('href'));
         if (!href) {
           return false;
         }

@@ -6,6 +6,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { Button } from '../../../components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '../../../components/ui/popover';
 import { useCloseOnGlobalScroll } from '../../../react/hooks/useCloseOnGlobalScroll';
+import { normalizeSafeUrl } from '../../../utils/security';
 import { runBlockTransformCommand, resolveCurrentBlockTransformCommand } from '../block-transform';
 import {
   SELECTION_TOOLTIP_ICON_SIZE,
@@ -273,12 +274,14 @@ export const LinkPopoverControl = (props: LinkPopoverControlProps): ReactElement
       return;
     }
 
+    // 归一化后的安全链接地址。
+    const safeHref = normalizeSafeUrl(href);
     // 当前选区范围。
     const { from, to } = view.state.selection;
     // 链接更新事务。
     const transaction = view.state.tr.removeMark(from, to, linkType);
-    if (href) {
-      transaction.addMark(from, to, linkType.create({ href }));
+    if (safeHref) {
+      transaction.addMark(from, to, linkType.create({ href: safeHref }));
     }
 
     view.dispatch(transaction.scrollIntoView());
@@ -304,7 +307,7 @@ export const LinkPopoverControl = (props: LinkPopoverControlProps): ReactElement
       return;
     }
 
-    setInputValue(resolveSelectedLinkHref(view.state, linkType));
+    setInputValue(normalizeSafeUrl(resolveSelectedLinkHref(view.state, linkType)));
     props.onOpenChange(true);
   };
 
