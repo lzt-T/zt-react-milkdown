@@ -179,6 +179,18 @@
     outline: none !important;
   }
 
+  .zt-md-editor .ProseMirror-hideselection *::selection {
+    background: transparent;
+  }
+
+  .zt-md-editor .ProseMirror-hideselection *::-moz-selection {
+    background: transparent;
+  }
+
+  .zt-md-editor .ProseMirror-hideselection {
+    caret-color: transparent;
+  }
+
   .zt-md-editor .ProseMirror-selectednode {
     outline: 1px solid color-mix(in srgb, var(--zt-primary) 55%, var(--zt-border)) !important;
   }

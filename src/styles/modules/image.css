@@ -6,6 +6,12 @@
     line-height: 0;
   }
 
+  .zt-md-editor .zt-md-image[data-selected='true'] {
+    outline: 1px solid color-mix(in srgb, var(--zt-primary) 55%, var(--zt-border));
+    outline-offset: 2px;
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--zt-surface) 82%, transparent);
+  }
+
   .zt-md-editor .zt-md-image img {
     @apply block max-w-full;
     height: auto;

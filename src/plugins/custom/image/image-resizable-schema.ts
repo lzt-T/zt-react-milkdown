@@ -122,6 +122,8 @@ const createResizableImageSchema = (prevSchema: GetNodeSchema): GetNodeSchema =>
 
     return {
       ...schema,
+      inline: false,
+      group: 'block',
       attrs: {
         ...schema.attrs,
         style: { default: '', validate: 'string' }

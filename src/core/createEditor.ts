@@ -3,7 +3,11 @@ import { createReplaceAllExecutor } from './commands';
 import { resolvePresetPlugins } from '../plugins/preset-common';
 import { assertKey } from '../utils/guard';
 import { dropCursorPlugin, gapCursorPlugin } from '../plugins/custom/cursor';
-import { createImageEditableNodeView, configureImageResizableSchema } from '../plugins/custom/image';
+import {
+  createImageEditableNodeView,
+  configureImageResizableSchema,
+  imageDeleteSelectionPlugin
+} from '../plugins/custom/image';
 import {
   createMathBlockEditableNodeView,
   createMathInlineEditPlugin,
@@ -117,6 +121,7 @@ export const createEditor = async (options: CreateEditorOptions): Promise<Editor
     codeBlockLanguagePicker: codeBlockLanguagePickerPlugin,
     clipboard,
     indent,
+    imageDeleteSelection: imageDeleteSelectionPlugin,
     tableArrowEntry: tableArrowEntryPlugin,
     mathBackspaceEntry: mathBackspaceEntryPlugin,
     blockquoteBackspaceLift: blockquoteBackspaceLiftPlugin,

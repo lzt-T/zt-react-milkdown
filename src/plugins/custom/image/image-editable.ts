@@ -112,6 +112,8 @@ class ImageEditableNodeView implements NodeView {
   private readonly rightResizeHandle: HTMLSpanElement;
   // 当前缩放状态。
   private resizeState: ImageResizeState | null = null;
+  // 当前图片是否处于节点选中态。
+  private isSelected = false;
 
   /**
    * 初始化图片视图。
@@ -136,6 +138,7 @@ class ImageEditableNodeView implements NodeView {
     this.dom.dataset.type = IMAGE_NODE_NAME;
     this.dom.className = 'zt-md-image';
     this.updateEditableState();
+    this.syncSelectedState();
 
     // 图片元素。
     this.imageElement = document.createElement('img');
@@ -215,6 +218,13 @@ class ImageEditableNodeView implements NodeView {
    */
   private updateEditableState(): void {
     this.dom.dataset.editable = isEditorViewEditable(this.view) ? 'true' : 'false';
+  }
+
+  /**
+   * 更新图片选中态标记。
+   */
+  private syncSelectedState(): void {
+    this.dom.dataset.selected = this.isSelected ? 'true' : 'false';
   }
 
   /**
@@ -390,6 +400,22 @@ class ImageEditableNodeView implements NodeView {
     this.node = node;
     this.syncFromNode(node);
     return true;
+  }
+
+  /**
+   * 节点被选中时同步图片选中态。
+   */
+  selectNode(): void {
+    this.isSelected = true;
+    this.syncSelectedState();
+  }
+
+  /**
+   * 节点取消选中时同步图片选中态。
+   */
+  deselectNode(): void {
+    this.isSelected = false;
+    this.syncSelectedState();
   }
 
   /**

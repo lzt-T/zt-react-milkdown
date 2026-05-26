@@ -20,6 +20,8 @@ export interface PresetPluginExports {
   clipboard: unknown;
   /** indent 插件实例。 */
   indent: unknown;
+  /** 图片两段式删除插件实例。 */
+  imageDeleteSelection: unknown;
   /** 表格方向键进入插件实例。 */
   tableArrowEntry: unknown;
   /** 公式块 Backspace 进入插件实例。 */
@@ -98,6 +100,7 @@ export const resolvePresetPlugins = (
     appendPluginDescriptors(descriptors, 'clipboard', pluginExports.clipboard);
     appendPluginDescriptors(descriptors, 'indent', pluginExports.indent);
   }
+  appendPluginDescriptors(descriptors, 'image-delete-selection', pluginExports.imageDeleteSelection);
   appendPluginDescriptors(descriptors, 'table-arrow-entry', pluginExports.tableArrowEntry);
   appendPluginDescriptors(descriptors, 'math-backspace-entry', pluginExports.mathBackspaceEntry);
   appendPluginDescriptors(descriptors, 'blockquote-backspace-lift', pluginExports.blockquoteBackspaceLift);

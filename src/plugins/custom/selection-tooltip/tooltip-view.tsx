@@ -1,4 +1,5 @@
 import type { MarkType } from '@milkdown/prose/model';
+import { TextSelection } from '@milkdown/prose/state';
 import type { EditorView } from '@milkdown/prose/view';
 import { Check, ChevronDown, Link2, Trash2 } from 'lucide-react';
 import { createElement, useEffect, useRef, useState, type MouseEvent as ReactMouseEvent, type ReactElement } from 'react';
@@ -504,7 +505,7 @@ export const createSelectionTooltipShouldShow = (
     const { selection, doc } = view.state;
     // 当前焦点是否位于菜单内。
     const isTooltipFocused = tooltip.contains(document.activeElement);
-    if (!isEditorViewEditable(view) || selection.empty) {
+    if (!isEditorViewEditable(view) || selection.empty || !(selection instanceof TextSelection)) {
       return false;
     }
 

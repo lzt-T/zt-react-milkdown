@@ -332,6 +332,7 @@ export const ImageUploadDialog = ({
         container={portalContainer}
         className="zt-md-image-upload-content-shell max-w-2xl sm:!max-w-2xl max-h-[90vh] overflow-hidden flex flex-col"
         showCloseButton={false}
+        onCloseAutoFocus={(event) => event.preventDefault()}
         onMouseDown={(event) => event.stopPropagation()}
         onKeyDown={handleKeyDown}
       >
