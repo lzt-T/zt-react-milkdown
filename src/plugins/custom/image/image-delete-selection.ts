@@ -1,5 +1,5 @@
 import type { Node as ProseNode, ResolvedPos } from '@milkdown/prose/model';
-import { NodeSelection, Plugin, PluginKey, TextSelection } from '@milkdown/prose/state';
+import { NodeSelection, Plugin, PluginKey, TextSelection, type Selection } from '@milkdown/prose/state';
 import type { EditorView } from '@milkdown/prose/view';
 import { $prose } from '@milkdown/utils';
 
@@ -95,7 +95,7 @@ const resolvePreviousImageBlock = (
 /**
  * 创建删除图片后的稳定文本选区。
  */
-const createStableTextSelection = (doc: ProseNode, position: number): TextSelection => {
+const createStableTextSelection = (doc: ProseNode, position: number): Selection => {
   try {
     return TextSelection.create(doc, position);
   } catch {

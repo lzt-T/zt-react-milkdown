@@ -1,6 +1,6 @@
 import katex from 'katex';
 import type { Node as ProseNode } from '@milkdown/prose/model';
-import { Plugin, PluginKey, TextSelection } from '@milkdown/prose/state';
+import { Plugin, PluginKey, TextSelection, type Selection } from '@milkdown/prose/state';
 import type { EditorView } from '@milkdown/prose/view';
 import { $prose } from '@milkdown/utils';
 import type { EditorI18nMessages } from '../../../types/editor';
@@ -115,7 +115,7 @@ class MathInlineEditPluginView {
   /**
    * 创建稳定的文本选区，避免极端位置构造失败。
    */
-  private createSafeTextSelection(doc: ProseNode, position: number): TextSelection {
+  private createSafeTextSelection(doc: ProseNode, position: number): Selection {
     try {
       return TextSelection.create(doc, position);
     } catch {
