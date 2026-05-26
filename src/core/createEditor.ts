@@ -1,8 +1,27 @@
-import type { CreateEditorOptions, EditorController } from '../types/editor';
+import type {
+  EditorChangeHandler,
+  EditorI18nMessages,
+  EditorLocale,
+  ImageUploadConfig,
+  SlashMenuConfig
+} from '../types/editor';
 import type { Node as ProseNode } from '@milkdown/prose/model';
+import {
+  defaultValueCtx,
+  Editor,
+  editorViewOptionsCtx,
+  nodeViewCtx,
+  rootCtx
+} from '@milkdown/core';
+import { clipboard } from '@milkdown/plugin-clipboard';
+import { history } from '@milkdown/plugin-history';
+import { indent, indentConfig } from '@milkdown/plugin-indent';
+import { listener, listenerCtx } from '@milkdown/plugin-listener';
+import { commonmark } from '@milkdown/preset-commonmark';
+import { gfm } from '@milkdown/preset-gfm';
+import { replaceAll } from '@milkdown/utils';
 import { createReplaceAllExecutor } from './commands';
 import { resolvePresetPlugins } from '../plugins/preset-common';
-import { assertKey } from '../utils/guard';
 import { dropCursorPlugin, gapCursorPlugin } from '../plugins/custom/cursor';
 import {
   createImageEditableNodeView,
@@ -32,6 +51,47 @@ import { tabSpaceIndentPlugin } from '../plugins/custom/indent';
 import { resolveEditorMessages } from '../local/i18n';
 import type { PresetPluginExports } from '../plugins/preset-common';
 import { normalizeSafeUrl } from '../utils/security';
+
+/**
+ * 定义 Milkdown 原生编辑器实例类型。
+ */
+export type NativeMilkdownEditor = ReturnType<typeof Editor.make>;
+
+/**
+ * 定义已配置编辑器的运行时句柄。
+ */
+export interface MilkdownEditorRuntime {
+  /** Milkdown 原生编辑器实例。 */
+  editor: NativeMilkdownEditor;
+  /** 注册需要在 create 后延迟启用的插件。 */
+  installRuntimePlugins: () => void;
+  /** 同步 Markdown 内容。 */
+  setMarkdown: (markdown: string) => void;
+}
+
+/**
+ * 定义创建 Milkdown 编辑器运行时时所需参数。
+ */
+export interface CreateMilkdownEditorRuntimeOptions {
+  /** 绑定的根节点。 */
+  root: HTMLElement;
+  /** 编辑器内部浮层 Portal 容器。 */
+  portalContainer: HTMLElement;
+  /** 初始 Markdown 内容。 */
+  markdown: string;
+  /** 是否只读。 */
+  readOnly: boolean;
+  /** 编辑器文案。 */
+  messages?: EditorI18nMessages;
+  /** 编辑器语言。 */
+  locale?: EditorLocale;
+  /** slash 菜单配置。 */
+  slashMenu?: SlashMenuConfig;
+  /** 图片上传配置。 */
+  imageUpload?: ImageUploadConfig;
+  /** Markdown 变化事件。 */
+  onChange: EditorChangeHandler;
+}
 
 /**
  * 获取当前事件命中的链接元素。
@@ -101,63 +161,11 @@ const blockReadonlyLinkClick = (event: MouseEvent, readOnly: boolean): boolean =
 };
 
 /**
- * 创建并初始化 Milkdown 编辑器实例。
+ * 创建面向 React 生命周期的 Milkdown 编辑器运行时。
  */
-export const createEditor = async (options: CreateEditorOptions): Promise<EditorController> => {
-  /** core 子模块导出。 */
-  const coreKit = (await import('@milkdown/core')) as Record<string, unknown>;
-  /** clipboard 子模块导出。 */
-  const clipboardKit = (await import('@milkdown/plugin-clipboard')) as Record<string, unknown>;
-  /** indent 子模块导出。 */
-  const indentKit = (await import('@milkdown/plugin-indent')) as Record<string, unknown>;
-  /** listener 子模块导出。 */
-  const listenerKit = (await import('@milkdown/plugin-listener')) as Record<string, unknown>;
-  /** history 子模块导出。 */
-  const historyKit = (await import('@milkdown/plugin-history')) as Record<string, unknown>;
-  /** commonmark 子模块导出。 */
-  const commonmarkKit = (await import('@milkdown/preset-commonmark')) as Record<string, unknown>;
-  /** gfm 子模块导出。 */
-  const gfmKit = (await import('@milkdown/preset-gfm')) as Record<string, unknown>;
-  /** utils 子模块导出。 */
-  const utilsKit = (await import('@milkdown/utils')) as Record<string, unknown>;
-
-  /** Editor 构造对象。 */
-  const Editor = assertKey(coreKit, 'Editor') as {
-    make: () => {
-      config: (handler: (ctx: unknown) => void) => unknown;
-      use: (plugin: unknown) => unknown;
-      create: () => Promise<unknown>;
-      action: (handler: unknown) => void;
-      destroy: () => Promise<void>;
-    };
-  };
-
-  /** rootCtx 导出对象。 */
-  const rootCtx = assertKey(coreKit, 'rootCtx');
-  /** defaultValueCtx 导出对象。 */
-  const defaultValueCtx = assertKey(coreKit, 'defaultValueCtx');
-  /** editorViewOptionsCtx 导出对象。 */
-  const editorViewOptionsCtx = assertKey(coreKit, 'editorViewOptionsCtx');
-  /** nodeViewCtx 导出对象。 */
-  const nodeViewCtx = assertKey(coreKit, 'nodeViewCtx');
-  /** listenerCtx 导出对象。 */
-  const listenerCtx = assertKey(listenerKit, 'listenerCtx');
-  /** listener 插件导出对象。 */
-  const listener = assertKey(listenerKit, 'listener');
-  /** history 插件导出对象。 */
-  const history = assertKey(historyKit, 'history');
-  /** clipboard 插件导出对象。 */
-  const clipboard = assertKey(clipboardKit, 'clipboard');
-  /** indent 插件导出对象。 */
-  const indent = assertKey(indentKit, 'indent');
-  /** indent 配置上下文。 */
-  const indentConfig = assertKey(indentKit, 'indentConfig');
-  /** commonmark 插件导出对象。 */
-  const commonmark = assertKey(commonmarkKit, 'commonmark');
-  /** gfm 插件导出对象。 */
-  const gfm = assertKey(gfmKit, 'gfm');
-  /** replaceAll 命令导出对象。 */
-  const replaceAll = assertKey(utilsKit, 'replaceAll');
+export const createMilkdownEditorRuntime = (
+  options: CreateMilkdownEditorRuntimeOptions
+): MilkdownEditorRuntime => {
   /** 编辑器文案。 */
   const messages = options.messages ?? resolveEditorMessages();
   /** 表格聚焦操作插件实例。 */
@@ -170,7 +178,7 @@ export const createEditor = async (options: CreateEditorOptions): Promise<Editor
   const mathInlineEditPlugin = createMathInlineEditPlugin(messages, options.portalContainer);
 
   /** 默认插件集合。 */
-  const slashSetup = await createSlashMenuPlugin(
+  const slashSetup = createSlashMenuPlugin(
     options.portalContainer,
     options.slashMenu,
     messages,
@@ -284,38 +292,38 @@ export const createEditor = async (options: CreateEditorOptions): Promise<Editor
   });
 
   bootstrapPlugins.forEach((descriptor) => {
-    editor.use(descriptor.plugin);
+    editor.use(descriptor.plugin as any);
   });
 
-  await editor.create();
-  runtimePluginDescriptors.forEach((descriptor) => {
-    try {
-      editor.use(descriptor.plugin);
-      if (descriptor.name === 'indent') {
-        editor.action((ctx: any) => {
-          ctx.set(indentConfig, {
-            type: 'space',
-            size: 4
+  /**
+   * 注册运行时延迟插件。
+   */
+  const installRuntimePlugins = (): void => {
+    runtimePluginDescriptors.forEach((descriptor) => {
+      try {
+        editor.use(descriptor.plugin as any);
+        if (descriptor.name === 'indent') {
+          editor.action((ctx: any) => {
+            ctx.set(indentConfig, {
+              type: 'space',
+              size: 4
+            });
           });
-        });
+        }
+      } catch (error) {
+        console.error(error);
       }
-    } catch (error) {
-      console.error(error);
-    }
-  });
+    });
+  };
 
   /** replaceAll 命令执行器。 */
-  const runReplaceAll = createReplaceAllExecutor(replaceAll, editor);
+  const runReplaceAll = createReplaceAllExecutor(replaceAll, editor as any);
 
   return {
-    destroy: async () => {
-      await editor.destroy();
-    },
-    setMarkdown: async (markdown: string) => {
+    editor,
+    installRuntimePlugins,
+    setMarkdown: (markdown: string): void => {
       runReplaceAll(markdown);
-    },
-    setEditable: async (_editable: boolean) => {
-      // 当前版本通过重建实例处理 editable 切换，此处保留接口兼容性。
     }
   };
 };

@@ -266,39 +266,3 @@ export interface MilkdownEditorProps {
   /** 图片上传配置。 */
   imageUpload?: ImageUploadConfig;
 }
-
-/**
- * 定义创建编辑器时所需参数。
- */
-export interface CreateEditorOptions {
-  /** 绑定的根节点。 */
-  root: HTMLElement;
-  /** 编辑器内部浮层 Portal 容器。 */
-  portalContainer: HTMLElement;
-  /** 初始 Markdown 内容。 */
-  markdown: string;
-  /** 是否只读。 */
-  readOnly: boolean;
-  /** 编辑器文案。 */
-  messages?: EditorI18nMessages;
-  /** 编辑器语言。 */
-  locale?: EditorLocale;
-  /** slash 菜单配置。 */
-  slashMenu?: SlashMenuConfig;
-  /** 图片上传配置。 */
-  imageUpload?: ImageUploadConfig;
-  /** Markdown 变化事件。 */
-  onChange: EditorChangeHandler;
-}
-
-/**
- * 定义编辑器实例的控制句柄。
- */
-export interface EditorController {
-  /** 销毁编辑器实例。 */
-  destroy: () => Promise<void>;
-  /** 同步 Markdown 内容。 */
-  setMarkdown: (markdown: string) => Promise<void>;
-  /** 同步可编辑状态。 */
-  setEditable: (editable: boolean) => Promise<void>;
-}

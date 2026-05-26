@@ -1,4 +1,5 @@
 import type { EditorI18nMessages, EditorLocale, ImageUploadConfig, SlashMenuConfig, SlashMenuItem } from '../../../types/editor';
+import { slashFactory } from '@milkdown/plugin-slash';
 import { resolveEditorWrapper, resolvePlacement, toContentAnchor } from '../../../lib/editor-overlay-position';
 import { showImageUploadDialog } from '../image/image-upload-dialog';
 import { runSlashCommand } from './slash-menu-commands';
@@ -44,12 +45,8 @@ const readObjectField = (value: unknown, key: string): unknown => {
 /**
  * 规范化 slash 工厂返回值。
  */
-const resolveSlashRuntime = async (): Promise<SlashRuntime | null> => {
-  // slash 插件导出集合。
-  const slashModule = (await import('@milkdown/plugin-slash')) as { slashFactory?: SlashFactory };
-  // slash 工厂函数。
-  const slashFactory = slashModule.slashFactory;
-  if (typeof slashFactory !== 'function') {
+const resolveSlashRuntime = (): SlashRuntime | null => {
+  if (typeof (slashFactory as SlashFactory | undefined) !== 'function') {
     console.error('[zt-md/slash] slashFactory not found');
     return null;
   }
@@ -89,20 +86,20 @@ const resolveSlashRuntime = async (): Promise<SlashRuntime | null> => {
 /**
  * 创建 slash 菜单插件。
  */
-export const createSlashMenuPlugin = async (
+export const createSlashMenuPlugin = (
   portalContainer: HTMLElement,
   config?: SlashMenuConfig,
   messages?: EditorI18nMessages,
   imageUpload?: ImageUploadConfig,
   locale: EditorLocale = 'zh-CN'
-): Promise<SlashPluginSetup> => {
+): SlashPluginSetup => {
   if (config?.enabled === false) {
     return { plugins: [], config: null };
   }
 
   try {
     // slash 插件运行时能力。
-    const runtime = await resolveSlashRuntime();
+    const runtime = resolveSlashRuntime();
     if (!runtime) {
       return { plugins: [], config: null };
     }

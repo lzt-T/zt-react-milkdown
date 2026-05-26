@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState, type CSSProperties } from 'react';
+import { Milkdown, MilkdownProvider } from '@milkdown/react';
 import clsx from 'clsx';
 import type { MilkdownEditorProps } from '../../types/editor';
 import { useControlledState } from '../hooks/useControlledState';
@@ -28,8 +29,6 @@ const toCssContentString = (value: string): string => {
  * 渲染 Milkdown 运行时并完成实例同步。
  */
 const MilkdownRuntime = (props: {
-  root: HTMLElement | null;
-  onRootRef: (node: HTMLDivElement | null) => void;
   markdown: string;
   locale: MilkdownEditorProps['locale'];
   readOnly: boolean;
@@ -44,7 +43,6 @@ const MilkdownRuntime = (props: {
   onInitError: (error: unknown) => void;
 }): JSX.Element => {
   useMilkdownEditor({
-    root: props.root,
     markdown: props.markdown,
     portalContainer: props.portalContainer,
     readOnly: props.readOnly,
@@ -64,7 +62,7 @@ const MilkdownRuntime = (props: {
       aria-label={props.messages.editorAriaLabel}
       style={props.editorStyle}
     >
-      <div data-milkdown-root ref={props.onRootRef} />
+      <Milkdown />
     </div>
   );
 };
@@ -77,8 +75,6 @@ export const MilkdownEditor = (props: MilkdownEditorProps): JSX.Element => {
   const [initErrorMessage, setInitErrorMessage] = useState<string>('');
   /** 编辑器内部浮层 Portal 容器。 */
   const [portalContainer, setPortalContainer] = useState<HTMLDivElement | null>(null);
-  /** Milkdown 根容器。 */
-  const [root, setRoot] = useState<HTMLDivElement | null>(null);
   /** 当前主题。 */
   const theme = props.theme ?? 'light';
   /** 当前只读状态。 */
@@ -131,12 +127,6 @@ export const MilkdownEditor = (props: MilkdownEditorProps): JSX.Element => {
   const handlePortalContainerRef = useCallback((node: HTMLDivElement | null): void => {
     setPortalContainer(node);
   }, []);
-  /**
-   * 同步 Milkdown 根容器。
-   */
-  const handleRootRef = useCallback((node: HTMLDivElement | null): void => {
-    setRoot(node);
-  }, []);
 
   return (
     <div className={clsx('zt-md', theme === 'dark' ? 'zt-md-dark' : 'zt-md-light', props.className)}>
@@ -144,22 +134,22 @@ export const MilkdownEditor = (props: MilkdownEditorProps): JSX.Element => {
       <div className="zt-md-body">
         {initErrorMessage ? <div className="zt-md-error">{initErrorMessage}</div> : null}
         {portalContainer ? (
-          <MilkdownRuntime
-            root={root}
-            onRootRef={handleRootRef}
-            markdown={markdown}
-            locale={props.locale}
-            portalContainer={portalContainer}
-            readOnly={readOnly}
-            debounceMs={debounceMs}
-            messages={messages}
-            slashMenu={props.slashMenu}
-            imageUpload={props.imageUpload}
-            editorStyle={editorStyle}
-            onMarkdownChange={handleMarkdownChange}
-            onInitReady={handleInitReady}
-            onInitError={handleInitError}
-          />
+          <MilkdownProvider>
+            <MilkdownRuntime
+              markdown={markdown}
+              locale={props.locale}
+              portalContainer={portalContainer}
+              readOnly={readOnly}
+              debounceMs={debounceMs}
+              messages={messages}
+              slashMenu={props.slashMenu}
+              imageUpload={props.imageUpload}
+              editorStyle={editorStyle}
+              onMarkdownChange={handleMarkdownChange}
+              onInitReady={handleInitReady}
+              onInitError={handleInitError}
+            />
+          </MilkdownProvider>
         ) : null}
         <div ref={handlePortalContainerRef} className="zt-md-portal" />
       </div>

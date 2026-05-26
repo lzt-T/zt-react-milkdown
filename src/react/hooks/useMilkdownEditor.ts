@@ -1,14 +1,22 @@
+import { useEditor } from '@milkdown/react';
 import { debounce } from 'es-toolkit/function';
 import { useEffect, useRef } from 'react';
-import type { EditorController, EditorI18nMessages, EditorLocale, ImageUploadConfig, SlashMenuConfig } from '../../types/editor';
-import { createEditor } from '../../core/createEditor';
+import type {
+  EditorI18nMessages,
+  EditorLocale,
+  ImageUploadConfig,
+  SlashMenuConfig
+} from '../../types/editor';
+import {
+  createMilkdownEditorRuntime,
+  type MilkdownEditorRuntime,
+  type NativeMilkdownEditor
+} from '../../core/createEditor';
 
 /**
  * 定义 useMilkdownEditor 的输入参数。
  */
 export interface UseMilkdownEditorOptions {
-  /** Milkdown 编辑器根容器。 */
-  root: HTMLElement | null;
   /** 需要同步到编辑器的 markdown。 */
   markdown: string;
   /** 编辑器内部浮层 Portal 容器。 */
@@ -34,23 +42,46 @@ export interface UseMilkdownEditorOptions {
 }
 
 /**
- * 封装 Milkdown 的创建、销毁与外部同步流程。
+ * 为 React 生命周期包装 Milkdown create 方法。
+ */
+const wrapEditorCreate = (
+  editor: NativeMilkdownEditor,
+  installRuntimePlugins: () => void,
+  onReady: () => void,
+  onError: (error: unknown) => void
+): NativeMilkdownEditor => {
+  /** 可覆盖 create 方法的编辑器视图。 */
+  const mutableEditor = editor as NativeMilkdownEditor & {
+    create: () => Promise<NativeMilkdownEditor>;
+  };
+  /** 原始 create 方法。 */
+  const runCreate = mutableEditor.create.bind(editor);
+
+  mutableEditor.create = async () => {
+    try {
+      // 创建结果由 @milkdown/react 写入实例引用。
+      const createdEditor = await runCreate();
+      installRuntimePlugins();
+      onReady();
+      return createdEditor;
+    } catch (error) {
+      console.error('Milkdown init failed:', error);
+      onError(error);
+      throw error;
+    }
+  };
+
+  return mutableEditor;
+};
+
+/**
+ * 封装 Milkdown React 生命周期与外部同步流程。
  */
 export const useMilkdownEditor = (options: UseMilkdownEditorOptions): void => {
-  /** 编辑器控制器引用。 */
-  const controllerRef = useRef<EditorController | null>(null);
+  /** 编辑器运行时引用。 */
+  const runtimeRef = useRef<MilkdownEditorRuntime | null>(null);
   /** 当前已写入编辑器的 markdown。 */
   const currentMarkdownRef = useRef<string>(options.markdown);
-  /** 当前最新 markdown 入参引用。 */
-  const latestMarkdownRef = useRef<string>(options.markdown);
-  /** 当前最新文案配置引用。 */
-  const latestMessagesRef = useRef<EditorI18nMessages | undefined>(options.messages);
-  /** 当前最新语言配置引用。 */
-  const latestLocaleRef = useRef<EditorLocale | undefined>(options.locale);
-  /** 当前最新 slash 菜单配置引用。 */
-  const latestSlashMenuRef = useRef<SlashMenuConfig | undefined>(options.slashMenu);
-  /** 当前最新图片上传配置引用。 */
-  const latestImageUploadRef = useRef<ImageUploadConfig | undefined>(options.imageUpload);
   /** markdown 变更回调引用。 */
   const onMarkdownChangeRef = useRef<(markdown: string) => void>(options.onMarkdownChange);
   /** 初始化失败回调引用。 */
@@ -62,25 +93,42 @@ export const useMilkdownEditor = (options: UseMilkdownEditorOptions): void => {
     null
   );
 
-  useEffect(() => {
-    latestMarkdownRef.current = options.markdown;
-  }, [options.markdown]);
+  /** 当前 Milkdown React 实例信息。 */
+  const editorInfo = useEditor(
+    (root) => {
+      runtimeRef.current = null;
+      currentMarkdownRef.current = options.markdown;
 
-  useEffect(() => {
-    latestMessagesRef.current = options.messages;
-  }, [options.messages]);
+      /** 编辑器运行时。 */
+      const runtime = createMilkdownEditorRuntime({
+        root,
+        portalContainer: options.portalContainer,
+        markdown: options.markdown,
+        readOnly: options.readOnly,
+        messages: options.messages,
+        locale: options.locale,
+        slashMenu: options.slashMenu,
+        imageUpload: options.imageUpload,
+        onChange: (nextMarkdown) => {
+          currentMarkdownRef.current = nextMarkdown;
+          debouncedEmitRef.current?.(nextMarkdown);
+        }
+      });
 
-  useEffect(() => {
-    latestLocaleRef.current = options.locale;
-  }, [options.locale]);
-
-  useEffect(() => {
-    latestSlashMenuRef.current = options.slashMenu;
-  }, [options.slashMenu]);
-
-  useEffect(() => {
-    latestImageUploadRef.current = options.imageUpload;
-  }, [options.imageUpload]);
+      return wrapEditorCreate(
+        runtime.editor,
+        runtime.installRuntimePlugins,
+        () => {
+          runtimeRef.current = runtime;
+          onInitReadyRef.current?.();
+        },
+        (error) => {
+          onInitErrorRef.current?.(error);
+        }
+      ) as any;
+    },
+    [options.portalContainer, options.readOnly, options.locale]
+  );
 
   useEffect(() => {
     onMarkdownChangeRef.current = options.onMarkdownChange;
@@ -114,76 +162,16 @@ export const useMilkdownEditor = (options: UseMilkdownEditorOptions): void => {
   }, [options.debounceMs]);
 
   useEffect(() => {
-    const rootElement = options.root;
-    if (!rootElement) {
-      return;
-    }
-
-    /** 标记当前 effect 是否已被清理，避免过期异步结果回写。 */
-    let disposed = false;
-    /** 当前 effect 创建的控制器实例。 */
-    let localController: EditorController | null = null;
-
-    void (async () => {
-      try {
-        const controller = await createEditor({
-          root: rootElement,
-          portalContainer: options.portalContainer,
-          markdown: latestMarkdownRef.current,
-          readOnly: options.readOnly,
-          messages: latestMessagesRef.current,
-          locale: latestLocaleRef.current,
-          slashMenu: latestSlashMenuRef.current,
-          imageUpload: latestImageUploadRef.current,
-          onChange: (nextMarkdown) => {
-            currentMarkdownRef.current = nextMarkdown;
-            debouncedEmitRef.current?.(nextMarkdown);
-          }
-        });
-
-        if (disposed) {
-          await controller.destroy();
-          return;
-        }
-
-        localController = controller;
-        controllerRef.current = controller;
-        onInitReadyRef.current?.();
-      } catch (error) {
-        if (!disposed) {
-          console.error('Milkdown init failed:', error);
-          onInitErrorRef.current?.(error);
-        }
-      }
-    })();
-
     return () => {
-      disposed = true;
-      debouncedEmitRef.current?.cancel();
-      if (!localController) {
-        return;
-      }
-      void localController.destroy();
-      if (controllerRef.current === localController) {
-        controllerRef.current = null;
-      }
-      localController = null;
+      runtimeRef.current = null;
     };
-    /**
-     * 仅结构性依赖触发编辑器重建：
-     * - root / portalContainer：宿主容器变化，必须重建。
-     * - readOnly：编辑模式切换，按现有行为重建。
-     * - locale：语言切换时重建，刷新初始化时注入的插件文案。
-     * 内容变化不重建；messages/slashMenu/imageUpload 通过 ref 读取，
-     * 避免父组件重渲染时对象引用变化导致输入失焦。
-     */
-  }, [options.root, options.readOnly, options.portalContainer, options.locale]);
+  }, [options.portalContainer, options.readOnly, options.locale]);
 
   useEffect(() => {
-    /** 当前控制器。 */
-    const controller = controllerRef.current;
+    /** 当前编辑器运行时。 */
+    const runtime = runtimeRef.current;
 
-    if (!controller) {
+    if (!runtime || editorInfo.loading) {
       return;
     }
 
@@ -192,6 +180,6 @@ export const useMilkdownEditor = (options: UseMilkdownEditorOptions): void => {
     }
 
     currentMarkdownRef.current = options.markdown;
-    void controller.setMarkdown(options.markdown);
-  }, [options.markdown]);
+    runtime.setMarkdown(options.markdown);
+  }, [editorInfo.loading, options.markdown]);
 };
