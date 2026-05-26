@@ -84,6 +84,10 @@ const App = (): JSX.Element => {
       "\\int_0^1 x^2 dx",
       "$$",
       "",
+      `## 图片示例
+
+![示例图片](https://picsum.photos/seed/1/300/200)`,
+      "",
       "> 主题切换会保留编辑内容。",
     ].join("\n"),
   );

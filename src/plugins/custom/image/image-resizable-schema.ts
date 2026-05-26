@@ -1,4 +1,4 @@
-import { imageSchema } from '@milkdown/preset-commonmark';
+import { imageSchema, paragraphSchema } from '@milkdown/preset-commonmark';
 import type { GetNodeSchema } from '@milkdown/utils';
 import { normalizeSafeUrl, parseSafeImageHtml } from '../../../utils/security';
 
@@ -20,10 +20,25 @@ const IMAGE_WIDTH_STYLE_PATTERN = /^\s*width\s*:\s*(\d{1,3})%\s*;?\s*$/i;
  */
 interface ImageSchemaConfigContext {
   /** 读取 schema 配置。 */
-  get: (key: typeof imageSchema.key) => GetNodeSchema;
+  get: (key: typeof imageSchema.key | typeof paragraphSchema.key) => GetNodeSchema;
   /** 写入 schema 配置。 */
-  set: (key: typeof imageSchema.key, value: GetNodeSchema) => void;
+  set: (key: typeof imageSchema.key | typeof paragraphSchema.key, value: GetNodeSchema) => void;
 }
+
+/**
+ * 解析段落中独立存在的 Markdown 图片。
+ */
+const resolveStandaloneMarkdownImage = (node: any): any | null => {
+  // 段落子节点列表。
+  const children = Array.isArray(node.children) ? node.children : [];
+  // 段落内唯一子节点。
+  const child = children[0];
+  if (children.length !== 1 || child?.type !== 'image') {
+    return null;
+  }
+
+  return child;
+};
 
 /**
  * 限制图片宽度百分比范围。
@@ -214,10 +229,40 @@ const createResizableImageSchema = (prevSchema: GetNodeSchema): GetNodeSchema =>
 };
 
 /**
+ * 创建兼容块级图片的 paragraph schema。
+ */
+const createImageCompatibleParagraphSchema = (prevSchema: GetNodeSchema): GetNodeSchema => {
+  return (ctx) => {
+    // 原始段落 schema。
+    const schema = prevSchema(ctx);
+
+    return {
+      ...schema,
+      parseMarkdown: {
+        ...schema.parseMarkdown,
+        runner: (state, node, type) => {
+          // 独立图片节点。
+          const standaloneImage = resolveStandaloneMarkdownImage(node);
+          if (standaloneImage) {
+            state.next(standaloneImage);
+            return;
+          }
+
+          schema.parseMarkdown.runner(state, node, type);
+        }
+      }
+    };
+  };
+};
+
+/**
  * 配置支持尺寸调整的图片 schema。
  */
 export const configureImageResizableSchema = (ctx: ImageSchemaConfigContext): void => {
   // 原始图片 schema 工厂。
-  const prevSchema = ctx.get(imageSchema.key) as GetNodeSchema;
-  ctx.set(imageSchema.key, createResizableImageSchema(prevSchema));
+  const prevImageSchema = ctx.get(imageSchema.key) as GetNodeSchema;
+  // 原始段落 schema 工厂。
+  const prevParagraphSchema = ctx.get(paragraphSchema.key) as GetNodeSchema;
+  ctx.set(imageSchema.key, createResizableImageSchema(prevImageSchema));
+  ctx.set(paragraphSchema.key, createImageCompatibleParagraphSchema(prevParagraphSchema));
 };
