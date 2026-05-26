@@ -225,11 +225,14 @@ const createResizableImageSchema = (prevSchema: GetNodeSchema): GetNodeSchema =>
             return;
           }
 
-          state.addNode('image', undefined, undefined, {
+          // Markdown 图片节点属于行内节点，块级图片需包进段落避免和相邻块黏连。
+          const imageMarkdownNode = {
+            type: 'image',
             title: node.attrs.title,
             url: src,
             alt: node.attrs.alt
-          });
+          };
+          state.addNode('paragraph', [imageMarkdownNode]);
         }
       }
     };
