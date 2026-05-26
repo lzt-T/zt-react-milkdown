@@ -124,7 +124,7 @@ class MathInlineEditPluginView {
   }
 
   /**
-   * 判断当前 input 光标是否位于可回退编辑器的边界。
+   * 判断当前 input 是否应通过方向键回到编辑器光标。
    */
   private resolveArrowExitTarget(event: KeyboardEvent): number | null {
     if (this.currentPosition === null) {
@@ -147,8 +147,16 @@ class MathInlineEditPluginView {
       return this.currentPosition;
     }
 
+    if (event.key === 'ArrowUp') {
+      return this.currentPosition;
+    }
+
     const sourceLength = this.sourceInput.value.length;
     if (event.key === 'ArrowRight' && selectionStart === sourceLength) {
+      return this.currentPosition + node.nodeSize;
+    }
+
+    if (event.key === 'ArrowDown') {
       return this.currentPosition + node.nodeSize;
     }
 
