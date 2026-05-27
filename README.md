@@ -88,6 +88,10 @@ export default function Demo() {
   - 支持 `light` / `dark` 两种主题。
   - 通过 `theme` 属性切换主题。
 
+- 浮层隔离
+  - Dialog/Modal 类浮层与 Slash 命令菜单挂载到编辑器内部 `.zt-md-portal`，继承当前主题且不挂到 `document.body`，不受编辑区滚动裁剪。
+  - 选区工具栏子菜单、代码块语言选择器、表格操作等内容附属浮层挂载到 `.zt-md-editor` 内部 `.zt-md-content-portal`，会随 `maxHeight` 编辑区滚动视口裁剪。
+
 ## API
 
 `MilkdownEditor` Props：

@@ -1,7 +1,9 @@
 @layer utilities {
   .zt-md-image-upload-host {
-    position: fixed;
-    inset: 0;
+    position: absolute;
+    width: 100vw;
+    height: 100dvh;
+    min-height: 100vh;
     z-index: 1300;
     --background: var(--zt-bg);
     --foreground: var(--zt-fg);
@@ -32,6 +34,8 @@
   }
 
   .zt-md-image-upload-host [data-slot='dialog-overlay'] {
+    position: absolute;
+    inset: 0;
     background: color-mix(in srgb, var(--zt-fg) 62%, transparent);
     backdrop-filter: none;
   }
@@ -41,6 +45,7 @@
   }
 
   [data-slot='dialog-content'].zt-md-image-upload-content-shell {
+    position: absolute;
     box-sizing: border-box;
     display: flex;
     width: min(640px, calc(100vw - 32px));

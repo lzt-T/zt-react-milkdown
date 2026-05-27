@@ -31,6 +31,16 @@ interface ImageUploadDialogOptions {
 }
 
 /**
+ * 同步图片上传弹窗宿主到浏览器视口。
+ */
+const syncImageUploadHostBounds = (host: HTMLElement, portalContainer: HTMLElement): void => {
+  // Portal 容器相对视口的位置。
+  const portalRect = portalContainer.getBoundingClientRect();
+  host.style.left = `${-portalRect.left}px`;
+  host.style.top = `${-portalRect.top}px`;
+};
+
+/**
  * 创建普通段落节点。
  */
 const createParagraphNode = (view: any, content?: any): any | null => {
@@ -178,7 +188,18 @@ export const showImageUploadDialog = (options: ImageUploadDialogOptions): void =
   // React 挂载容器。
   const host = document.createElement('div');
   host.className = `zt-md-image-upload-host ${themeClassName}`;
-  document.body.appendChild(host);
+  options.portalContainer.appendChild(host);
+  syncImageUploadHostBounds(host, options.portalContainer);
+
+  /**
+   * 视口或页面滚动变化时重新对齐宿主。
+   */
+  const handleViewportChange = (): void => {
+    syncImageUploadHostBounds(host, options.portalContainer);
+  };
+
+  window.addEventListener('resize', handleViewportChange);
+  window.addEventListener('scroll', handleViewportChange, true);
 
   // React 根节点。
   const root = createRoot(host);
@@ -188,6 +209,8 @@ export const showImageUploadDialog = (options: ImageUploadDialogOptions): void =
    */
   const unmountDialog = (onAfterUnmount?: () => void): void => {
     queueMicrotask(() => {
+      window.removeEventListener('resize', handleViewportChange);
+      window.removeEventListener('scroll', handleViewportChange, true);
       root.unmount();
       host.remove();
       onAfterUnmount?.();

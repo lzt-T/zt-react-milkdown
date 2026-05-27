@@ -8,7 +8,6 @@ import { createRoot, type Root } from 'react-dom/client';
 import { refractor } from 'refractor';
 import type { EditorI18nMessages } from '../../../types/editor';
 import { Popover, PopoverContent, PopoverTrigger } from '../../../components/ui/popover';
-import { useCloseOnGlobalScroll } from '../../../react/hooks/useCloseOnGlobalScroll';
 import {
   createOverlayRepositionScheduler,
   resolveEditorWrapper,
@@ -173,6 +172,8 @@ interface CodeBlockLanguagePickerProps {
   messages: EditorI18nMessages;
   /** 编辑器浮层容器。 */
   portalContainer: HTMLElement;
+  /** Popover 碰撞边界。 */
+  collisionBoundary: HTMLElement | null;
   /** 语言切换回调。 */
   onSelectLanguage: (language: string) => void;
 }
@@ -248,26 +249,6 @@ const CodeBlockLanguagePicker = (props: CodeBlockLanguagePickerProps): ReactElem
     setKeyword('');
   };
 
-  /**
-   * 滚动时关闭语言选择 Popover，避免面板悬浮残留。
-   */
-  const handleCloseOnScroll = (): void => {
-    setOpen(false);
-  };
-
-  /**
-   * 判断滚动是否发生在语言选择器面板内部。
-   */
-  const shouldIgnorePanelScroll = (event: Event): boolean => {
-    if (!(event.target instanceof HTMLElement)) {
-      return false;
-    }
-
-    return event.target.closest('.zt-md-code-language-picker-panel') !== null;
-  };
-
-  useCloseOnGlobalScroll(open, handleCloseOnScroll, shouldIgnorePanelScroll);
-
   return createElement(
     Popover,
     {
@@ -310,6 +291,8 @@ const CodeBlockLanguagePicker = (props: CodeBlockLanguagePickerProps): ReactElem
           sideOffset: 6,
           className: 'zt-md-code-language-picker-panel',
           container: props.portalContainer,
+          collisionBoundary: props.collisionBoundary,
+          hideWhenDetached: true,
           onOpenAutoFocus: handleAutoFocus,
           onCloseAutoFocus: handleAutoFocus
         },
@@ -469,6 +452,7 @@ class CodeBlockLanguagePickerView {
         currentLanguage: language,
         messages: this.messages,
         portalContainer: this.portalContainer,
+        collisionBoundary: this.editorWrapper,
         onSelectLanguage: (nextLanguage) => this.applyLanguage(nextLanguage)
       })
     );

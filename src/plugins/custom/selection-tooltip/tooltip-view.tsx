@@ -6,7 +6,6 @@ import { createElement, useEffect, useRef, useState, type MouseEvent as ReactMou
 import { createRoot, type Root } from 'react-dom/client';
 import { Button } from '../../../components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '../../../components/ui/popover';
-import { useCloseOnGlobalScroll } from '../../../react/hooks/useCloseOnGlobalScroll';
 import { normalizeSafeUrl } from '../../../utils/security';
 import { runBlockTransformCommand, resolveCurrentBlockTransformCommand } from '../block-transform';
 import {
@@ -115,6 +114,8 @@ interface BlockTransformPopoverControlProps {
   getCurrentView: () => EditorView | null;
   /** Popover Portal 挂载容器。 */
   portalContainer: HTMLElement;
+  /** Popover 碰撞边界，通常为编辑器滚动容器。 */
+  collisionBoundary: HTMLElement | null;
   /** 图标尺寸。 */
   iconSize: number;
   /** 图标线宽。 */
@@ -137,15 +138,6 @@ interface BlockTransformPopoverControlProps {
  * 块级转换 Popover 控件。
  */
 export const BlockTransformPopoverControl = (props: BlockTransformPopoverControlProps): ReactElement => {
-  /**
-   * 滚动时关闭块级转换 Popover。
-   */
-  const handleCloseOnScroll = (): void => {
-    props.onOpenChange(false);
-  };
-
-  useCloseOnGlobalScroll(props.open, handleCloseOnScroll);
-
   /**
    * 阻止交互破坏当前选区。
    */
@@ -196,6 +188,8 @@ export const BlockTransformPopoverControl = (props: BlockTransformPopoverControl
       PopoverContent,
         {
           container: props.portalContainer,
+          collisionBoundary: props.collisionBoundary,
+          hideWhenDetached: true,
           align: 'start',
           sideOffset: 8,
           className: 'zt-md-selection-transform-popover !w-[176px] p-1',
@@ -240,15 +234,6 @@ export const LinkPopoverControl = (props: LinkPopoverControlProps): ReactElement
   const [inputValue, setInputValue] = useState('');
   /** 链接输入框引用。 */
   const inputRef = useRef<HTMLInputElement | null>(null);
-
-  /**
-   * 滚动时关闭链接 Popover。
-   */
-  const handleCloseOnScroll = (): void => {
-    props.onOpenChange(false);
-  };
-
-  useCloseOnGlobalScroll(props.open, handleCloseOnScroll);
 
   /**
    * 阻止交互时破坏当前选区。
@@ -372,6 +357,8 @@ export const LinkPopoverControl = (props: LinkPopoverControlProps): ReactElement
       PopoverContent,
       {
         container: props.portalContainer,
+        collisionBoundary: props.collisionBoundary,
+        hideWhenDetached: true,
         align: 'center',
         sideOffset: 8,
         className: 'zt-md-selection-link-popover w-fit min-w-0 gap-0 p-2',

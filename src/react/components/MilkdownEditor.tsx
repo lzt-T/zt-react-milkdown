@@ -37,7 +37,7 @@ const MilkdownRuntime = (props: {
   slashMenu: MilkdownEditorProps['slashMenu'];
   imageUpload: MilkdownEditorProps['imageUpload'];
   portalContainer: HTMLElement;
-  editorStyle: CSSProperties & Record<'--zt-gap-placeholder-content', string>;
+  contentPortalContainer: HTMLElement;
   onMarkdownChange: (markdown: string) => void;
   onInitReady: () => void;
   onInitError: (error: unknown) => void;
@@ -45,6 +45,7 @@ const MilkdownRuntime = (props: {
   useMilkdownEditor({
     markdown: props.markdown,
     portalContainer: props.portalContainer,
+    contentPortalContainer: props.contentPortalContainer,
     readOnly: props.readOnly,
     debounceMs: props.debounceMs,
     messages: props.messages,
@@ -56,15 +57,7 @@ const MilkdownRuntime = (props: {
     onInitError: props.onInitError
   });
 
-  return (
-    <div
-      className={clsx('zt-md-editor', props.readOnly ? 'zt-md-readonly' : 'zt-md-editable')}
-      aria-label={props.messages.editorAriaLabel}
-      style={props.editorStyle}
-    >
-      <Milkdown />
-    </div>
-  );
+  return <Milkdown />;
 };
 
 /**
@@ -75,6 +68,8 @@ export const MilkdownEditor = (props: MilkdownEditorProps): JSX.Element => {
   const [initErrorMessage, setInitErrorMessage] = useState<string>('');
   /** 编辑器内部浮层 Portal 容器。 */
   const [portalContainer, setPortalContainer] = useState<HTMLDivElement | null>(null);
+  /** 编辑器内容附属浮层 Portal 容器。 */
+  const [contentPortalContainer, setContentPortalContainer] = useState<HTMLDivElement | null>(null);
   /** 当前主题。 */
   const theme = props.theme ?? 'light';
   /** 当前只读状态。 */
@@ -127,30 +122,43 @@ export const MilkdownEditor = (props: MilkdownEditorProps): JSX.Element => {
   const handlePortalContainerRef = useCallback((node: HTMLDivElement | null): void => {
     setPortalContainer(node);
   }, []);
+  /**
+   * 同步编辑器内容附属浮层 Portal 容器。
+   */
+  const handleContentPortalContainerRef = useCallback((node: HTMLDivElement | null): void => {
+    setContentPortalContainer(node);
+  }, []);
 
   return (
     <div className={clsx('zt-md', theme === 'dark' ? 'zt-md-dark' : 'zt-md-light', props.className)}>
       {props.headerSlot ? <div className="zt-md-header">{props.headerSlot}</div> : null}
       <div className="zt-md-body">
         {initErrorMessage ? <div className="zt-md-error">{initErrorMessage}</div> : null}
-        {portalContainer ? (
-          <MilkdownProvider>
-            <MilkdownRuntime
-              markdown={markdown}
-              locale={props.locale}
-              portalContainer={portalContainer}
-              readOnly={readOnly}
-              debounceMs={debounceMs}
-              messages={messages}
-              slashMenu={props.slashMenu}
-              imageUpload={props.imageUpload}
-              editorStyle={editorStyle}
-              onMarkdownChange={handleMarkdownChange}
-              onInitReady={handleInitReady}
-              onInitError={handleInitError}
-            />
-          </MilkdownProvider>
-        ) : null}
+        <div
+          className={clsx('zt-md-editor', readOnly ? 'zt-md-readonly' : 'zt-md-editable')}
+          aria-label={messages.editorAriaLabel}
+          style={editorStyle}
+        >
+          {portalContainer && contentPortalContainer ? (
+            <MilkdownProvider>
+              <MilkdownRuntime
+                markdown={markdown}
+                locale={props.locale}
+                portalContainer={portalContainer}
+                contentPortalContainer={contentPortalContainer}
+                readOnly={readOnly}
+                debounceMs={debounceMs}
+                messages={messages}
+                slashMenu={props.slashMenu}
+                imageUpload={props.imageUpload}
+                onMarkdownChange={handleMarkdownChange}
+                onInitReady={handleInitReady}
+                onInitError={handleInitError}
+              />
+            </MilkdownProvider>
+          ) : null}
+          <div ref={handleContentPortalContainerRef} className="zt-md-content-portal" />
+        </div>
         <div ref={handlePortalContainerRef} className="zt-md-portal" />
       </div>
     </div>

@@ -52,6 +52,8 @@ const createSelectionTooltipPluginView = (
   let linkTriggerButton: HTMLButtonElement | null = null;
   // 链接按钮 React 根节点。
   const linkControlRoot = createRoot(linkControlHost);
+  // 内容附属 Popover 碰撞边界。
+  const collisionBoundary = portalContainer.closest('.zt-md-editor') as HTMLElement | null;
 
   /**
    * 控制链接 Popover 展开状态。
@@ -104,6 +106,7 @@ const createSelectionTooltipPluginView = (
       createElement(BlockTransformPopoverControl, {
         getCurrentView: () => currentView,
         portalContainer,
+        collisionBoundary,
         iconSize: SELECTION_TOOLTIP_ICON_SIZE,
         iconStrokeWidth: SELECTION_TOOLTIP_ICON_STROKE_WIDTH,
         menuTitle: messages.selectionTooltipTransformLabel,
@@ -124,6 +127,7 @@ const createSelectionTooltipPluginView = (
       createElement(LinkPopoverControl, {
         getCurrentView: () => currentView,
         portalContainer,
+        collisionBoundary,
         iconSize: SELECTION_TOOLTIP_ICON_SIZE,
         iconStrokeWidth: SELECTION_TOOLTIP_ICON_STROKE_WIDTH,
         triggerRef: (element: HTMLButtonElement | null) => {

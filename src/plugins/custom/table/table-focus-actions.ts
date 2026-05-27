@@ -337,6 +337,7 @@ class TableFocusActionsView {
       createElement(TableMoreActions, {
         messages: this.messages,
         portalContainer: this.portalContainer,
+        collisionBoundary: this.editorWrapper,
         canInsertRowAbove,
         canInsertColumn,
         canDeleteRow,

@@ -118,9 +118,21 @@
     pointer-events: none;
   }
 
+  .zt-md-content-portal {
+    position: absolute;
+    inset: 0;
+    z-index: 30;
+    pointer-events: none;
+  }
+
   .zt-md-portal [data-slot="popover-content"],
   .zt-md-portal [data-slot="dialog-overlay"],
   .zt-md-portal [data-slot="dialog-content"] {
+    pointer-events: auto;
+  }
+
+  .zt-md-content-portal > *,
+  .zt-md-content-portal [data-slot="popover-content"] {
     pointer-events: auto;
   }
 

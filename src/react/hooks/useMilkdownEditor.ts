@@ -21,6 +21,8 @@ export interface UseMilkdownEditorOptions {
   markdown: string;
   /** 编辑器内部浮层 Portal 容器。 */
   portalContainer: HTMLElement;
+  /** 编辑器内容附属浮层 Portal 容器。 */
+  contentPortalContainer: HTMLElement;
   /** 当前是否只读。 */
   readOnly: boolean;
   /** 内容变更外发的防抖时长（毫秒）。 */
@@ -103,6 +105,7 @@ export const useMilkdownEditor = (options: UseMilkdownEditorOptions): void => {
       const runtime = createMilkdownEditorRuntime({
         root,
         portalContainer: options.portalContainer,
+        contentPortalContainer: options.contentPortalContainer,
         markdown: options.markdown,
         readOnly: options.readOnly,
         messages: options.messages,
@@ -127,7 +130,7 @@ export const useMilkdownEditor = (options: UseMilkdownEditorOptions): void => {
         }
       ) as any;
     },
-    [options.portalContainer, options.readOnly, options.locale]
+    [options.portalContainer, options.contentPortalContainer, options.readOnly, options.locale]
   );
 
   useEffect(() => {
@@ -165,7 +168,7 @@ export const useMilkdownEditor = (options: UseMilkdownEditorOptions): void => {
     return () => {
       runtimeRef.current = null;
     };
-  }, [options.portalContainer, options.readOnly, options.locale]);
+  }, [options.portalContainer, options.contentPortalContainer, options.readOnly, options.locale]);
 
   useEffect(() => {
     /** 当前编辑器运行时。 */

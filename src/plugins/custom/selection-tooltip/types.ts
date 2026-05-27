@@ -64,6 +64,8 @@ export interface LinkPopoverControlProps {
   getCurrentView: () => EditorView | null;
   /** Popover Portal 挂载容器。 */
   portalContainer: HTMLElement;
+  /** Popover 碰撞边界，通常为编辑器滚动容器。 */
+  collisionBoundary: HTMLElement | null;
   /** 链接按钮图标尺寸。 */
   iconSize: number;
   /** 链接按钮图标线宽。 */

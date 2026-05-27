@@ -3,7 +3,6 @@ import { EllipsisVertical } from 'lucide-react';
 import type { EditorI18nMessages } from '../../../types/editor';
 import { Button } from '../../../components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '../../../components/ui/popover';
-import { useCloseOnGlobalScroll } from '../../../react/hooks/useCloseOnGlobalScroll';
 
 /**
  * 表格更多菜单属性。
@@ -13,6 +12,8 @@ interface TableMoreActionsProps {
   messages: EditorI18nMessages;
   /** Popover Portal 挂载容器。 */
   portalContainer?: HTMLElement | null;
+  /** Popover 碰撞边界，通常为编辑器滚动容器。 */
+  collisionBoundary?: HTMLElement | null;
   /** 是否允许在当前行上方插入行。 */
   canInsertRowAbove: boolean;
   /** 是否允许在当前列附近插入列。 */
@@ -41,8 +42,6 @@ interface TableMoreActionsProps {
 export const TableMoreActions = (props: TableMoreActionsProps): ReactElement => {
   /** Popover 展开状态。 */
   const [open, setOpen] = useState(false);
-
-  useCloseOnGlobalScroll(open, () => setOpen(false));
 
   /**
    * 阻止菜单交互抢走编辑器选区。
@@ -146,6 +145,8 @@ export const TableMoreActions = (props: TableMoreActionsProps): ReactElement => 
         sideOffset: 6,
         className: 'zt-md-table-action-popover',
         container: props.portalContainer,
+        collisionBoundary: props.collisionBoundary,
+        hideWhenDetached: true,
         onOpenAutoFocus: handleAutoFocus,
         onCloseAutoFocus: handleAutoFocus
       },

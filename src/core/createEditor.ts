@@ -77,6 +77,8 @@ export interface CreateMilkdownEditorRuntimeOptions {
   root: HTMLElement;
   /** 编辑器内部浮层 Portal 容器。 */
   portalContainer: HTMLElement;
+  /** 编辑器内容附属浮层 Portal 容器。 */
+  contentPortalContainer: HTMLElement;
   /** 初始 Markdown 内容。 */
   markdown: string;
   /** 是否只读。 */
@@ -169,13 +171,13 @@ export const createMilkdownEditorRuntime = (
   /** 编辑器文案。 */
   const messages = options.messages ?? resolveEditorMessages();
   /** 表格聚焦操作插件实例。 */
-  const tableFocusActionsPlugin = createTableFocusActionsPlugin(options.portalContainer, messages);
+  const tableFocusActionsPlugin = createTableFocusActionsPlugin(options.contentPortalContainer, messages);
   /** 选区 tooltip 菜单插件实例。 */
-  const selectionTooltipPlugin = createSelectionTooltipPlugin(options.portalContainer, messages);
+  const selectionTooltipPlugin = createSelectionTooltipPlugin(options.contentPortalContainer, messages);
   /** 代码块语言选择器插件实例。 */
-  const codeBlockLanguagePickerPlugin = createCodeBlockLanguagePickerPlugin(messages, options.portalContainer);
+  const codeBlockLanguagePickerPlugin = createCodeBlockLanguagePickerPlugin(messages, options.contentPortalContainer);
   /** 行内公式编辑插件实例。 */
-  const mathInlineEditPlugin = createMathInlineEditPlugin(messages, options.portalContainer);
+  const mathInlineEditPlugin = createMathInlineEditPlugin(messages, options.contentPortalContainer);
 
   /** 默认插件集合。 */
   const slashSetup = createSlashMenuPlugin(
