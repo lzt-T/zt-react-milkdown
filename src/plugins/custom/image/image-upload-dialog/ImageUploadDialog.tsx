@@ -148,10 +148,14 @@ export const ImageUploadDialog = ({
   const maxFileSize = imageUpload?.maxFileSize ?? DEFAULT_MAX_FILE_SIZE;
   // 当前是否锁定交互。
   const isInteractionLocked = isUploading || isPreparingInsert;
-  // 是否保留重选提示高度。
-  const shouldReserveReselectHint = uploadType === 'file' && (isInteractionLocked || Boolean(imageUrl));
   // 是否展示重选提示。
   const shouldShowReselectHint = uploadType === 'file' && Boolean(imageUrl) && !isInteractionLocked;
+  // 当前提示行优先显示错误，其次显示重选提示。
+  const imageUploadHint = error || (shouldShowReselectHint ? messages.imageUploadReselectHint : '');
+  // 当前提示行是否处于错误态。
+  const isImageUploadHintError = Boolean(error);
+  // 当前提示行是否展示可见文案。
+  const shouldShowImageUploadHint = Boolean(imageUploadHint);
   // 是否禁用确认按钮。
   const isConfirmDisabled = !imageUrl || Boolean(error) || isInteractionLocked || previewLoadError;
 
@@ -405,45 +409,90 @@ export const ImageUploadDialog = ({
         </div>
 
         <div className="zt-md-image-upload-content">
-          {uploadType === 'file' ? (
-            <div className="zt-md-image-upload-file">
-              <input
-                ref={fileInputRef}
-                id={IMAGE_FILE_INPUT_ID}
-                type="file"
-                accept="image/*"
-                className="zt-md-image-upload-file-input"
-                disabled={isInteractionLocked}
-                onChange={handleFileChange}
-              />
-              <label
-                htmlFor={IMAGE_FILE_INPUT_ID}
-                className="zt-md-image-upload-file-label"
-                data-drag-over={isDragOver ? 'true' : 'false'}
-                data-has-preview={imageUrl ? 'true' : 'false'}
-                data-disabled={isInteractionLocked ? 'true' : 'false'}
-                aria-disabled={isInteractionLocked}
-                onClick={(event) => {
-                  if (isInteractionLocked) {
-                    event.preventDefault();
-                  }
-                }}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-              >
-                {isUploading ? (
-                  <>
-                    <div className="zt-md-image-upload-file-icon">
-                      <Loader2 size={40} className="zt-md-image-upload-spin" />
+          <div className="zt-md-image-upload-control">
+            {uploadType === 'file' ? (
+              <div className="zt-md-image-upload-file">
+                <input
+                  ref={fileInputRef}
+                  id={IMAGE_FILE_INPUT_ID}
+                  type="file"
+                  accept="image/*"
+                  className="zt-md-image-upload-file-input"
+                  disabled={isInteractionLocked}
+                  onChange={handleFileChange}
+                />
+                <label
+                  htmlFor={IMAGE_FILE_INPUT_ID}
+                  className="zt-md-image-upload-file-label"
+                  data-drag-over={isDragOver ? 'true' : 'false'}
+                  data-has-preview={imageUrl ? 'true' : 'false'}
+                  data-disabled={isInteractionLocked ? 'true' : 'false'}
+                  aria-disabled={isInteractionLocked}
+                  onClick={(event) => {
+                    if (isInteractionLocked) {
+                      event.preventDefault();
+                    }
+                  }}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                >
+                  {isUploading ? (
+                    <>
+                      <div className="zt-md-image-upload-file-icon">
+                        <Loader2 size={40} className="zt-md-image-upload-spin" />
+                      </div>
+                      <div className="zt-md-image-upload-file-text">{messages.imageUploadUploadingLabel}</div>
+                    </>
+                  ) : imageUrl ? (
+                    <div className="zt-md-image-upload-file-preview">
+                      {previewLoadError ? (
+                        <div className="zt-md-image-upload-preview-error">
+                          <ImageOff size={40} />
+                          <span>{messages.imageUploadLoadFailed}</span>
+                        </div>
+                      ) : (
+                        <img
+                          src={imageUrl}
+                          alt=""
+                          onLoad={() => setPreviewLoadError(false)}
+                          onError={() => setPreviewLoadError(true)}
+                        />
+                      )}
                     </div>
-                    <div className="zt-md-image-upload-file-text">{messages.imageUploadUploadingLabel}</div>
-                  </>
-                ) : imageUrl ? (
-                  <div className="zt-md-image-upload-file-preview">
+                  ) : (
+                    <>
+                      <div className="zt-md-image-upload-file-icon">
+                        <ImagePlus size={40} />
+                      </div>
+                      <div className="zt-md-image-upload-file-text">{messages.imageUploadDropLabel}</div>
+                      <div className="zt-md-image-upload-file-hint">
+                        {messages.imageUploadSupportsAndMax.replace('{size}', formatFileSize(maxFileSize))}
+                      </div>
+                    </>
+                  )}
+                </label>
+              </div>
+            ) : (
+              <div className="zt-md-image-upload-url">
+                <label className="zt-md-image-upload-label" htmlFor="zt-md-image-upload-url-input">
+                  {messages.imageUploadUrlTab}
+                </label>
+                <input
+                  ref={urlInputRef}
+                  id="zt-md-image-upload-url-input"
+                  type="url"
+                  className="zt-md-image-upload-url-input"
+                  placeholder={messages.imageUploadUrlPlaceholder}
+                  value={imageUrl}
+                  disabled={isInteractionLocked}
+                  onChange={(event) => handleUrlChange(event.target.value)}
+                />
+                {imageUrl && !error ? (
+                  <div className="zt-md-image-upload-url-preview">
                     {previewLoadError ? (
                       <div className="zt-md-image-upload-preview-error">
-                        <ImageOff size={40} />
+                        <ImageOff size={32} />
                         <span>{messages.imageUploadLoadFailed}</span>
                       </div>
                     ) : (
@@ -455,70 +504,25 @@ export const ImageUploadDialog = ({
                       />
                     )}
                   </div>
-                ) : (
-                  <>
-                    <div className="zt-md-image-upload-file-icon">
-                      <ImagePlus size={40} />
-                    </div>
-                    <div className="zt-md-image-upload-file-text">{messages.imageUploadDropLabel}</div>
-                    <div className="zt-md-image-upload-file-hint">
-                      {messages.imageUploadSupportsAndMax.replace('{size}', formatFileSize(maxFileSize))}
-                    </div>
-                  </>
-                )}
-              </label>
-              {shouldReserveReselectHint ? (
-                <div
-                  className="zt-md-image-upload-file-hint zt-md-image-upload-reselect-hint"
-                  data-placeholder={shouldShowReselectHint ? 'false' : 'true'}
-                >
-                  {messages.imageUploadReselectHint}
-                </div>
-              ) : null}
-            </div>
-          ) : (
-            <div className="zt-md-image-upload-url">
-              <label className="zt-md-image-upload-label" htmlFor="zt-md-image-upload-url-input">
-                {messages.imageUploadUrlTab}
-              </label>
-              <input
-                ref={urlInputRef}
-                id="zt-md-image-upload-url-input"
-                type="url"
-                className="zt-md-image-upload-url-input"
-                placeholder={messages.imageUploadUrlPlaceholder}
-                value={imageUrl}
-                disabled={isInteractionLocked}
-                onChange={(event) => handleUrlChange(event.target.value)}
-              />
-              {imageUrl && !error ? (
-                <div className="zt-md-image-upload-url-preview">
-                  {previewLoadError ? (
-                    <div className="zt-md-image-upload-preview-error">
-                      <ImageOff size={32} />
-                      <span>{messages.imageUploadLoadFailed}</span>
-                    </div>
-                  ) : (
-                    <img
-                      src={imageUrl}
-                      alt=""
-                      onLoad={() => setPreviewLoadError(false)}
-                      onError={() => setPreviewLoadError(true)}
-                    />
-                  )}
-                </div>
-              ) : null}
-            </div>
-          )}
+                ) : null}
+              </div>
+            )}
 
-          {error ? (
-            <div className="zt-md-image-upload-error" role="alert" aria-live="polite">
-              <AlertCircle size={16} className="zt-md-image-upload-error-icon" />
-              <span>{error}</span>
+            <div
+              className="zt-md-image-upload-file-hint zt-md-image-upload-reselect-hint"
+              data-error={isImageUploadHintError ? 'true' : 'false'}
+              data-placeholder={shouldShowImageUploadHint ? 'false' : 'true'}
+              role={isImageUploadHintError ? 'alert' : undefined}
+              aria-live={isImageUploadHintError ? 'polite' : 'off'}
+              aria-hidden={!shouldShowImageUploadHint}
+            >
+              {isImageUploadHintError ? <AlertCircle size={14} className="zt-md-image-upload-hint-icon" /> : null}
+              <span className="zt-md-image-upload-hint-text">
+                {imageUploadHint || messages.imageUploadReselectHint}
+              </span>
             </div>
-          ) : null}
+          </div>
         </div>
-
         <DialogFooter>
           <Button
             type="button"
@@ -541,4 +545,3 @@ export const ImageUploadDialog = ({
     </Dialog>
   );
 };
-

@@ -123,7 +123,11 @@
     gap: 16px;
     overflow-x: hidden;
     overflow-y: auto;
-    padding: 6px 0 24px;
+    padding: 12px 0 6px;
+  }
+
+  .zt-md-image-upload-control {
+    width: 100%;
   }
 
   .zt-md-image-upload-file {
@@ -237,9 +241,29 @@
   }
 
   .zt-md-image-upload-reselect-hint {
-    min-height: 20px;
+    display: flex;
+    height: 20px;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
     margin-top: 8px;
+    line-height: 20px;
     text-align: center;
+  }
+
+  .zt-md-image-upload-reselect-hint[data-error='true'] {
+    color: var(--zt-destructive);
+  }
+
+  .zt-md-image-upload-hint-icon {
+    flex: 0 0 auto;
+  }
+
+  .zt-md-image-upload-hint-text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .zt-md-image-upload-reselect-hint[data-placeholder='true'] {
@@ -295,22 +319,6 @@
     background: color-mix(in srgb, var(--zt-muted) 6%, var(--zt-surface));
   }
 
-  .zt-md-image-upload-error {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    border: 1px solid color-mix(in srgb, var(--zt-destructive) 28%, transparent);
-    border-radius: 8px;
-    background: color-mix(in srgb, var(--zt-destructive) 10%, transparent);
-    color: var(--zt-destructive);
-    font-size: 14px;
-    line-height: 1.5;
-    padding: 10px 12px;
-  }
-
-  .zt-md-image-upload-error-icon {
-    flex: 0 0 auto;
-  }
 
   [data-slot='dialog-content'].zt-md-image-upload-content-shell [data-slot='dialog-footer'] {
     margin: 0 -24px;

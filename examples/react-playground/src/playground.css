@@ -1,3 +1,6 @@
+body{
+  margin: 0;
+}
 .playground-shell {
   --pg-bg: #f4f7fc;
   --pg-fg: #12233a;
