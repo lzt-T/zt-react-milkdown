@@ -10,7 +10,7 @@
     z-index: 3;
     display: none;
     align-items: center;
-    gap: 4px;
+    gap: 3px;
   }
 
   .zt-md-editor .zt-md-code-block:hover .zt-md-code-block-actions,
@@ -26,8 +26,8 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 30px;
-    height: 30px;
+    width: 26px;
+    height: 26px;
     border: 1px solid color-mix(in srgb, var(--zt-border) 82%, var(--zt-fg));
     border-radius: 4px;
     background: color-mix(in srgb, var(--zt-surface) 96%, transparent);
