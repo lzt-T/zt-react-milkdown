@@ -1,8 +1,8 @@
-import { createElement, useState, type MouseEvent as ReactMouseEvent, type ReactElement } from 'react';
+import { Fragment, createElement, useState, type MouseEvent as ReactMouseEvent, type ReactElement } from 'react';
 import { EllipsisVertical } from 'lucide-react';
 import type { EditorI18nMessages } from '../../../types/editor';
 import { Button } from '../../../components/ui/button';
-import { Popover, PopoverContent, PopoverTrigger } from '../../../components/ui/popover';
+import { FloatingPortalPanel, useFloatingPortalPanel } from '../floating-portal-panel';
 
 /**
  * 表格更多菜单属性。
@@ -42,6 +42,17 @@ interface TableMoreActionsProps {
 export const TableMoreActions = (props: TableMoreActionsProps): ReactElement => {
   /** Popover 展开状态。 */
   const [open, setOpen] = useState(false);
+  /** 表格更多菜单浮层定位。 */
+  const panel = useFloatingPortalPanel({
+    open,
+    portalContainer: props.portalContainer,
+    editorWrapper: props.collisionBoundary,
+    horizontalAlign: 'end',
+    offsetY: 6,
+    fallbackWidth: 168,
+    fallbackHeight: 240,
+    onOutside: () => setOpen(false)
+  });
 
   /**
    * 阻止菜单交互抢走编辑器选区。
@@ -58,10 +69,16 @@ export const TableMoreActions = (props: TableMoreActionsProps): ReactElement => 
   };
 
   /**
-   * 阻止 Popover 打开时转移焦点。
+   * 切换菜单展开状态。
    */
-  const handleAutoFocus = (event: Event): void => {
-    event.preventDefault();
+  const handleTriggerClick = (): void => {
+    if (open) {
+      setOpen(false);
+      return;
+    }
+
+    panel.updatePosition();
+    handleOpenChange(true);
   };
 
   /**
@@ -113,42 +130,32 @@ export const TableMoreActions = (props: TableMoreActionsProps): ReactElement => 
   };
 
   return createElement(
-    Popover,
-    {
-      open,
-      onOpenChange: handleOpenChange
-    },
+    Fragment,
+    null,
     createElement(
-      PopoverTrigger,
+      'button',
       {
-        asChild: true
+        ref: panel.triggerRef,
+        type: 'button',
+        className: 'zt-md-table-action-button',
+        'aria-label': props.messages.tableMoreAriaLabel,
+        'aria-expanded': open,
+        onMouseDown: handleMouseDown,
+        onClick: handleTriggerClick
       },
-      createElement(
-        'button',
-        {
-          type: 'button',
-          className: 'zt-md-table-action-button',
-          'aria-label': props.messages.tableMoreAriaLabel,
-          onMouseDown: handleMouseDown
-        },
-        createElement(EllipsisVertical, {
-          size: 14,
-          strokeWidth: 2,
-          'aria-hidden': 'true'
-        })
-      )
+      createElement(EllipsisVertical, {
+        size: 14,
+        strokeWidth: 2,
+        'aria-hidden': 'true'
+      })
     ),
     createElement(
-      PopoverContent,
+      FloatingPortalPanel,
       {
-        align: 'end',
-        sideOffset: 6,
+        panel,
+        portalContainer: props.portalContainer,
         className: 'zt-md-table-action-popover',
-        container: props.portalContainer,
-        collisionBoundary: props.collisionBoundary,
-        hideWhenDetached: true,
-        onOpenAutoFocus: handleAutoFocus,
-        onCloseAutoFocus: handleAutoFocus
+        onMouseDown: handleMouseDown
       },
       createElement(
         'div',

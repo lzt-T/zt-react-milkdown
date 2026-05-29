@@ -45,7 +45,7 @@
   height: 1.125rem;
   padding: 0;
   border: 0;
-  border-radius: 6px;
+  border-radius: 4px;
   background: transparent;
   color: var(--zt-muted);
   cursor: pointer;
@@ -94,6 +94,20 @@
     0 14px 32px -22px color-mix(in srgb, var(--zt-primary) 35%, transparent),
     0 12px 20px -18px color-mix(in srgb, var(--zt-fg) 22%, transparent);
   backdrop-filter: blur(10px);
+  transform-origin: top right;
+  animation: zt-md-table-action-popover-in 120ms ease-out;
+}
+
+@keyframes zt-md-table-action-popover-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .zt-md-table-action-menu-group {

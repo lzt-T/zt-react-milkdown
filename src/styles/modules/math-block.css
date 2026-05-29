@@ -44,7 +44,8 @@
   }
 
   .zt-md-editor .zt-md-math-block-action-button {
-    @apply inline-flex size-7 items-center justify-center rounded-md border border-zt-border bg-zt-surface text-zt-muted;
+    @apply inline-flex size-7 items-center justify-center border border-zt-border bg-zt-surface text-zt-muted;
+    border-radius: 4px;
     cursor: pointer;
   }
 

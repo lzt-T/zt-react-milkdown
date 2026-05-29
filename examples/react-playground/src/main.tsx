@@ -177,7 +177,7 @@ const App = (): JSX.Element => {
             theme={theme}
             locale={locale}
             readOnly={readOnly}
-            maxHeight={400}
+            maxHeight={600}
           />
         </section>
       </main>

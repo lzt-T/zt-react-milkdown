@@ -8,6 +8,22 @@
     pointer-events: auto;
   }
 
+  .zt-md-code-language-picker-host[data-mounted='true'] {
+    animation: zt-md-code-language-picker-trigger-in 120ms ease-out;
+  }
+
+  @keyframes zt-md-code-language-picker-trigger-in {
+    from {
+      opacity: 0;
+      transform: translateY(4px) scale(0.98);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
   .zt-md-code-language-picker {
     position: relative;
     display: inline-flex;
@@ -51,6 +67,23 @@
     background: var(--zt-surface);
     padding: 0.45rem;
     box-shadow: 0 8px 22px -14px color-mix(in srgb, var(--zt-primary) 52%, transparent);
+  }
+
+  .zt-md-code-language-picker-panel[data-state='open'] {
+    transform-origin: var(--radix-popover-content-transform-origin);
+    animation: zt-md-code-language-picker-panel-in 120ms ease-out;
+  }
+
+  @keyframes zt-md-code-language-picker-panel-in {
+    from {
+      opacity: 0;
+      transform: translateY(4px) scale(0.98);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
   }
 
   .zt-md-code-language-picker-search {

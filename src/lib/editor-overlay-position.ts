@@ -15,6 +15,8 @@ export interface OverlayContentAnchor {
   anchorBottomInContent: number;
   /** 锚点左侧（内容坐标）。 */
   anchorLeftInContent: number;
+  /** 锚点右侧（内容坐标）。 */
+  anchorRightInContent?: number;
 }
 
 /**
@@ -46,9 +48,11 @@ export interface OverlayPositionConfig {
   /** 内容坐标锚点。 */
   anchor: OverlayContentAnchor;
   /** 浮层尺寸。 */
-  overlaySize: { width: number };
+  overlaySize: { width: number; height?: number };
   /** 展开方向。 */
   placement: OverlayPlacement;
+  /** 横向对齐方式。 */
+  horizontalAlign?: 'start' | 'center' | 'end';
   /** 主轴偏移。 */
   offsetY: number;
   /** 边界内边距。 */
@@ -69,10 +73,16 @@ export const resolveEditorWrapper = (viewDom: HTMLElement | null): HTMLElement |
 /**
  * 根据当前光标视口矩形与阈值解析菜单展开方向。
  */
-export const resolvePlacement = (anchorRect: DOMRect, threshold: number): OverlayPlacement => {
+export const resolvePlacement = (
+  anchorRect: DOMRect,
+  threshold: number,
+  boundaryRect?: DOMRect
+): OverlayPlacement => {
   const viewportHeight = typeof window === 'undefined' ? anchorRect.bottom : window.innerHeight;
-  const spaceAbove = anchorRect.top;
-  const spaceBelow = viewportHeight - anchorRect.bottom;
+  const boundaryTop = boundaryRect?.top ?? 0;
+  const boundaryBottom = boundaryRect?.bottom ?? viewportHeight;
+  const spaceAbove = anchorRect.top - boundaryTop;
+  const spaceBelow = boundaryBottom - anchorRect.bottom;
   if (spaceBelow < threshold && spaceAbove > spaceBelow) {
     return 'top';
   }
@@ -89,8 +99,27 @@ export const toContentAnchor = (anchorRect: DOMRect, wrapper: HTMLElement): Over
   return {
     anchorTopInContent: anchorRect.top - wrapperRect.top + wrapper.scrollTop,
     anchorBottomInContent: anchorRect.bottom - wrapperRect.top + wrapper.scrollTop,
-    anchorLeftInContent: anchorRect.left - wrapperRect.left + wrapper.scrollLeft
+    anchorLeftInContent: anchorRect.left - wrapperRect.left + wrapper.scrollLeft,
+    anchorRightInContent: anchorRect.right - wrapperRect.left + wrapper.scrollLeft
   };
+};
+
+/**
+ * 解析浮层横向内容坐标。
+ */
+const resolveOverlayLeftInContent = (config: OverlayPositionConfig): number => {
+  const { anchor, overlaySize, horizontalAlign = 'start' } = config;
+  const anchorRightInContent = anchor.anchorRightInContent ?? anchor.anchorLeftInContent;
+
+  if (horizontalAlign === 'end') {
+    return anchorRightInContent - overlaySize.width;
+  }
+
+  if (horizontalAlign === 'center') {
+    return anchor.anchorLeftInContent + (anchorRightInContent - anchor.anchorLeftInContent - overlaySize.width) / 2;
+  }
+
+  return anchor.anchorLeftInContent;
 };
 
 /**
@@ -101,13 +130,14 @@ export const toViewportPosition = (config: OverlayPositionConfig): OverlayViewpo
   const wrapperRect = wrapper.getBoundingClientRect();
   const minLeft = wrapper.scrollLeft + boundaryInset;
   const maxLeft = wrapper.scrollLeft + wrapper.clientWidth - overlaySize.width - boundaryInset;
+  const rawLeft = resolveOverlayLeftInContent(config);
   const clampedLeft = Math.min(
-    Math.max(anchor.anchorLeftInContent, minLeft),
+    Math.max(rawLeft, minLeft),
     Math.max(minLeft, maxLeft)
   );
   const overlayTopInContent =
     placement === 'top'
-      ? anchor.anchorTopInContent - offsetY
+      ? anchor.anchorTopInContent - (overlaySize.height ?? 0) - offsetY
       : anchor.anchorBottomInContent + offsetY;
 
   return {

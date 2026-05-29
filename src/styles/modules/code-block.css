@@ -29,7 +29,7 @@
     width: 30px;
     height: 30px;
     border: 1px solid color-mix(in srgb, var(--zt-border) 82%, var(--zt-fg));
-    border-radius: 10px;
+    border-radius: 4px;
     background: color-mix(in srgb, var(--zt-surface) 96%, transparent);
     color: var(--zt-fg);
     transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease;

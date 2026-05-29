@@ -2,12 +2,11 @@ import type { MarkType } from '@milkdown/prose/model';
 import { TextSelection } from '@milkdown/prose/state';
 import type { EditorView } from '@milkdown/prose/view';
 import { Check, ChevronDown, Link2, Trash2 } from 'lucide-react';
-import { createElement, useEffect, useRef, useState, type MouseEvent as ReactMouseEvent, type ReactElement } from 'react';
+import { Fragment, createElement, useEffect, useRef, useState, type MouseEvent as ReactMouseEvent, type ReactElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import { Button } from '../../../components/ui/button';
-import { Popover, PopoverContent, PopoverTrigger } from '../../../components/ui/popover';
 import { normalizeSafeUrl } from '../../../utils/security';
 import { runBlockTransformCommand, resolveCurrentBlockTransformCommand } from '../block-transform';
+import { FloatingPortalPanel, useFloatingPortalPanel } from '../floating-portal-panel';
 import {
   SELECTION_TOOLTIP_ICON_SIZE,
   SELECTION_TOOLTIP_ICON_STROKE_WIDTH
@@ -138,6 +137,17 @@ interface BlockTransformPopoverControlProps {
  * 块级转换 Popover 控件。
  */
 export const BlockTransformPopoverControl = (props: BlockTransformPopoverControlProps): ReactElement => {
+  /** 块级转换菜单浮层定位。 */
+  const panel = useFloatingPortalPanel({
+    open: props.open,
+    portalContainer: props.portalContainer,
+    editorWrapper: props.collisionBoundary,
+    offsetY: 8,
+    fallbackWidth: 176,
+    fallbackHeight: 360,
+    onOutside: () => props.onOpenChange(false)
+  });
+
   /**
    * 阻止交互破坏当前选区。
    */
@@ -162,40 +172,45 @@ export const BlockTransformPopoverControl = (props: BlockTransformPopoverControl
     });
   };
 
+  /**
+   * 切换块级转换菜单展开状态。
+   */
+  const toggleBlockTransformPopover = (): void => {
+    if (props.open) {
+      props.onOpenChange(false);
+      return;
+    }
+
+    panel.updatePosition();
+    props.onOpenChange(true);
+  };
+
   return createElement(
-    Popover,
-    {
-      open: props.open,
-      onOpenChange: props.onOpenChange
-    },
+    Fragment,
+    null,
     createElement(
-      PopoverTrigger,
-      { asChild: true },
-      createElement(
-        'button',
-        {
-          type: 'button',
-          className: 'zt-md-selection-transform-trigger',
-          'aria-label': props.menuTitle,
-          title: props.menuTitle,
-          onMouseDown: preventMouseDown
-        },
-        createElement('span', { className: 'zt-md-selection-transform-trigger-label' }, props.activeLabel),
-        createElement(ChevronDown, { size: props.iconSize, strokeWidth: props.iconStrokeWidth, 'aria-hidden': 'true' })
-      )
+      'button',
+      {
+        ref: panel.triggerRef,
+        type: 'button',
+        className: 'zt-md-selection-transform-trigger',
+        'aria-label': props.menuTitle,
+        'aria-expanded': props.open,
+        title: props.menuTitle,
+        onMouseDown: preventMouseDown,
+        onClick: toggleBlockTransformPopover
+      },
+      createElement('span', { className: 'zt-md-selection-transform-trigger-label' }, props.activeLabel),
+      createElement(ChevronDown, { size: props.iconSize, strokeWidth: props.iconStrokeWidth, 'aria-hidden': 'true' })
     ),
     createElement(
-      PopoverContent,
-        {
-          container: props.portalContainer,
-          collisionBoundary: props.collisionBoundary,
-          hideWhenDetached: true,
-          align: 'start',
-          sideOffset: 8,
-          className: 'zt-md-selection-transform-popover !w-[176px] p-1',
-          onOpenAutoFocus: (event) => event.preventDefault(),
-          onCloseAutoFocus: (event) => event.preventDefault()
-        },
+      FloatingPortalPanel,
+      {
+        panel,
+        portalContainer: props.portalContainer,
+        className: 'zt-md-selection-transform-popover !w-[176px] p-1',
+        onMouseDown: preventMouseDown
+      },
       createElement('p', { className: 'zt-md-selection-transform-popover-title' }, props.menuTitle),
       createElement(
         'div',
@@ -297,6 +312,39 @@ export const LinkPopoverControl = (props: LinkPopoverControlProps): ReactElement
     props.onOpenChange(true);
   };
 
+  /** 链接编辑面板浮层定位。 */
+  const panel = useFloatingPortalPanel({
+    open: props.open,
+    portalContainer: props.portalContainer,
+    editorWrapper: props.collisionBoundary,
+    horizontalAlign: 'center',
+    offsetY: 8,
+    fallbackWidth: 266,
+    fallbackHeight: 48,
+    onOutside: () => handleOpenChange(false)
+  });
+
+  /**
+   * 同步链接按钮引用。
+   */
+  const handleTriggerRef = (element: HTMLButtonElement | null): void => {
+    panel.triggerRef.current = element;
+    props.triggerRef(element);
+  };
+
+  /**
+   * 切换链接编辑面板展开状态。
+   */
+  const handleTriggerClick = (): void => {
+    if (props.open) {
+      handleOpenChange(false);
+      return;
+    }
+
+    panel.updatePosition();
+    handleOpenChange(true);
+  };
+
   useEffect(() => {
     if (!props.open) {
       return;
@@ -320,55 +368,38 @@ export const LinkPopoverControl = (props: LinkPopoverControlProps): ReactElement
   }, [props.open]);
 
   return createElement(
-    Popover,
-    {
-      open: props.open,
-      onOpenChange: handleOpenChange
-    },
+    Fragment,
+    null,
     createElement(
-      PopoverTrigger,
+      'button',
       {
-        asChild: true
+        ref: handleTriggerRef,
+        type: 'button',
+        className: 'zt-md-selection-tooltip-button',
+        'data-command': 'link',
+        title: props.messages.selectionTooltipLinkTitle,
+        'aria-label': props.messages.selectionTooltipLinkTitle,
+        'aria-expanded': props.open,
+        onMouseDown: preventMouseDown,
+        onClick: handleTriggerClick
       },
       createElement(
-        'button',
+        'span',
         {
-          ref: props.triggerRef,
-          type: 'button',
-          className: 'zt-md-selection-tooltip-button',
-          'data-command': 'link',
-          title: props.messages.selectionTooltipLinkTitle,
-          'aria-label': props.messages.selectionTooltipLinkTitle,
-          onMouseDown: preventMouseDown
+          className: 'zt-md-selection-tooltip-button-icon'
         },
-        createElement(
-          'span',
-          {
-            className: 'zt-md-selection-tooltip-button-icon'
-          },
-          createElement(Link2, {
-            size: props.iconSize,
-            strokeWidth: props.iconStrokeWidth
-          })
-        )
+        createElement(Link2, {
+          size: props.iconSize,
+          strokeWidth: props.iconStrokeWidth
+        })
       )
     ),
     createElement(
-      PopoverContent,
+      FloatingPortalPanel,
       {
-        container: props.portalContainer,
-        collisionBoundary: props.collisionBoundary,
-        hideWhenDetached: true,
-        align: 'center',
-        sideOffset: 8,
-        className: 'zt-md-selection-link-popover w-fit min-w-0 gap-0 p-2',
-        onOpenAutoFocus: (event) => {
-          event.preventDefault();
-          requestAnimationFrame(() => {
-            inputRef.current?.focus();
-          });
-        },
-        onCloseAutoFocus: (event) => event.preventDefault()
+        panel,
+        portalContainer: props.portalContainer,
+        className: 'zt-md-selection-link-popover w-fit min-w-0 gap-0 p-2'
       },
       createElement(
         'div',
@@ -392,13 +423,10 @@ export const LinkPopoverControl = (props: LinkPopoverControlProps): ReactElement
           }
         }),
         createElement(
-          Button,
+          'button',
           {
             type: 'button',
-            variant: 'ghost',
-            size: 'icon-sm',
-            className:
-              'zt-md-selection-link-popover-action cursor-pointer bg-transparent hover:bg-transparent focus-visible:ring-0',
+            className: 'zt-md-selection-link-popover-action',
             onMouseDown: preventMouseDown,
             onClick: () => commitLink(inputValue.trim()),
             'aria-label': props.messages.selectionLinkSaveAriaLabel
@@ -409,13 +437,10 @@ export const LinkPopoverControl = (props: LinkPopoverControlProps): ReactElement
           })
         ),
         createElement(
-          Button,
+          'button',
           {
             type: 'button',
-            variant: 'ghost',
-            size: 'icon-sm',
-            className:
-              'zt-md-selection-link-popover-action cursor-pointer bg-transparent hover:bg-transparent focus-visible:ring-0',
+            className: 'zt-md-selection-link-popover-action zt-md-selection-link-popover-action-danger',
             onMouseDown: preventMouseDown,
             onClick: () => commitLink(''),
             'aria-label': props.messages.selectionLinkRemoveAriaLabel
