@@ -3,11 +3,11 @@ import type { Node as ProseNode } from '@milkdown/prose/model';
 import type { EditorView } from '@milkdown/prose/view';
 import { $prose } from '@milkdown/utils';
 import { Check, ChevronDown, Search } from 'lucide-react';
-import { createElement, useEffect, useMemo, useState, type MouseEvent as ReactMouseEvent, type ReactElement } from 'react';
+import { Fragment, createElement, useEffect, useMemo, useState, type MouseEvent as ReactMouseEvent, type ReactElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { refractor } from 'refractor';
 import type { EditorI18nMessages } from '../../../types/editor';
-import { Popover, PopoverContent, PopoverTrigger } from '../../../components/ui/popover';
+import { FloatingPortalPanel, useFloatingPortalPanel } from '../floating-portal-panel';
 import {
   createOverlayRepositionScheduler,
   resolveEditorWrapper,
@@ -25,6 +25,10 @@ const CODE_BLOCK_LANGUAGE_PICKER_OFFSET_X = 104;
 const CODE_BLOCK_LANGUAGE_PICKER_OFFSET_Y = 36;
 // 纯文本语言值。
 const PLAIN_TEXT_LANGUAGE_VALUE = 'text';
+// 语言面板首帧定位宽度兜底。
+const CODE_BLOCK_LANGUAGE_PICKER_PANEL_WIDTH = 224;
+// 语言面板首帧定位高度兜底。
+const CODE_BLOCK_LANGUAGE_PICKER_PANEL_HEIGHT = 220;
 // 语言展示名映射表。
 const LANGUAGE_LABEL_MAP: Record<string, string> = {
   javascript: 'JavaScript',
@@ -172,7 +176,7 @@ interface CodeBlockLanguagePickerProps {
   messages: EditorI18nMessages;
   /** 编辑器浮层容器。 */
   portalContainer: HTMLElement;
-  /** Popover 碰撞边界。 */
+  /** 浮层碰撞边界。 */
   collisionBoundary: HTMLElement | null;
   /** 语言切换回调。 */
   onSelectLanguage: (language: string) => void;
@@ -205,11 +209,17 @@ const CodeBlockLanguagePicker = (props: CodeBlockLanguagePickerProps): ReactElem
       return optionLabel.includes(normalizedKeyword) || optionValue.includes(normalizedKeyword);
     });
   }, [keyword, languageOptions]);
-
-  useEffect(() => {
-    setOpen(false);
-    setKeyword('');
-  }, [props.currentLanguage]);
+  // 语言面板浮层定位。
+  const panel = useFloatingPortalPanel({
+    open,
+    portalContainer: props.portalContainer,
+    editorWrapper: props.collisionBoundary,
+    horizontalAlign: 'end',
+    offsetY: 6,
+    fallbackWidth: CODE_BLOCK_LANGUAGE_PICKER_PANEL_WIDTH,
+    fallbackHeight: CODE_BLOCK_LANGUAGE_PICKER_PANEL_HEIGHT,
+    onOutside: () => setOpen(false)
+  });
 
   /**
    * 判断事件目标是否允许保留默认聚焦行为。
@@ -234,10 +244,16 @@ const CodeBlockLanguagePicker = (props: CodeBlockLanguagePickerProps): ReactElem
   };
 
   /**
-   * 阻止 Popover 自动聚焦导致选区跳动。
+   * 切换语言面板展开状态。
    */
-  const handleAutoFocus = (event: Event): void => {
-    event.preventDefault();
+  const handleTriggerClick = (): void => {
+    if (open) {
+      setOpen(false);
+      return;
+    }
+
+    panel.updatePosition();
+    setOpen(true);
   };
 
   /**
@@ -249,12 +265,14 @@ const CodeBlockLanguagePicker = (props: CodeBlockLanguagePickerProps): ReactElem
     setKeyword('');
   };
 
+  useEffect(() => {
+    setOpen(false);
+    setKeyword('');
+  }, [props.currentLanguage]);
+
   return createElement(
-    Popover,
-    {
-      open,
-      onOpenChange: setOpen
-    },
+    Fragment,
+    null,
     createElement(
       'div',
       {
@@ -262,97 +280,88 @@ const CodeBlockLanguagePicker = (props: CodeBlockLanguagePickerProps): ReactElem
         onMouseDown: handleMouseDown
       },
       createElement(
-        PopoverTrigger,
+        'button',
         {
-          asChild: true
+          ref: panel.triggerRef,
+          type: 'button',
+          className: 'zt-md-code-language-picker-trigger',
+          'aria-expanded': open,
+          'aria-label': currentLanguageLabel,
+          onClick: handleTriggerClick
         },
-        createElement(
-          'button',
-          {
-            type: 'button',
-            className: 'zt-md-code-language-picker-trigger',
-            'aria-expanded': open,
-            'aria-label': currentLanguageLabel
-          },
-          createElement('span', { className: 'zt-md-code-language-picker-trigger-label' }, currentLanguageLabel),
-          createElement(ChevronDown, {
-            className: 'zt-md-code-language-picker-trigger-icon',
-            size: 14,
-            strokeWidth: 2,
-            'aria-hidden': 'true'
-          })
-        )
+        createElement('span', { className: 'zt-md-code-language-picker-trigger-label' }, currentLanguageLabel),
+        createElement(ChevronDown, {
+          className: 'zt-md-code-language-picker-trigger-icon',
+          size: 14,
+          strokeWidth: 2,
+          'aria-hidden': 'true'
+        })
+      )
+    ),
+    createElement(
+      FloatingPortalPanel,
+      {
+        panel,
+        portalContainer: props.portalContainer,
+        className: 'zt-md-code-language-picker-panel',
+        onMouseDown: handleMouseDown
+      },
+      createElement(
+        'label',
+        {
+          className: 'zt-md-code-language-picker-search'
+        },
+        createElement(Search, {
+          className: 'zt-md-code-language-picker-search-icon',
+          size: 14,
+          strokeWidth: 2,
+          'aria-hidden': 'true'
+        }),
+        createElement('input', {
+          value: keyword,
+          onChange: (event) => setKeyword(event.currentTarget.value),
+          placeholder: props.messages.codeBlockLanguageSearchPlaceholder,
+          className: 'zt-md-code-language-picker-search-input'
+        })
       ),
       createElement(
-        PopoverContent,
+        'div',
         {
-          align: 'end',
-          side: 'bottom',
-          sideOffset: 6,
-          className: 'zt-md-code-language-picker-panel',
-          container: props.portalContainer,
-          collisionBoundary: props.collisionBoundary,
-          hideWhenDetached: true,
-          onOpenAutoFocus: handleAutoFocus,
-          onCloseAutoFocus: handleAutoFocus
+          className: 'zt-md-code-language-picker-options',
+          role: 'listbox'
         },
-        createElement(
-          'label',
-          {
-            className: 'zt-md-code-language-picker-search'
-          },
-          createElement(Search, {
-            className: 'zt-md-code-language-picker-search-icon',
-            size: 14,
-            strokeWidth: 2,
-            'aria-hidden': 'true'
-          }),
-          createElement('input', {
-            value: keyword,
-            onChange: (event) => setKeyword(event.currentTarget.value),
-            placeholder: props.messages.codeBlockLanguageSearchPlaceholder,
-            className: 'zt-md-code-language-picker-search-input'
-          })
-        ),
-        createElement(
-          'div',
-          {
-            className: 'zt-md-code-language-picker-options',
-            role: 'listbox'
-          },
-          filteredOptions.length > 0
-            ? filteredOptions.map((option) =>
-                createElement(
-                  'button',
-                  {
-                    key: option.value || '__plain_text__',
-                    type: 'button',
-                    className: 'zt-md-code-language-picker-option',
-                    'data-selected': option.value === normalizedCurrentLanguage ? 'true' : 'false',
-                    onClick: () => handleSelectLanguage(option.value)
-                  },
-                  createElement('span', null, option.label),
-                  option.value === normalizedCurrentLanguage
-                    ? createElement(Check, {
-                        className: 'zt-md-code-language-picker-option-check',
-                        size: 14,
-                        strokeWidth: 2,
-                        'aria-hidden': 'true'
-                      })
-                    : null
-                )
-              )
-            : createElement(
-                'div',
+        filteredOptions.length > 0
+          ? filteredOptions.map((option) =>
+              createElement(
+                'button',
                 {
-                  className: 'zt-md-code-language-picker-empty'
+                  key: option.value || '__plain_text__',
+                  type: 'button',
+                  className: 'zt-md-code-language-picker-option',
+                  'data-selected': option.value === normalizedCurrentLanguage ? 'true' : 'false',
+                  onClick: () => handleSelectLanguage(option.value)
                 },
-                '-'
+                createElement('span', null, option.label),
+                option.value === normalizedCurrentLanguage
+                  ? createElement(Check, {
+                      className: 'zt-md-code-language-picker-option-check',
+                      size: 14,
+                      strokeWidth: 2,
+                      'aria-hidden': 'true'
+                    })
+                  : null
               )
+            )
+          : createElement(
+              'div',
+              {
+                className: 'zt-md-code-language-picker-empty'
+              },
+              '-'
+            )
         )
       )
-    )
-  );
+    );
 };
 
 /**
