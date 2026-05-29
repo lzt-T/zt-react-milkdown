@@ -77,7 +77,7 @@ interface FloatingPortalPanelProps {
   /** 鼠标按下事件。 */
   onMouseDown?: (event: MouseEvent<HTMLDivElement>) => void;
   /** 面板内容。 */
-  children: ReactNode;
+  children?: ReactNode;
 }
 
 /**
