@@ -1,3 +1,4 @@
+@config "../../tailwind.config.ts";
 @layer theme, base, components, utilities;
 @import "tailwindcss/theme.css" layer(theme);
 @import "tailwindcss/utilities.css" layer(utilities);
@@ -12,6 +13,7 @@
 @import "./modules/drop-cursor.css";
 @import "./modules/math-block.css";
 @import "./modules/math-inline.css";
+@import "./modules/typography.css";
 @import "./modules/blockquote.css";
 @import "./modules/inline-code.css";
 @import "./modules/code-block.css";
@@ -170,20 +172,6 @@
     display: inline !important;
     border: none !important;
     margin: 0 !important;
-  }
-
-  .zt-md-editor .ProseMirror h1,
-  .zt-md-editor .ProseMirror h2,
-  .zt-md-editor .ProseMirror h3,
-  .zt-md-editor .ProseMirror h4,
-  .zt-md-editor .ProseMirror h5,
-  .zt-md-editor .ProseMirror h6 {
-    margin: 0;
-    line-height: 1.28;
-  }
-
-  .zt-md-editor .ProseMirror :is(h1, h2, h3, h4, h5, h6) + :is(h1, h2, h3, h4, h5, h6) {
-    margin-top: 0.62em;
   }
 
   .zt-md-editor .ProseMirror:focus,

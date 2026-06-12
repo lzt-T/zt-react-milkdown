@@ -1,0 +1,82 @@
+@layer components {
+  .zt-md-editor .ProseMirror h1,
+  .zt-md-editor .ProseMirror h2,
+  .zt-md-editor .ProseMirror h3,
+  .zt-md-editor .ProseMirror h4,
+  .zt-md-editor .ProseMirror h5,
+  .zt-md-editor .ProseMirror h6 {
+    margin: 0;
+    font-weight: 700;
+    line-height: 1.28;
+  }
+
+  .zt-md-editor .ProseMirror h1 {
+    font-size: 2em;
+  }
+
+  .zt-md-editor .ProseMirror h2 {
+    font-size: 1.5em;
+  }
+
+  .zt-md-editor .ProseMirror h3 {
+    font-size: 1.25em;
+  }
+
+  .zt-md-editor .ProseMirror h4 {
+    font-size: 1.125em;
+    font-weight: 600;
+  }
+
+  .zt-md-editor .ProseMirror h5 {
+    font-size: 1em;
+    font-weight: 600;
+  }
+
+  .zt-md-editor .ProseMirror h6 {
+    font-size: 0.875em;
+    font-weight: 600;
+  }
+
+  .zt-md-editor .ProseMirror :is(h1, h2, h3, h4, h5, h6) + :is(h1, h2, h3, h4, h5, h6) {
+    margin-top: 0.62em;
+  }
+
+  .zt-md-editor .ProseMirror ul,
+  .zt-md-editor .ProseMirror ol {
+    margin: 0;
+    padding-inline-start: 16px;
+  }
+
+  .zt-md-editor .ProseMirror ul {
+    list-style-type: disc;
+  }
+
+  .zt-md-editor .ProseMirror ol {
+    list-style-type: decimal;
+  }
+
+  .zt-md-editor .ProseMirror li:not([data-item-type="task"]) {
+    margin: 0.12em 0;
+  }
+
+  .zt-md-editor .ProseMirror li[data-item-type="task"] {
+    list-style: none;
+  }
+
+  .zt-md-editor .ProseMirror a[href] {
+    color: var(--zt-primary);
+    text-decoration-line: underline;
+    text-decoration-thickness: 0.08em;
+    text-underline-offset: 0.18em;
+  }
+
+  .zt-md-editor .ProseMirror a[href]:hover {
+    color: color-mix(in srgb, var(--zt-primary) 82%, var(--zt-fg));
+  }
+
+  .zt-md-editor .ProseMirror hr {
+    margin: 0.9em 0;
+    border: 0;
+    border-top: 1px solid var(--zt-border);
+  }
+}
