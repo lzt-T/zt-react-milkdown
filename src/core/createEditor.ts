@@ -6,9 +6,11 @@ import type {
   SlashMenuConfig
 } from '../types/editor';
 import type { Node as ProseNode } from '@milkdown/prose/model';
+import { TextSelection } from '@milkdown/prose/state';
 import {
   defaultValueCtx,
   Editor,
+  editorViewCtx,
   editorViewOptionsCtx,
   nodeViewCtx,
   rootCtx
@@ -58,6 +60,16 @@ import { normalizeSafeUrl } from '../utils/security';
 export type NativeMilkdownEditor = ReturnType<typeof Editor.make>;
 
 /**
+ * 定义编辑器聚焦时可参考的视口坐标。
+ */
+export interface FocusEditorCoordinates {
+  /** 视口左侧坐标。 */
+  left: number;
+  /** 视口顶部坐标。 */
+  top: number;
+}
+
+/**
  * 定义已配置编辑器的运行时句柄。
  */
 export interface MilkdownEditorRuntime {
@@ -65,6 +77,8 @@ export interface MilkdownEditorRuntime {
   editor: NativeMilkdownEditor;
   /** 注册需要在 create 后延迟启用的插件。 */
   installRuntimePlugins: () => void;
+  /** 聚焦 ProseMirror 编辑器视图。 */
+  focusEditor: (coordinates?: FocusEditorCoordinates) => void;
   /** 同步 Markdown 内容。 */
   setMarkdown: (markdown: string) => void;
 }
@@ -321,9 +335,32 @@ export const createMilkdownEditorRuntime = (
   /** replaceAll 命令执行器。 */
   const runReplaceAll = createReplaceAllExecutor(replaceAll, editor as any);
 
+  /**
+   * 聚焦编辑器并将现有选区折叠为光标。
+   */
+  const focusEditor = (coordinates?: FocusEditorCoordinates): void => {
+    editor.action((ctx: any) => {
+      /** 当前 ProseMirror 视图。 */
+      const view = ctx.get(editorViewCtx);
+      /** 坐标解析得到的文档位置。 */
+      const coordinatePosition = coordinates ? view.posAtCoords(coordinates) : null;
+      /** 下一次应写入的空文本选区。 */
+      const nextSelection = coordinatePosition
+        ? TextSelection.near(view.state.doc.resolve(coordinatePosition.pos), 1)
+        : TextSelection.atEnd(view.state.doc);
+
+      if (!view.state.selection.eq(nextSelection)) {
+        view.dispatch(view.state.tr.setSelection(nextSelection).scrollIntoView());
+      }
+
+      view.focus();
+    });
+  };
+
   return {
     editor,
     installRuntimePlugins,
+    focusEditor,
     setMarkdown: (markdown: string): void => {
       runReplaceAll(markdown);
     }

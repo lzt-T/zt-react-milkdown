@@ -1,6 +1,15 @@
-import { useCallback, useMemo, useState, type CSSProperties } from 'react';
+import {
+  useCallback,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type MutableRefObject,
+  type MouseEvent as ReactMouseEvent
+} from 'react';
 import { Milkdown, MilkdownProvider } from '@milkdown/react';
 import clsx from 'clsx';
+import type { FocusEditorCoordinates } from '../../core/createEditor';
 import type { MilkdownEditorProps } from '../../types/editor';
 import { useControlledState } from '../hooks/useControlledState';
 import { useMilkdownEditor } from '../hooks/useMilkdownEditor';
@@ -38,6 +47,7 @@ const MilkdownRuntime = (props: {
   imageUpload: MilkdownEditorProps['imageUpload'];
   portalContainer: HTMLElement;
   contentPortalContainer: HTMLElement;
+  focusEditorRef: MutableRefObject<((coordinates?: FocusEditorCoordinates) => void) | null>;
   onMarkdownChange: (markdown: string) => void;
   onInitReady: () => void;
   onInitError: (error: unknown) => void;
@@ -46,6 +56,7 @@ const MilkdownRuntime = (props: {
     markdown: props.markdown,
     portalContainer: props.portalContainer,
     contentPortalContainer: props.contentPortalContainer,
+    focusEditorRef: props.focusEditorRef,
     readOnly: props.readOnly,
     debounceMs: props.debounceMs,
     messages: props.messages,
@@ -70,6 +81,8 @@ export const MilkdownEditor = (props: MilkdownEditorProps): JSX.Element => {
   const [portalContainer, setPortalContainer] = useState<HTMLDivElement | null>(null);
   /** 编辑器内容附属浮层 Portal 容器。 */
   const [contentPortalContainer, setContentPortalContainer] = useState<HTMLDivElement | null>(null);
+  /** 编辑器聚焦方法引用。 */
+  const focusEditorRef = useRef<((coordinates?: FocusEditorCoordinates) => void) | null>(null);
   /** 当前主题。 */
   const theme = props.theme ?? 'light';
   /** 当前只读状态。 */
@@ -117,6 +130,30 @@ export const MilkdownEditor = (props: MilkdownEditorProps): JSX.Element => {
     setInitErrorMessage(nextMessage);
   }, [messages.initError]);
   /**
+   * 点击编辑器空白区域时将焦点交给 ProseMirror。
+   */
+  const handleEditorMouseDown = useCallback((event: ReactMouseEvent<HTMLDivElement>): void => {
+    if (readOnly) {
+      return;
+    }
+
+    // 当前鼠标按下目标。
+    const target = event.target;
+    if (!(target instanceof Element)) {
+      return;
+    }
+
+    if (target.closest('.ProseMirror') || target.closest('.zt-md-content-portal')) {
+      return;
+    }
+
+    event.preventDefault();
+    focusEditorRef.current?.({
+      left: event.clientX,
+      top: event.clientY
+    });
+  }, [readOnly]);
+  /**
    * 同步编辑器内部浮层 Portal 容器。
    */
   const handlePortalContainerRef = useCallback((node: HTMLDivElement | null): void => {
@@ -137,6 +174,7 @@ export const MilkdownEditor = (props: MilkdownEditorProps): JSX.Element => {
         <div
           className={clsx('zt-md-editor', readOnly ? 'zt-md-readonly' : 'zt-md-editable')}
           aria-label={messages.editorAriaLabel}
+          onMouseDown={handleEditorMouseDown}
           style={editorStyle}
         >
           {portalContainer && contentPortalContainer ? (
@@ -146,6 +184,7 @@ export const MilkdownEditor = (props: MilkdownEditorProps): JSX.Element => {
                 locale={props.locale}
                 portalContainer={portalContainer}
                 contentPortalContainer={contentPortalContainer}
+                focusEditorRef={focusEditorRef}
                 readOnly={readOnly}
                 debounceMs={debounceMs}
                 messages={messages}

@@ -40,6 +40,8 @@ const createSelectionTooltipPluginView = (
   let isLinkPopoverOpen = false;
   // 块级转换 Popover 展开状态。
   let isBlockTransformPopoverOpen = false;
+  // 插件视图是否已销毁。
+  let isDestroyed = false;
   // 图标渲染根节点集合。
   const iconRoots: Root[] = [];
   // 块级转换按钮 React 挂载容器。
@@ -154,21 +156,99 @@ const createSelectionTooltipPluginView = (
     tooltip.append(linkControlHost);
     renderLinkControl();
   }
+  // 选区菜单展示判断函数。
+  const shouldShowSelectionTooltip = createSelectionTooltipShouldShow(
+    tooltip,
+    () => isLinkPopoverOpen,
+    () => isBlockTransformPopoverOpen
+  );
   // tooltip 浮层提供器。
   const provider = new TooltipProvider({
     content: tooltip,
     debounce: 80,
     offset: 8,
     root: portalContainer,
-    shouldShow: createSelectionTooltipShouldShow(
-      tooltip,
-      () => isLinkPopoverOpen,
-      () => isBlockTransformPopoverOpen
-    ),
+    shouldShow: shouldShowSelectionTooltip,
     floatingUIOptions: {
       placement: 'top'
     }
   });
+
+  /**
+   * 挂载选区菜单 DOM。
+   */
+  const mountSelectionTooltip = (): void => {
+    if (tooltip.parentElement) {
+      return;
+    }
+
+    portalContainer.appendChild(tooltip);
+  };
+
+  /**
+   * 卸载选区菜单 DOM。
+   */
+  const unmountSelectionTooltip = (): void => {
+    tooltip.remove();
+  };
+
+  provider.onHide = unmountSelectionTooltip;
+
+  /**
+   * 隐藏选区菜单与附属 Popover。
+   */
+  const hideSelectionTooltip = (): void => {
+    setLinkPopoverOpen(false);
+    setBlockTransformPopoverOpen(false);
+    provider.hide();
+    unmountSelectionTooltip();
+  };
+
+  /**
+   * 判断节点是否位于选区菜单交互区域内。
+   */
+  const isSelectionTooltipTarget = (target: EventTarget | null): boolean => {
+    if (!(target instanceof Node)) {
+      return false;
+    }
+
+    return (
+      Boolean(currentView?.dom.contains(target)) ||
+      tooltip.contains(target) ||
+      portalContainer.contains(target)
+    );
+  };
+
+  /**
+   * 处理编辑器失焦后的菜单隐藏。
+   */
+  const handleEditorBlur = (): void => {
+    requestAnimationFrame(() => {
+      if (isDestroyed) {
+        return;
+      }
+
+      if (isSelectionTooltipTarget(document.activeElement)) {
+        return;
+      }
+
+      hideSelectionTooltip();
+    });
+  };
+
+  /**
+   * 处理文档外部点击后的菜单隐藏。
+   */
+  const handleDocumentMouseDown = (event: MouseEvent): void => {
+    if (isSelectionTooltipTarget(event.target)) {
+      return;
+    }
+
+    hideSelectionTooltip();
+  };
+
+  view.dom.addEventListener('blur', handleEditorBlur);
+  document.addEventListener('mousedown', handleDocumentMouseDown, true);
 
   return {
     update: (nextView, previousState) => {
@@ -184,10 +264,20 @@ const createSelectionTooltipPluginView = (
         const linkType = resolveMarkType(currentView, ['link']);
         linkTriggerButton.dataset.active = linkType && isMarkActive(currentView.state, linkType) ? 'true' : 'false';
       }
+      if (!shouldShowSelectionTooltip(currentView)) {
+        provider.hide();
+        unmountSelectionTooltip();
+        return;
+      }
+
+      mountSelectionTooltip();
       provider.update(currentView, previousState);
     },
     destroy: () => {
+      isDestroyed = true;
       currentView = null;
+      view.dom.removeEventListener('blur', handleEditorBlur);
+      document.removeEventListener('mousedown', handleDocumentMouseDown, true);
       blockTransformControlRoot.unmount();
       linkControlRoot.unmount();
       iconRoots.splice(0).forEach((iconRoot) => {

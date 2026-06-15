@@ -1,6 +1,6 @@
 import { useEditor } from '@milkdown/react';
 import { debounce } from 'es-toolkit/function';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, type MutableRefObject } from 'react';
 import type {
   EditorI18nMessages,
   EditorLocale,
@@ -9,6 +9,7 @@ import type {
 } from '../../types/editor';
 import {
   createMilkdownEditorRuntime,
+  type FocusEditorCoordinates,
   type MilkdownEditorRuntime,
   type NativeMilkdownEditor
 } from '../../core/createEditor';
@@ -35,6 +36,8 @@ export interface UseMilkdownEditorOptions {
   slashMenu?: SlashMenuConfig;
   /** 图片上传配置。 */
   imageUpload?: ImageUploadConfig;
+  /** 编辑器聚焦方法引用。 */
+  focusEditorRef?: MutableRefObject<((coordinates?: FocusEditorCoordinates) => void) | null>;
   /** 编辑器内容变更回调。 */
   onMarkdownChange: (markdown: string) => void;
   /** 编辑器初始化失败回调。 */
@@ -99,6 +102,9 @@ export const useMilkdownEditor = (options: UseMilkdownEditorOptions): void => {
   const editorInfo = useEditor(
     (root) => {
       runtimeRef.current = null;
+      if (options.focusEditorRef) {
+        options.focusEditorRef.current = null;
+      }
       currentMarkdownRef.current = options.markdown;
 
       /** 编辑器运行时。 */
@@ -123,6 +129,9 @@ export const useMilkdownEditor = (options: UseMilkdownEditorOptions): void => {
         runtime.installRuntimePlugins,
         () => {
           runtimeRef.current = runtime;
+          if (options.focusEditorRef) {
+            options.focusEditorRef.current = runtime.focusEditor;
+          }
           onInitReadyRef.current?.();
         },
         (error) => {
@@ -130,7 +139,13 @@ export const useMilkdownEditor = (options: UseMilkdownEditorOptions): void => {
         }
       ) as any;
     },
-    [options.portalContainer, options.contentPortalContainer, options.readOnly, options.locale]
+    [
+      options.portalContainer,
+      options.contentPortalContainer,
+      options.readOnly,
+      options.locale,
+      options.focusEditorRef
+    ]
   );
 
   useEffect(() => {
@@ -167,8 +182,17 @@ export const useMilkdownEditor = (options: UseMilkdownEditorOptions): void => {
   useEffect(() => {
     return () => {
       runtimeRef.current = null;
+      if (options.focusEditorRef) {
+        options.focusEditorRef.current = null;
+      }
     };
-  }, [options.portalContainer, options.contentPortalContainer, options.readOnly, options.locale]);
+  }, [
+    options.portalContainer,
+    options.contentPortalContainer,
+    options.readOnly,
+    options.locale,
+    options.focusEditorRef
+  ]);
 
   useEffect(() => {
     /** 当前编辑器运行时。 */
