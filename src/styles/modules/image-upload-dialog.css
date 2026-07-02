@@ -1,10 +1,23 @@
 @layer utilities {
-  .zt-md-image-upload-host {
-    position: absolute;
+  .zt-md-dialog-host {
+    position: fixed;
+    inset: 0;
     width: 100vw;
     height: 100dvh;
     min-height: 100vh;
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    color: var(--zt-fg);
+    font-family: var(--zt-font);
     z-index: 1300;
+    pointer-events: none;
+    transition: none;
+  }
+
+  .zt-md-image-upload-host {
     --background: var(--zt-bg);
     --foreground: var(--zt-fg);
     --card: var(--zt-surface);
@@ -25,7 +38,6 @@
     --input: var(--zt-border);
     --ring: color-mix(in srgb, var(--zt-primary) 45%, var(--zt-border));
     --radius: var(--zt-radius);
-    pointer-events: none;
   }
 
   .zt-md-image-upload-host [data-slot='dialog-overlay'],
@@ -45,7 +57,6 @@
   }
 
   [data-slot='dialog-content'].zt-md-image-upload-content-shell {
-    position: absolute;
     box-sizing: border-box;
     display: flex;
     width: min(640px, calc(100vw - 32px));

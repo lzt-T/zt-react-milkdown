@@ -59,9 +59,10 @@ examples/                   # 示例与调试入口
 ## 5. Portal 与滚动裁剪
 
 - 编辑器内部使用两层 Portal：
-  - `.zt-md-portal` 位于 `.zt-md-body` 内，用于 Dialog/Modal、Slash 命令菜单等编辑器级浮层，不受编辑区滚动裁剪。
+  - `.zt-md-portal` 位于 `.zt-md-body` 内，用于 Slash 命令菜单等编辑器级锚点浮层，不受编辑区滚动裁剪。
   - `.zt-md-content-portal` 位于 `.zt-md-editor` 内，用于选区工具栏子菜单、代码块语言选择器、表格操作等内容附属浮层，必须受编辑区滚动视口裁剪。
-- 所有编辑器浮层必须挂在 `.zt-md` 内部，不要挂到 `document.body`。
+- 全屏 Dialog/Modal 可以挂载到 `document.body` 下的隔离宿主，宿主必须携带编辑器主题类名并同步主题变量，避免被父级 `overflow` 或 `transform` 裁切。
+- 锚点浮层必须挂在 `.zt-md` 内部，不要挂到 `document.body`。
 - Radix Popover 类内容附属浮层应以 `.zt-md-editor` 作为 `collisionBoundary`，并在触发器脱离边界时隐藏。
 - 调整 Portal 策略时，需要同步更新 README 的样式/主题说明。
 

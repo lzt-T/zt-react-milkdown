@@ -30,14 +30,58 @@ interface ImageUploadDialogOptions {
   imageUpload?: ImageUploadConfig;
 }
 
+// 需要从编辑器根节点复制到 body 弹窗宿主的主题变量。
+const DIALOG_THEME_VARIABLES = [
+  '--zt-font',
+  '--zt-bg',
+  '--zt-surface',
+  '--zt-elevated',
+  '--zt-fg',
+  '--zt-muted',
+  '--zt-border',
+  '--zt-primary',
+  '--zt-primary-foreground',
+  '--zt-secondary',
+  '--zt-destructive',
+  '--zt-destructive-foreground',
+  '--zt-glow',
+  '--zt-radius',
+  '--zt-radius-lg'
+] as const;
+
 /**
- * 同步图片上传弹窗宿主到浏览器视口。
+ * 同步编辑器主题变量到 body 弹窗宿主。
  */
-const syncImageUploadHostBounds = (host: HTMLElement, portalContainer: HTMLElement): void => {
-  // Portal 容器相对视口的位置。
-  const portalRect = portalContainer.getBoundingClientRect();
-  host.style.left = `${-portalRect.left}px`;
-  host.style.top = `${-portalRect.top}px`;
+const syncDialogHostThemeVariables = (host: HTMLElement, editorRoot: Element | null): void => {
+  if (!editorRoot) {
+    return;
+  }
+
+  // 编辑器根节点的最终主题变量。
+  const editorRootStyle = window.getComputedStyle(editorRoot);
+  DIALOG_THEME_VARIABLES.forEach((variableName) => {
+    // 当前主题变量值。
+    const variableValue = editorRootStyle.getPropertyValue(variableName);
+    if (variableValue) {
+      host.style.setProperty(variableName, variableValue.trim());
+    }
+  });
+};
+
+/**
+ * 创建全屏 Dialog 宿主节点。
+ */
+const createFullscreenDialogHost = (portalContainer: HTMLElement, className: string): HTMLDivElement => {
+  // 当前编辑器主题容器。
+  const editorRoot = portalContainer.closest('.zt-md');
+  // 当前编辑器主题类名。
+  const themeClassName = editorRoot?.classList.contains('zt-md-dark') ? 'zt-md-dark' : 'zt-md-light';
+  // React 挂载容器。
+  const host = document.createElement('div');
+  host.className = `zt-md zt-md-dialog-host ${className} ${themeClassName}`;
+  syncDialogHostThemeVariables(host, editorRoot);
+  document.body.appendChild(host);
+  return host;
 };
 
 /**
@@ -181,26 +225,8 @@ const insertImageNode = (view: any, payload: InsertImagePayload): boolean => {
  * 创建图片上传弹窗。
  */
 export const showImageUploadDialog = (options: ImageUploadDialogOptions): void => {
-  // 当前编辑器主题容器。
-  const editorRoot = options.portalContainer.closest('.zt-md');
-  // 当前编辑器主题类名。
-  const themeClassName = editorRoot?.classList.contains('zt-md-dark') ? 'zt-md-dark' : 'zt-md-light';
-  // React 挂载容器。
-  const host = document.createElement('div');
-  host.className = `zt-md-image-upload-host ${themeClassName}`;
-  options.portalContainer.appendChild(host);
-  syncImageUploadHostBounds(host, options.portalContainer);
-
-  /**
-   * 视口或页面滚动变化时重新对齐宿主。
-   */
-  const handleViewportChange = (): void => {
-    syncImageUploadHostBounds(host, options.portalContainer);
-  };
-
-  window.addEventListener('resize', handleViewportChange);
-  window.addEventListener('scroll', handleViewportChange, true);
-
+  // 图片上传弹窗宿主节点。
+  const host = createFullscreenDialogHost(options.portalContainer, 'zt-md-image-upload-host');
   // React 根节点。
   const root = createRoot(host);
 
@@ -209,8 +235,6 @@ export const showImageUploadDialog = (options: ImageUploadDialogOptions): void =
    */
   const unmountDialog = (onAfterUnmount?: () => void): void => {
     queueMicrotask(() => {
-      window.removeEventListener('resize', handleViewportChange);
-      window.removeEventListener('scroll', handleViewportChange, true);
       root.unmount();
       host.remove();
       onAfterUnmount?.();
