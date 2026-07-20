@@ -3,7 +3,16 @@ import type { Node as ProseNode } from '@milkdown/prose/model';
 import type { EditorView } from '@milkdown/prose/view';
 import { $prose } from '@milkdown/utils';
 import { Check, ChevronDown, Search } from 'lucide-react';
-import { Fragment, createElement, useEffect, useMemo, useState, type MouseEvent as ReactMouseEvent, type ReactElement } from 'react';
+import {
+  Fragment,
+  createElement,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useState,
+  type MouseEvent as ReactMouseEvent,
+  type ReactElement
+} from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { refractor } from 'refractor';
 import type { EditorI18nMessages } from '../../../types/editor';
@@ -19,12 +28,19 @@ import {
 const CODE_BLOCK_NODE_NAME = 'code_block';
 // 代码块语言选择器插件 key。
 const CODE_BLOCK_LANGUAGE_PICKER_PLUGIN_KEY = 'ZT_MD_CODE_BLOCK_LANGUAGE_PICKER';
-// 右下角横向偏移（像素）。
-const CODE_BLOCK_LANGUAGE_PICKER_OFFSET_X = 104;
-// 右下角纵向偏移（像素）。
-const CODE_BLOCK_LANGUAGE_PICKER_OFFSET_Y = 36;
+// 选择器与代码块边缘间距（像素）。
+const CODE_BLOCK_LANGUAGE_PICKER_EDGE_INSET = 8;
+// 选择器首次渲染定位宽度兜底。
+const CODE_BLOCK_LANGUAGE_PICKER_FALLBACK_WIDTH = 96;
+// 选择器首次渲染定位高度兜底。
+const CODE_BLOCK_LANGUAGE_PICKER_FALLBACK_HEIGHT = 28;
 // 纯文本语言值。
 const PLAIN_TEXT_LANGUAGE_VALUE = 'text';
+// Canvas 代码块语言关键字映射表。
+const CANVAS_LANGUAGE_KEYWORD_MAP: Record<string, string> = {
+  svg: 'svg',
+  html: 'html'
+};
 // 语言面板首帧定位宽度兜底。
 const CODE_BLOCK_LANGUAGE_PICKER_PANEL_WIDTH = 224;
 // 语言面板首帧定位高度兜底。
@@ -56,6 +72,15 @@ const normalizeCodeBlockLanguage = (language: string): string => {
   const normalizedLanguage = language.trim().toLowerCase();
   if (!normalizedLanguage) {
     return PLAIN_TEXT_LANGUAGE_VALUE;
+  }
+
+  if (normalizedLanguage.startsWith('canvas-')) {
+    // Canvas 代码块对应的标准语言值。
+    const canvasLanguage = Object.entries(CANVAS_LANGUAGE_KEYWORD_MAP).find(([keyword]) =>
+      normalizedLanguage.includes(keyword)
+    )?.[1];
+
+    return canvasLanguage ?? normalizedLanguage;
   }
 
   return normalizedLanguage;
@@ -180,6 +205,8 @@ interface CodeBlockLanguagePickerProps {
   collisionBoundary: HTMLElement | null;
   /** 语言切换回调。 */
   onSelectLanguage: (language: string) => void;
+  /** 选择器布局变化回调。 */
+  onLayoutChange: () => void;
 }
 
 /**
@@ -264,6 +291,10 @@ const CodeBlockLanguagePicker = (props: CodeBlockLanguagePickerProps): ReactElem
     setOpen(false);
     setKeyword('');
   };
+
+  useLayoutEffect(() => {
+    props.onLayoutChange();
+  }, [currentLanguageLabel, props.onLayoutChange]);
 
   useEffect(() => {
     setOpen(false);
@@ -397,6 +428,17 @@ class CodeBlockLanguagePickerView {
   });
 
   /**
+   * 在选择器布局完成后刷新定位。
+   */
+  private readonly handlePickerLayoutChange = (): void => {
+    if (!this.hasPositionContext) {
+      return;
+    }
+
+    this.updateOverlayPosition();
+  };
+
+  /**
    * 初始化插件视图。
    */
   constructor(view: EditorView, messages: EditorI18nMessages, portalContainer: HTMLElement) {
@@ -462,7 +504,8 @@ class CodeBlockLanguagePickerView {
         messages: this.messages,
         portalContainer: this.portalContainer,
         collisionBoundary: this.editorWrapper,
-        onSelectLanguage: (nextLanguage) => this.applyLanguage(nextLanguage)
+        onSelectLanguage: (nextLanguage) => this.applyLanguage(nextLanguage),
+        onLayoutChange: this.handlePickerLayoutChange
       })
     );
     this.host.dataset.mounted = 'true';
@@ -492,15 +535,29 @@ class CodeBlockLanguagePickerView {
 
     const preRect = this.currentPreElement.getBoundingClientRect();
     const anchor = toContentAnchor(preRect, this.editorWrapper);
+    // 代码块右边界内容坐标。
+    const codeBlockRightInContent = anchor.anchorRightInContent ?? anchor.anchorLeftInContent + preRect.width;
+    // 选择器可用宽度不超过代码块与编辑器可视区域。
+    const pickerMaxWidth = Math.max(
+      0,
+      Math.min(preRect.width, this.editorWrapper.clientWidth) - CODE_BLOCK_LANGUAGE_PICKER_EDGE_INSET * 2
+    );
+    this.host.style.setProperty('--zt-md-code-language-picker-max-width', `${pickerMaxWidth}px`);
+
+    // 优先使用真实尺寸，首帧渲染前使用兜底尺寸。
+    const pickerWidth = this.host.offsetWidth || Math.min(CODE_BLOCK_LANGUAGE_PICKER_FALLBACK_WIDTH, pickerMaxWidth);
+    const pickerHeight = this.host.offsetHeight || CODE_BLOCK_LANGUAGE_PICKER_FALLBACK_HEIGHT;
     const portalPosition = toPortalPosition(
       {
         wrapper: this.editorWrapper,
         anchor: {
-          anchorLeftInContent: anchor.anchorLeftInContent + preRect.width - CODE_BLOCK_LANGUAGE_PICKER_OFFSET_X,
-          anchorTopInContent: anchor.anchorTopInContent + preRect.height - CODE_BLOCK_LANGUAGE_PICKER_OFFSET_Y,
-          anchorBottomInContent: anchor.anchorTopInContent + preRect.height - CODE_BLOCK_LANGUAGE_PICKER_OFFSET_Y
+          anchorLeftInContent: codeBlockRightInContent - pickerWidth - CODE_BLOCK_LANGUAGE_PICKER_EDGE_INSET,
+          anchorTopInContent:
+            anchor.anchorTopInContent + preRect.height - pickerHeight - CODE_BLOCK_LANGUAGE_PICKER_EDGE_INSET,
+          anchorBottomInContent:
+            anchor.anchorTopInContent + preRect.height - pickerHeight - CODE_BLOCK_LANGUAGE_PICKER_EDGE_INSET
         },
-        overlaySize: { width: 96 },
+        overlaySize: { width: pickerWidth },
         placement: 'top',
         offsetY: 0,
         boundaryInset: 2
@@ -549,12 +606,12 @@ class CodeBlockLanguagePickerView {
     this.currentPreElement = preElement;
     this.hasPositionContext = true;
     this.updateOverlayPosition();
-    this.repositionScheduler.schedule();
-    if (shouldSkipRender) {
-      return;
+    if (!shouldSkipRender) {
+      this.render(currentLanguage);
     }
 
-    this.render(currentLanguage);
+    // 下一帧兜底校正可能的异步布局变化。
+    this.repositionScheduler.schedule();
   }
 
   /**
