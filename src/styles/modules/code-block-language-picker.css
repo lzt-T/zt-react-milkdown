@@ -146,6 +146,10 @@
     background: color-mix(in srgb, var(--zt-primary) 14%, var(--zt-surface));
   }
 
+  .zt-md-code-language-picker-option[data-active='true'] {
+    background: color-mix(in srgb, var(--zt-primary) 22%, var(--zt-surface));
+  }
+
   .zt-md-code-language-picker-option-check {
     color: color-mix(in srgb, var(--zt-primary) 82%, var(--zt-fg));
     flex-shrink: 0;

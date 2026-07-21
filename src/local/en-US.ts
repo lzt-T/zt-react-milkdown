@@ -69,5 +69,7 @@ export const enUSMessages: EditorI18nMessages = {
   codeBlockLanguageSearchPlaceholder: 'Search languages',
   codeBlockLanguagePlainText: 'text',
   codeBlockCopyAriaLabel: 'Copy code block',
+  codeBlockPreviewAriaLabel: 'Preview code block',
+  codeBlockSourceAriaLabel: 'View code block source',
   codeBlockDeleteAriaLabel: 'Delete code block'
 };

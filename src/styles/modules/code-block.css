@@ -1,11 +1,12 @@
 @layer components {
   .zt-md-editor .zt-md-code-block {
     position: relative;
+    display: flow-root;
   }
 
   .zt-md-editor .zt-md-code-block-actions {
     position: absolute;
-    top: 8px;
+    top: calc(0.75rem + 8px);
     right: 8px;
     z-index: 3;
     display: none;
@@ -14,11 +15,17 @@
   }
 
   .zt-md-editor .zt-md-code-block:hover .zt-md-code-block-actions,
-  .zt-md-editor .zt-md-code-block:focus-within .zt-md-code-block-actions {
+  .zt-md-editor .zt-md-code-block:focus-within .zt-md-code-block-actions,
+  .zt-md-editor .zt-md-code-block-actions[data-focused='true'] {
     display: inline-flex;
   }
 
-  .zt-md-editor .zt-md-code-block[data-editable='false'] .zt-md-code-block-actions {
+  .zt-md-editor .zt-md-code-block-actions[data-visible='false'] {
+    display: none;
+  }
+
+  .zt-md-editor .zt-md-code-block[data-editable='false'] .zt-md-code-block-editable-action,
+  .zt-md-editor .zt-md-code-block-action-button[hidden] {
     display: none;
   }
 
@@ -47,6 +54,12 @@
     color: var(--zt-primary);
   }
 
+  .zt-md-editor .zt-md-code-block-action-button[data-active='true'] {
+    background: color-mix(in srgb, var(--zt-primary) 18%, var(--zt-surface));
+    border-color: color-mix(in srgb, var(--zt-primary) 50%, var(--zt-border));
+    color: var(--zt-primary);
+  }
+
   .zt-md-editor .zt-md-code-block-action-button-danger:hover {
     background: color-mix(in srgb, var(--zt-destructive) 18%, var(--zt-surface));
     border-color: color-mix(in srgb, var(--zt-destructive) 44%, var(--zt-border));
@@ -55,6 +68,47 @@
 
   .zt-md-editor .zt-md-code-block-action-button svg {
     pointer-events: none;
+  }
+
+  .zt-md-editor .zt-md-code-block-preview {
+    position: absolute;
+    inset: 0;
+    margin-block: 0.75rem;
+    overflow: hidden;
+    border: 1px solid var(--zt-border);
+    border-radius: var(--zt-radius);
+    background: var(--zt-bg);
+  }
+
+  .zt-md-editor .zt-md-code-block-preview[hidden] {
+    display: none;
+  }
+
+  .zt-md-editor .zt-md-code-block[data-view-mode='preview'] {
+    height: calc(min(24rem, 60vh) + 1.5rem);
+  }
+
+  .zt-md-editor .zt-md-code-block[data-view-mode='preview'] > pre {
+    position: absolute;
+    inset: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  .zt-md-editor .zt-md-code-block-preview-frame {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: transparent;
+  }
+
+  .zt-md-light .zt-md-code-block-preview-frame {
+    color-scheme: light;
+  }
+
+  .zt-md-dark .zt-md-code-block-preview-frame {
+    color-scheme: dark;
   }
 
   .zt-md-editor .ProseMirror pre {

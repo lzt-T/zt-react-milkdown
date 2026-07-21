@@ -69,5 +69,7 @@ export const zhCNMessages: EditorI18nMessages = {
   codeBlockLanguageSearchPlaceholder: '搜索语言',
   codeBlockLanguagePlainText: 'text',
   codeBlockCopyAriaLabel: '复制代码块',
+  codeBlockPreviewAriaLabel: '预览代码块',
+  codeBlockSourceAriaLabel: '查看代码块源码',
   codeBlockDeleteAriaLabel: '删除代码块'
 };

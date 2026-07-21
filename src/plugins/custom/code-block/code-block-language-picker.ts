@@ -9,20 +9,26 @@ import {
   useEffect,
   useLayoutEffect,
   useMemo,
+  useRef,
   useState,
+  type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent as ReactMouseEvent,
   type ReactElement
 } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { refractor } from 'refractor';
-import type { EditorI18nMessages } from '../../../types/editor';
+import {
+  normalizeCodeBlockLanguage,
+  PLAIN_TEXT_LANGUAGE_VALUE
+} from '@/plugins/custom/code-block/code-block-language';
+import type { EditorI18nMessages } from '@/types/editor';
 import { FloatingPortalPanel, useFloatingPortalPanel } from '../floating-portal-panel';
 import {
   createOverlayRepositionScheduler,
   resolveEditorWrapper,
   toContentAnchor,
   toPortalPosition
-} from '../../../lib/editor-overlay-position';
+} from '@/lib/editor-overlay-position';
 
 // 代码块节点名称。
 const CODE_BLOCK_NODE_NAME = 'code_block';
@@ -34,13 +40,6 @@ const CODE_BLOCK_LANGUAGE_PICKER_EDGE_INSET = 8;
 const CODE_BLOCK_LANGUAGE_PICKER_FALLBACK_WIDTH = 96;
 // 选择器首次渲染定位高度兜底。
 const CODE_BLOCK_LANGUAGE_PICKER_FALLBACK_HEIGHT = 28;
-// 纯文本语言值。
-const PLAIN_TEXT_LANGUAGE_VALUE = 'text';
-// Canvas 代码块语言关键字映射表。
-const CANVAS_LANGUAGE_KEYWORD_MAP: Record<string, string> = {
-  svg: 'svg',
-  html: 'html'
-};
 // 语言面板首帧定位宽度兜底。
 const CODE_BLOCK_LANGUAGE_PICKER_PANEL_WIDTH = 224;
 // 语言面板首帧定位高度兜底。
@@ -63,27 +62,6 @@ const LANGUAGE_LABEL_MAP: Record<string, string> = {
   yml: 'YAML',
   sql: 'SQL',
   xml: 'XML'
-};
-
-/**
- * 规范化代码块语言值。
- */
-const normalizeCodeBlockLanguage = (language: string): string => {
-  const normalizedLanguage = language.trim().toLowerCase();
-  if (!normalizedLanguage) {
-    return PLAIN_TEXT_LANGUAGE_VALUE;
-  }
-
-  if (normalizedLanguage.startsWith('canvas-')) {
-    // Canvas 代码块对应的标准语言值。
-    const canvasLanguage = Object.entries(CANVAS_LANGUAGE_KEYWORD_MAP).find(([keyword]) =>
-      normalizedLanguage.includes(keyword)
-    )?.[1];
-
-    return canvasLanguage ?? normalizedLanguage;
-  }
-
-  return normalizedLanguage;
 };
 
 /**
@@ -217,6 +195,12 @@ const CodeBlockLanguagePicker = (props: CodeBlockLanguagePickerProps): ReactElem
   const [open, setOpen] = useState(false);
   // 搜索关键字。
   const [keyword, setKeyword] = useState('');
+  // 当前键盘高亮项索引。
+  const [activeOptionIndex, setActiveOptionIndex] = useState(0);
+  // 搜索输入框。
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+  // 语言选项容器。
+  const optionsContainerRef = useRef<HTMLDivElement | null>(null);
   // 当前规范化语言值。
   const normalizedCurrentLanguage = normalizeCodeBlockLanguage(props.currentLanguage);
   // 当前语言显示文本。
@@ -279,6 +263,8 @@ const CodeBlockLanguagePicker = (props: CodeBlockLanguagePickerProps): ReactElem
       return;
     }
 
+    const currentOptionIndex = filteredOptions.findIndex((option) => option.value === normalizedCurrentLanguage);
+    setActiveOptionIndex(currentOptionIndex >= 0 ? currentOptionIndex : 0);
     panel.updatePosition();
     setOpen(true);
   };
@@ -292,6 +278,49 @@ const CodeBlockLanguagePicker = (props: CodeBlockLanguagePickerProps): ReactElem
     setKeyword('');
   };
 
+  /**
+   * 按指定偏移循环移动键盘高亮项。
+   */
+  const moveActiveOption = (offset: number): void => {
+    if (filteredOptions.length === 0) {
+      return;
+    }
+
+    setActiveOptionIndex((currentIndex) => {
+      return (currentIndex + offset + filteredOptions.length) % filteredOptions.length;
+    });
+  };
+
+  /**
+   * 确认当前键盘高亮项。
+   */
+  const confirmActiveOption = (): void => {
+    const activeOption = filteredOptions[activeOptionIndex];
+    if (!activeOption) {
+      return;
+    }
+
+    handleSelectLanguage(activeOption.value);
+  };
+
+  /**
+   * 处理搜索输入框的键盘导航。
+   */
+  const handleSearchKeyDown = (event: ReactKeyboardEvent<HTMLInputElement>): void => {
+    const keyHandlerMap: Record<string, () => void> = {
+      ArrowDown: () => moveActiveOption(1),
+      ArrowUp: () => moveActiveOption(-1),
+      Enter: confirmActiveOption
+    };
+    const keyHandler = keyHandlerMap[event.key];
+    if (!keyHandler) {
+      return;
+    }
+
+    event.preventDefault();
+    keyHandler();
+  };
+
   useLayoutEffect(() => {
     props.onLayoutChange();
   }, [currentLanguageLabel, props.onLayoutChange]);
@@ -299,7 +328,28 @@ const CodeBlockLanguagePicker = (props: CodeBlockLanguagePickerProps): ReactElem
   useEffect(() => {
     setOpen(false);
     setKeyword('');
+    setActiveOptionIndex(0);
   }, [props.currentLanguage]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    searchInputRef.current?.focus();
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    const activeOption = optionsContainerRef.current?.querySelector<HTMLElement>('[data-active="true"]');
+    activeOption?.scrollIntoView({
+      block: 'nearest',
+      inline: 'nearest'
+    });
+  }, [activeOptionIndex, filteredOptions, open]);
 
   return createElement(
     Fragment,
@@ -349,8 +399,13 @@ const CodeBlockLanguagePicker = (props: CodeBlockLanguagePickerProps): ReactElem
           'aria-hidden': 'true'
         }),
         createElement('input', {
+          ref: searchInputRef,
           value: keyword,
-          onChange: (event) => setKeyword(event.currentTarget.value),
+          onChange: (event) => {
+            setKeyword(event.currentTarget.value);
+            setActiveOptionIndex(0);
+          },
+          onKeyDown: handleSearchKeyDown,
           placeholder: props.messages.codeBlockLanguageSearchPlaceholder,
           className: 'zt-md-code-language-picker-search-input'
         })
@@ -358,17 +413,19 @@ const CodeBlockLanguagePicker = (props: CodeBlockLanguagePickerProps): ReactElem
       createElement(
         'div',
         {
+          ref: optionsContainerRef,
           className: 'zt-md-code-language-picker-options',
           role: 'listbox'
         },
         filteredOptions.length > 0
-          ? filteredOptions.map((option) =>
+          ? filteredOptions.map((option, optionIndex) =>
               createElement(
                 'button',
                 {
                   key: option.value || '__plain_text__',
                   type: 'button',
                   className: 'zt-md-code-language-picker-option',
+                  'data-active': optionIndex === activeOptionIndex ? 'true' : 'false',
                   'data-selected': option.value === normalizedCurrentLanguage ? 'true' : 'false',
                   onClick: () => handleSelectLanguage(option.value)
                 },
@@ -415,6 +472,8 @@ class CodeBlockLanguagePickerView {
   private currentCodeBlockPosition: number | null = null;
   // 当前绑定 pre 元素。
   private currentPreElement: HTMLPreElement | null = null;
+  // 当前代码块操作区容器。
+  private currentActionsContainer: HTMLElement | null = null;
   // 当前渲染的语言值。
   private currentRenderedLanguage: string | null = null;
   // 当前定位上下文是否有效。
@@ -513,9 +572,25 @@ class CodeBlockLanguagePickerView {
   }
 
   /**
+   * 同步当前代码块操作区的聚焦标记。
+   */
+  private syncFocusedActionsContainer(actionsContainer: HTMLElement | null): void {
+    if (this.currentActionsContainer === actionsContainer) {
+      return;
+    }
+
+    delete this.currentActionsContainer?.dataset.focused;
+    this.currentActionsContainer = actionsContainer;
+    if (this.currentActionsContainer) {
+      this.currentActionsContainer.dataset.focused = 'true';
+    }
+  }
+
+  /**
    * 卸载当前选择器。
    */
   private detach(): void {
+    this.syncFocusedActionsContainer(null);
     this.hostRoot.render(null);
     delete this.host.dataset.mounted;
     this.host.remove();
@@ -591,6 +666,11 @@ class CodeBlockLanguagePickerView {
       this.detach();
       return;
     }
+
+    const actionsContainer = preElement.parentElement?.querySelector<HTMLElement>(
+      ':scope > .zt-md-code-block-actions'
+    ) ?? null;
+    this.syncFocusedActionsContainer(actionsContainer);
 
     if (this.host.parentElement !== this.portalContainer) {
       this.portalContainer.append(this.host);

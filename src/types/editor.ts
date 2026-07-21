@@ -144,6 +144,10 @@ export interface EditorI18nMessages {
   codeBlockLanguagePlainText: string;
   /** 代码块复制按钮无障碍标签。 */
   codeBlockCopyAriaLabel: string;
+  /** 代码块预览按钮无障碍标签。 */
+  codeBlockPreviewAriaLabel: string;
+  /** 代码块源码按钮无障碍标签。 */
+  codeBlockSourceAriaLabel: string;
   /** 代码块删除按钮无障碍标签。 */
   codeBlockDeleteAriaLabel: string;
 }
