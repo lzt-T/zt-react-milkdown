@@ -113,7 +113,7 @@
 
   .zt-md-editor .ProseMirror pre {
     @apply my-3 overflow-x-auto rounded-[var(--zt-radius)] border border-zt-border px-4 py-3;
-    background: color-mix(in srgb, var(--zt-bg) 92%, var(--zt-primary));
+    background: var(--zt-elevated);
     color: var(--zt-fg);
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
     font-size: 0.92em;

@@ -1,7 +1,7 @@
 @layer components {
   .zt-md-editor .zt-md-math-inline {
     @apply my-0.5 inline-flex max-w-full items-baseline gap-1 rounded-sm px-1 align-baseline;
-    background: color-mix(in srgb, var(--zt-primary) 8%, transparent);
+    background: var(--zt-elevated);
     cursor: pointer;
   }
 

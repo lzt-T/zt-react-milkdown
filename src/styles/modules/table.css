@@ -18,7 +18,7 @@
 }
 
 .zt-md-editor .ProseMirror th {
-  background: color-mix(in srgb, var(--zt-primary) 8%, var(--zt-surface));
+  background: var(--zt-elevated);
   font-weight: 600;
   text-align: left;
 }

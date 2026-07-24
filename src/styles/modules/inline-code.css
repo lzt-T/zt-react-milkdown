@@ -2,7 +2,7 @@
   .zt-md-editor .ProseMirror p code {
     @apply rounded-[6px] px-2 py-[1px] align-baseline;
     border: 1px solid transparent;
-    background: color-mix(in srgb, var(--zt-primary) 14%, var(--zt-surface));
+    background: var(--zt-elevated);
     color: color-mix(in srgb, var(--zt-fg) 94%, var(--zt-primary));
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
     font-size: 0.9em;
