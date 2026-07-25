@@ -1,4 +1,4 @@
-import type { EditorI18nMessages } from '../types/editor';
+import type { EditorI18nMessages } from '@/types/editor';
 
 /**
  * 英文编辑器语言包。
@@ -30,12 +30,15 @@ export const enUSMessages: EditorI18nMessages = {
   imageUploadUrlTab: 'Image URL',
   imageUploadUrlPlaceholder: 'Paste image URL',
   imageUploadInsertUrlLabel: 'Insert URL',
-  imageUploadConfirmLabel: 'Confirm',
+  imageUploadConfirmLabel: 'Insert image',
+  imageUploadAltLabel: 'Alternative text (optional)',
+  imageUploadAltPlaceholder: 'Describe the image',
   imageUploadUploadingLabel: 'Uploading...',
+  imageUploadInsertingLabel: 'Inserting...',
   imageUploadCancelLabel: 'Cancel',
   imageUploadLoadFailed: 'Image failed to load',
   imageUploadReselectHint: 'Click or drag to reselect',
-  imageUploadSupportsAndMax: 'Supports image files, max {size}',
+  imageUploadSupportsAndMax: 'Supports PNG, JPG, GIF, WebP, SVG, and more, max {size}',
   imageUploadFileTooLarge: 'The image file is too large.',
   imageUploadFileSizeExceeded: 'Image size must not exceed {size}',
   imageUploadInvalidType: 'Please choose an image file.',

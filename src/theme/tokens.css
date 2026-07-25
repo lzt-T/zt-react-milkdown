@@ -1,8 +1,12 @@
 :root {
-  --zt-font: 'IBM Plex Sans', 'Noto Sans SC', 'PingFang SC', sans-serif;
-  --zt-font-display: 'DM Serif Display', 'Songti SC', 'Noto Serif SC', serif;
-  --zt-radius: 14px;
-  --zt-radius-lg: 22px;
+  --zt-font:
+    ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    'Segoe UI Variable Text', 'Segoe UI', 'PingFang SC',
+    'Microsoft YaHei UI', 'Microsoft YaHei', 'Noto Sans CJK SC',
+    'Noto Sans SC', sans-serif;
+  --zt-font-display: var(--zt-font);
+  --zt-radius: 6px;
+  --zt-radius-lg: 10px;
 }
 
 .zt-md-light {
@@ -13,12 +17,12 @@
   --zt-fg: #162336;
   --zt-muted: #5e7087;
   --zt-border: #d4dde9;
-  --zt-primary: #3f5f7a;
-  --zt-primary-foreground: oklch(0.985 0 0);
-  --zt-secondary: #f27a1a;
-  --zt-destructive: oklch(0.577 0.245 27.325);
-  --zt-destructive-foreground: oklch(0.985 0 0);
-  --zt-glow: color-mix(in srgb, var(--zt-primary) 20%, transparent);
+  --zt-primary: #3548d4;
+  --zt-primary-foreground: #ffffff;
+  --zt-secondary: #5a65bc;
+  --zt-destructive: #b4232d;
+  --zt-destructive-foreground: #ffffff;
+  --zt-glow: transparent;
 }
 
 .zt-md-dark {
@@ -29,10 +33,10 @@
   --zt-fg: #e8efff;
   --zt-muted: #93a7c3;
   --zt-border: #2f4366;
-  --zt-primary: #9bb7cf;
-  --zt-primary-foreground: oklch(0.205 0 0);
-  --zt-secondary: #ffab66;
-  --zt-destructive: oklch(0.704 0.191 22.216);
-  --zt-destructive-foreground: oklch(0.205 0 0);
-  --zt-glow: color-mix(in srgb, var(--zt-primary) 36%, transparent);
+  --zt-primary: #8c9bff;
+  --zt-primary-foreground: #111116;
+  --zt-secondary: #aab2ff;
+  --zt-destructive: #ff7b82;
+  --zt-destructive-foreground: #1f0b0d;
+  --zt-glow: transparent;
 }

@@ -11,15 +11,15 @@
   }
 
   .zt-md-editor .ProseMirror h1 {
-    font-size: 2em;
+    font-size: 1.75em;
   }
 
   .zt-md-editor .ProseMirror h2 {
-    font-size: 1.5em;
+    font-size: 1.375em;
   }
 
   .zt-md-editor .ProseMirror h3 {
-    font-size: 1.25em;
+    font-size: 1.1875em;
   }
 
   .zt-md-editor .ProseMirror h4 {
@@ -39,6 +39,14 @@
 
   .zt-md-editor .ProseMirror :is(h1, h2, h3, h4, h5, h6) + :is(h1, h2, h3, h4, h5, h6) {
     margin-top: 0.62em;
+  }
+
+  .zt-md-editor .ProseMirror :is(h1, h2, h3):not(:first-child) {
+    margin-top: 1.35em;
+  }
+
+  .zt-md-editor .ProseMirror :is(h1, h2, h3) + :is(p, ul, ol, blockquote) {
+    margin-top: 0.55em;
   }
 
   .zt-md-editor .ProseMirror ul,
@@ -78,5 +86,17 @@
     margin: 0.9em 0;
     border: 0;
     border-top: 1px solid var(--zt-border);
+  }
+}
+
+@media (max-width: 560px) {
+  @layer components {
+    .zt-md-editor .ProseMirror h1 {
+      font-size: 1.55em;
+    }
+
+    .zt-md-editor .ProseMirror h2 {
+      font-size: 1.25em;
+    }
   }
 }

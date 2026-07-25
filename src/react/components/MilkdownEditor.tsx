@@ -17,6 +17,12 @@ import { resolveEditorMessages } from '../../local/i18n';
 // 默认防抖时长（毫秒）。
 const DEFAULT_DEBOUNCE_MS = 160;
 
+// 只读状态展示文案。
+const READ_ONLY_LABELS: Record<NonNullable<MilkdownEditorProps['locale']>, string> = {
+  'zh-CN': '只读',
+  'en-US': 'Read only'
+};
+
 /**
  * 将占位文案转为 CSS content 可消费的字符串。
  */
@@ -87,6 +93,8 @@ export const MilkdownEditor = (props: MilkdownEditorProps): JSX.Element => {
   const theme = props.theme ?? 'light';
   /** 当前只读状态。 */
   const readOnly = props.readOnly ?? false;
+  /** 当前只读状态展示文案。 */
+  const readOnlyLabel = READ_ONLY_LABELS[props.locale ?? 'zh-CN'];
   /** 内容变更防抖时长。 */
   const debounceMs = props.debounceMs ?? DEFAULT_DEBOUNCE_MS;
 
@@ -167,13 +175,18 @@ export const MilkdownEditor = (props: MilkdownEditorProps): JSX.Element => {
   }, []);
 
   return (
-    <div className={clsx('zt-md', theme === 'dark' ? 'zt-md-dark' : 'zt-md-light', props.className)}>
+    <div
+      className={clsx('zt-md', theme === 'dark' ? 'zt-md-dark' : 'zt-md-light', props.className)}
+      data-readonly={readOnly ? 'true' : 'false'}
+      data-readonly-label={readOnlyLabel}
+    >
       {props.headerSlot ? <div className="zt-md-header">{props.headerSlot}</div> : null}
       <div className="zt-md-body">
         {initErrorMessage ? <div className="zt-md-error">{initErrorMessage}</div> : null}
         <div
           className={clsx('zt-md-editor', readOnly ? 'zt-md-readonly' : 'zt-md-editable')}
           aria-label={messages.editorAriaLabel}
+          aria-readonly={readOnly}
           onMouseDown={handleEditorMouseDown}
           style={editorStyle}
         >

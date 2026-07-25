@@ -68,8 +68,14 @@ export interface EditorI18nMessages {
   imageUploadInsertUrlLabel: string;
   /** 图片插入确认按钮文案。 */
   imageUploadConfirmLabel: string;
+  /** 图片替代文本输入框标签。 */
+  imageUploadAltLabel: string;
+  /** 图片替代文本输入框占位文案。 */
+  imageUploadAltPlaceholder: string;
   /** 图片上传中提示。 */
   imageUploadUploadingLabel: string;
+  /** 图片插入准备中提示。 */
+  imageUploadInsertingLabel: string;
   /** 图片上传取消按钮文案。 */
   imageUploadCancelLabel: string;
   /** 图片加载失败提示。 */

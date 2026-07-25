@@ -1,10 +1,10 @@
 @layer components {
   .zt-md-editor .zt-md-math-block {
-    @apply relative my-3 overflow-hidden rounded-zt border border-zt-border bg-zt-bg;
+    @apply relative my-3 overflow-hidden rounded-zt border border-zt-border bg-zt-elevated;
   }
 
   .zt-md-editor .zt-md-math-block-source {
-    @apply border-b border-zt-border bg-zt-bg px-3 py-2;
+    @apply border-b border-zt-border bg-zt-elevated px-3 py-2;
   }
 
   .zt-md-editor .zt-md-math-block-textarea {
@@ -13,7 +13,7 @@
 
   .zt-md-editor .zt-md-math-block-preview {
     /* 长公式改为横向滚动展示，避免被公式块容器裁切。 */
-    @apply overflow-x-auto overflow-y-hidden px-3 py-4;
+    @apply overflow-x-auto overflow-y-hidden px-3 py-3;
     /* 禁止预览区文本选中，避免拖动滚动时出现蓝色选区。 */
     -webkit-user-select: none;
     user-select: none;
@@ -24,7 +24,8 @@
   }
 
   .zt-md-editor .zt-md-math-block-error {
-    @apply mt-2 text-xs text-red-500;
+    @apply mt-2 text-xs;
+    color: var(--zt-destructive);
   }
 
   .zt-md-editor .zt-md-math-block-actions {
@@ -45,7 +46,7 @@
 
   .zt-md-editor .zt-md-math-block-action-button {
     @apply inline-flex size-7 items-center justify-center border border-zt-border bg-zt-surface text-zt-muted;
-    border-radius: 4px;
+    border-radius: var(--zt-radius);
     cursor: pointer;
   }
 

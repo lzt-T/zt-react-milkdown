@@ -1,4 +1,4 @@
-import type { EditorI18nMessages } from '../types/editor';
+import type { EditorI18nMessages } from '@/types/editor';
 
 /**
  * 中文编辑器语言包。
@@ -30,12 +30,15 @@ export const zhCNMessages: EditorI18nMessages = {
   imageUploadUrlTab: '图片链接',
   imageUploadUrlPlaceholder: '粘贴图片链接',
   imageUploadInsertUrlLabel: '插入链接',
-  imageUploadConfirmLabel: '确认',
+  imageUploadConfirmLabel: '插入图片',
+  imageUploadAltLabel: '替代文本（可选）',
+  imageUploadAltPlaceholder: '描述图片内容',
   imageUploadUploadingLabel: '上传中...',
+  imageUploadInsertingLabel: '正在插入...',
   imageUploadCancelLabel: '取消',
   imageUploadLoadFailed: '图片加载失败',
   imageUploadReselectHint: '点击或拖拽重新选择',
-  imageUploadSupportsAndMax: '支持图片文件，最大 {size}',
+  imageUploadSupportsAndMax: '支持 PNG、JPG、GIF、WebP、SVG 等，最大 {size}',
   imageUploadFileTooLarge: '图片文件过大。',
   imageUploadFileSizeExceeded: '图片大小不能超过 {size}',
   imageUploadInvalidType: '请选择图片文件。',

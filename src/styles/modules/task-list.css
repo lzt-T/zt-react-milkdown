@@ -18,7 +18,7 @@
   .zt-md-editor li[data-item-type="task"]::before {
     position: absolute;
     left: 0.04rem;
-    top: 0.5em;
+    top: calc(0.875em - 0.475rem);
     width: 0.95rem;
     height: 0.95rem;
     border: 1px solid var(--zt-border);
@@ -36,7 +36,7 @@
   .zt-md-editor li[data-item-type="task"][data-checked="true"]::after {
     position: absolute;
     left: 0.38rem;
-    top: 0.6em;
+    top: calc(0.975em - 0.475rem);
     width: 0.26rem;
     height: 0.5rem;
     border: solid var(--zt-surface);

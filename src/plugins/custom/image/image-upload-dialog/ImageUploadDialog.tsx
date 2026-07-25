@@ -1,7 +1,7 @@
 import { AlertCircle, ImageOff, ImagePlus, Loader2 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { DragEvent, KeyboardEvent } from 'react';
-import { Button } from '../../../../components/ui/button';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -9,8 +9,18 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle
-} from '../../../../components/ui/dialog';
-import type { EditorI18nMessages, ImageUploadConfig } from '../../../../types/editor';
+} from '@/components/ui/dialog';
+import type { EditorI18nMessages, ImageUploadConfig } from '@/types/editor';
+import {
+  DEFAULT_MAX_FILE_SIZE,
+  formatFileSize,
+  getDefaultImageAltText,
+  IMAGE_ALT_INPUT_ID,
+  IMAGE_FILE_INPUT_ID,
+  isValidUrl,
+  preloadImage,
+  readFileAsDataUrl
+} from '@/plugins/custom/image/image-upload-dialog/image-upload-utils';
 
 /**
  * 定义图片弹窗上传方式。
@@ -43,75 +53,6 @@ interface ImageUploadDialogProps {
   onCancel: () => void;
 }
 
-// 默认最大文件体积，用于提示文案。
-const DEFAULT_MAX_FILE_SIZE = 5 * 1024 * 1024;
-// 图片文件输入框 ID。
-const IMAGE_FILE_INPUT_ID = 'zt-md-image-upload-file-input';
-
-/**
- * 读取文件为 Data URL。
- */
-const readFileAsDataUrl = (file: File): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    // 文件读取器。
-    const reader = new FileReader();
-    reader.onload = () => {
-      // 读取结果。
-      const result = reader.result;
-      if (typeof result === 'string') {
-        resolve(result);
-        return;
-      }
-
-      reject(new Error('Invalid file result'));
-    };
-    reader.onerror = () => {
-      reject(reader.error ?? new Error('File read failed'));
-    };
-    reader.readAsDataURL(file);
-  });
-};
-
-/**
- * 格式化文件体积。
- */
-const formatFileSize = (size: number): string => {
-  if (size < 1024 * 1024) {
-    return `${Math.ceil(size / 1024)}KB`;
-  }
-  return `${(size / 1024 / 1024).toFixed(1)}MB`;
-};
-
-/**
- * 校验链接是否可作为 URL。
- */
-const isValidUrl = (value: string): boolean => {
-  try {
-    // URL 构造器负责基础格式校验。
-    const url = new URL(value);
-    return Boolean(url.protocol && url.host);
-  } catch {
-    return false;
-  }
-};
-
-/**
- * 预加载图片，确保插入编辑器前已经可渲染。
- */
-const preloadImage = (src: string): Promise<void> => {
-  return new Promise((resolve, reject) => {
-    // 预加载图片实例。
-    const image = new Image();
-    image.onload = () => {
-      resolve();
-    };
-    image.onerror = () => {
-      reject(new Error('Image load failed'));
-    };
-    image.src = src;
-  });
-};
-
 /**
  * 渲染图片上传弹窗。
  */
@@ -124,10 +65,10 @@ export const ImageUploadDialog = ({
 }: ImageUploadDialogProps): JSX.Element => {
   // 当前上传方式。
   const [uploadType, setUploadType] = useState<ImageUploadType>('file');
-  // 当前选择的文件。
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   // 当前图片地址。
   const [imageUrl, setImageUrl] = useState('');
+  // 当前图片替代文本。
+  const [altText, setAltText] = useState('');
   // 当前预览图是否加载失败。
   const [previewLoadError, setPreviewLoadError] = useState(false);
   // 当前错误提示。
@@ -156,6 +97,8 @@ export const ImageUploadDialog = ({
   const isImageUploadHintError = Boolean(error);
   // 当前提示行是否展示可见文案。
   const shouldShowImageUploadHint = Boolean(imageUploadHint);
+  // 是否展示图片替代文本输入框。
+  const shouldShowAltInput = Boolean(imageUrl) && !error && !isUploading && !previewLoadError;
   // 是否禁用确认按钮。
   const isConfirmDisabled = !imageUrl || Boolean(error) || isInteractionLocked || previewLoadError;
 
@@ -164,21 +107,21 @@ export const ImageUploadDialog = ({
    */
   const processFile = useCallback(async (file: File): Promise<void> => {
     if (!file.type.startsWith('image/')) {
-      setSelectedFile(null);
       setImageUrl('');
+      setAltText('');
       setError(messages.imageUploadInvalidType);
       return;
     }
 
     if (file.size > maxFileSize) {
-      setSelectedFile(null);
       setImageUrl('');
+      setAltText('');
       setError(messages.imageUploadFileSizeExceeded.replace('{size}', formatFileSize(maxFileSize)));
       return;
     }
 
     setError('');
-    setSelectedFile(file);
+    setAltText(getDefaultImageAltText(file.name));
     setPreviewLoadError(false);
     setIsUploading(true);
 
@@ -229,7 +172,6 @@ export const ImageUploadDialog = ({
    * 处理图片链接变化。
    */
   const handleUrlChange = useCallback((nextUrl: string): void => {
-    setSelectedFile(null);
     setPreviewLoadError(false);
     setImageUrl(nextUrl);
 
@@ -289,8 +231,8 @@ export const ImageUploadDialog = ({
       return;
     }
     setUploadType(nextUploadType);
-    setSelectedFile(null);
     setImageUrl('');
+    setAltText('');
     setPreviewLoadError(false);
     setError('');
   }, [isInteractionLocked]);
@@ -321,7 +263,7 @@ export const ImageUploadDialog = ({
       }
       onConfirm({
         src: imageUrl,
-        alt: uploadType === 'file' ? selectedFile?.name ?? '' : ''
+        alt: altText.trim()
       });
     } catch {
       if (mountedRef.current) {
@@ -334,6 +276,7 @@ export const ImageUploadDialog = ({
       }
     }
   }, [
+    altText,
     imageUrl,
     isInteractionLocked,
     messages.imageUploadInvalidUrl,
@@ -341,7 +284,6 @@ export const ImageUploadDialog = ({
     messages.imageUploadSelectOrEnterImage,
     messages.imageUploadUploadingWait,
     onConfirm,
-    selectedFile,
     uploadType
   ]);
 
@@ -373,7 +315,7 @@ export const ImageUploadDialog = ({
       <DialogContent
         container={portalContainer}
         className="zt-md-image-upload-content-shell max-w-2xl sm:!max-w-2xl max-h-[90vh] overflow-hidden flex flex-col"
-        showCloseButton={false}
+        closeLabel={messages.imageUploadCancelLabel}
         onCloseAutoFocus={(event) => event.preventDefault()}
         onMouseDown={(event) => event.stopPropagation()}
         onKeyDown={handleKeyDown}
@@ -385,12 +327,13 @@ export const ImageUploadDialog = ({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="zt-md-image-upload-segmented" role="tablist" aria-label={messages.imageUploadDialogTitle}>
+        <div className="zt-md-image-upload-segmented" role="group" aria-label={messages.imageUploadDialogTitle}>
           <Button
             type="button"
             variant="ghost"
             className="zt-md-image-upload-segment"
             data-active={uploadType === 'file' ? 'true' : 'false'}
+            aria-pressed={uploadType === 'file'}
             disabled={isInteractionLocked}
             onClick={() => handleUploadTypeChange('file')}
           >
@@ -401,6 +344,7 @@ export const ImageUploadDialog = ({
             variant="ghost"
             className="zt-md-image-upload-segment"
             data-active={uploadType === 'url' ? 'true' : 'false'}
+            aria-pressed={uploadType === 'url'}
             disabled={isInteractionLocked}
             onClick={() => handleUploadTypeChange('url')}
           >
@@ -508,6 +452,23 @@ export const ImageUploadDialog = ({
               </div>
             )}
 
+            {shouldShowAltInput ? (
+              <div className="zt-md-image-upload-alt">
+                <label className="zt-md-image-upload-label" htmlFor={IMAGE_ALT_INPUT_ID}>
+                  {messages.imageUploadAltLabel}
+                </label>
+                <input
+                  id={IMAGE_ALT_INPUT_ID}
+                  type="text"
+                  className="zt-md-image-upload-alt-input"
+                  placeholder={messages.imageUploadAltPlaceholder}
+                  value={altText}
+                  disabled={isInteractionLocked}
+                  onChange={(event) => setAltText(event.target.value)}
+                />
+              </div>
+            ) : null}
+
             <div
               className="zt-md-image-upload-file-hint zt-md-image-upload-reselect-hint"
               data-error={isImageUploadHintError ? 'true' : 'false'}
@@ -538,7 +499,11 @@ export const ImageUploadDialog = ({
               void handleConfirm();
             }}
           >
-            {isInteractionLocked ? messages.imageUploadUploadingLabel : messages.imageUploadConfirmLabel}
+            {isUploading
+              ? messages.imageUploadUploadingLabel
+              : isPreparingInsert
+                ? messages.imageUploadInsertingLabel
+                : messages.imageUploadConfirmLabel}
           </Button>
         </DialogFooter>
       </DialogContent>

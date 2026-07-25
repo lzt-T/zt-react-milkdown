@@ -24,7 +24,8 @@
   }
 
   .zt-md-editor .zt-md-math-inline-error {
-    @apply ml-1 text-xs text-red-500;
+    @apply ml-1 text-xs;
+    color: var(--zt-destructive);
   }
 
   .zt-md-editor .zt-md-math-inline-editor {
@@ -40,6 +41,7 @@
   }
 
   .zt-md-editor .zt-md-math-inline-editor-error {
-    @apply whitespace-nowrap text-xs text-red-500;
+    @apply whitespace-nowrap text-xs;
+    color: var(--zt-destructive);
   }
 }

@@ -44,7 +44,7 @@
     justify-content: space-between;
     gap: 0.4rem;
     border: 1px solid var(--zt-border);
-    border-radius: 0.5rem;
+    border-radius: var(--zt-radius);
     background: color-mix(in srgb, var(--zt-surface) 88%, var(--zt-bg));
     color: color-mix(in srgb, var(--zt-fg) 82%, var(--zt-muted));
     padding: 0.22rem 0.45rem;
@@ -67,10 +67,10 @@
   .zt-md-code-language-picker-panel {
     width: 14rem;
     border: 1px solid var(--zt-border);
-    border-radius: 0.6rem;
+    border-radius: var(--zt-radius-lg);
     background: var(--zt-surface);
     padding: 0.45rem;
-    box-shadow: 0 8px 22px -14px color-mix(in srgb, var(--zt-primary) 52%, transparent);
+    box-shadow: 0 10px 24px -14px color-mix(in srgb, black 32%, transparent);
     transform-origin: top right;
     animation: zt-md-code-language-picker-panel-in 120ms ease-out;
   }
@@ -92,7 +92,7 @@
     align-items: center;
     gap: 0.35rem;
     border: 1px solid var(--zt-border);
-    border-radius: 0.45rem;
+    border-radius: var(--zt-radius);
     background: color-mix(in srgb, var(--zt-surface) 88%, var(--zt-bg));
     padding: 0.28rem 0.4rem;
   }
@@ -131,7 +131,7 @@
     align-items: center;
     justify-content: space-between;
     border: 0;
-    border-radius: 0.45rem;
+    border-radius: var(--zt-radius);
     background: transparent;
     color: var(--zt-fg);
     padding: 0.3rem 0.42rem;

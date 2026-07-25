@@ -3,10 +3,10 @@
     position: absolute;
     z-index: 1200;
     border: 1px solid var(--zt-border);
-    border-radius: 12px;
+    border-radius: var(--zt-radius-lg);
     background: var(--zt-surface);
     color: var(--zt-fg);
-    box-shadow: 0 12px 30px -20px color-mix(in srgb, var(--zt-primary) 40%, transparent);
+    box-shadow: 0 12px 28px -16px color-mix(in srgb, black 28%, transparent);
     min-width: 210px;
     max-height: 320px;
     overflow: auto;
@@ -23,7 +23,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    border-radius: 8px;
+    border-radius: var(--zt-radius);
     padding: 8px 10px;
     font-size: 14px;
     line-height: 1.4;
@@ -58,5 +58,13 @@
     color: var(--zt-muted);
     font-size: 12px;
     line-height: 1.2;
+  }
+}
+
+@media (max-width: 767px) {
+  @layer components {
+    .slash-menu-item {
+      min-height: 44px;
+    }
   }
 }

@@ -89,6 +89,8 @@ const DialogOverlay = React.forwardRef<
 type DialogContentProps = React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & {
   /** 是否展示默认关闭按钮。 */
   showCloseButton?: boolean
+  /** 默认关闭按钮的无障碍文案。 */
+  closeLabel?: string
   /** 可选 Portal 容器，未提供时默认挂载到 body。 */
   container?: HTMLElement | null
 }
@@ -106,6 +108,7 @@ const DialogContent = React.forwardRef<
     className,
     children,
     showCloseButton = true,
+    closeLabel = "Close",
     ...props
   }, ref) {
     return (
@@ -130,7 +133,7 @@ const DialogContent = React.forwardRef<
               >
                 <XIcon
                 />
-                <span className="sr-only">Close</span>
+                <span className="sr-only">{closeLabel}</span>
               </Button>
             </DialogPrimitive.Close>
           )}

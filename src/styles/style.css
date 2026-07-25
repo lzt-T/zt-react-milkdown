@@ -4,7 +4,6 @@
 @import "tailwindcss/utilities.css" layer(utilities);
 @import "tw-animate-css";
 @import "../theme/tokens.css";
-/* @import "./modules/math-block.css"; */
 @import "./modules/slash-menu.css";
 @import "./modules/image.css";
 @import "./modules/image-upload-dialog.css";
@@ -88,17 +87,33 @@
 
 @layer components {
   .zt-md {
-    @apply relative w-full overflow-visible rounded-[var(--zt-radius)] border border-zt-border bg-zt-surface font-sans text-zt-fg transition-[transform,border-color,box-shadow] duration-300 ease-out;
-    box-shadow:
-      inset 0 1px 0 color-mix(in srgb, white 36%, transparent),
-      0 18px 40px -26px color-mix(in srgb, var(--zt-primary) 20%, transparent);
+    @apply relative w-full overflow-visible rounded-[var(--zt-radius-lg)] border border-zt-border bg-zt-surface font-sans text-zt-fg;
+    transition:
+      border-color 150ms ease-out,
+      box-shadow 150ms ease-out;
   }
 
   .zt-md:focus-within {
-    border-color: var(--zt-border);
-    box-shadow:
-      inset 0 1px 0 color-mix(in srgb, white 36%, transparent),
-      0 18px 40px -26px color-mix(in srgb, var(--zt-primary) 20%, transparent);
+    border-color: var(--zt-primary);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--zt-primary) 22%, transparent);
+  }
+
+  .zt-md[data-readonly='true']::after {
+    content: attr(data-readonly-label);
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 20;
+    padding: 4px 7px;
+    border: 1px solid var(--zt-border);
+    border-radius: var(--zt-radius);
+    background: var(--zt-elevated);
+    color: var(--zt-muted);
+    font-size: 11px;
+    font-weight: 650;
+    letter-spacing: 0.01em;
+    line-height: 1;
+    pointer-events: none;
   }
 
   .zt-md-header {
@@ -110,7 +125,7 @@
   .zt-md-body {
     @apply relative min-h-[160px];
     background: var(--zt-surface);
-    border-radius: var(--zt-radius);
+    border-radius: var(--zt-radius-lg);
   }
 
   .zt-md-portal {
@@ -140,12 +155,13 @@
 
   .zt-md-error {
     @apply absolute right-4 top-4 z-20 rounded-md border border-zt-border px-2 py-1 text-xs;
-    background: color-mix(in srgb, var(--zt-surface) 84%, var(--zt-secondary));
-    color: color-mix(in srgb, var(--zt-fg) 72%, var(--zt-secondary));
+    border-color: color-mix(in srgb, var(--zt-destructive) 42%, var(--zt-border));
+    background: color-mix(in srgb, var(--zt-destructive) 9%, var(--zt-surface));
+    color: var(--zt-destructive);
   }
 
   .zt-md-editor {
-    @apply min-h-[160px] px-5 py-4 text-[15px] leading-8 outline-none;
+    @apply min-h-[160px] px-5 py-4 text-[15.5px] leading-[1.75] outline-none;
     position: relative;
   }
 
@@ -156,6 +172,11 @@
   .zt-md-editor .ProseMirror {
     outline: none;
     white-space: pre-wrap;
+    caret-color: var(--zt-primary);
+  }
+
+  .zt-md-editor .ProseMirror ::selection {
+    background: color-mix(in srgb, var(--zt-primary) 24%, transparent);
   }
 
   .zt-md-editor .ProseMirror p {
@@ -247,15 +268,66 @@
   }
 
   .zt-md *:hover::-webkit-scrollbar-thumb {
-    background-color: color-mix(in srgb, var(--zt-primary) 34%, var(--zt-muted));
+    background-color: color-mix(in srgb, var(--zt-muted) 68%, var(--zt-surface));
   }
 
   .zt-md-readonly {
-    @apply cursor-default opacity-90;
+    @apply cursor-default;
   }
 
   .zt-md-editable {
     @apply cursor-text;
+  }
+
+  .zt-md :is(
+      .zt-md-code-block-action-button,
+      .zt-md-image-action-button,
+      .zt-md-math-block-action-button,
+      .zt-md-selection-tooltip-button,
+      .zt-md-selection-transform-trigger,
+      .zt-md-selection-transform-item,
+      .zt-md-selection-link-popover-action,
+      .zt-md-table-action-button,
+      .zt-md-table-action-menu-item,
+      .zt-md-code-language-picker-trigger,
+      .zt-md-code-language-picker-option
+    ):focus-visible {
+    outline: 2px solid var(--zt-primary);
+    outline-offset: 1px;
+  }
+}
+
+@media (max-width: 767px) {
+  @layer components {
+    .zt-md :is(
+        .zt-md-code-block-action-button,
+        .zt-md-image-action-button,
+        .zt-md-math-block-action-button,
+        .zt-md-selection-tooltip-button,
+        .zt-md-selection-transform-trigger,
+        .zt-md-selection-link-popover-action,
+        .zt-md-table-action-button,
+        .zt-md-table-action-menu-item,
+        .zt-md-code-language-picker-trigger,
+        .zt-md-code-language-picker-option
+      ) {
+      min-width: 44px;
+      min-height: 44px;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  @layer components {
+    .zt-md,
+    .zt-md *,
+    .zt-md *::before,
+    .zt-md *::after {
+      scroll-behavior: auto !important;
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 }
 
