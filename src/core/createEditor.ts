@@ -24,7 +24,11 @@ import { gfm } from '@milkdown/preset-gfm';
 import { replaceAll } from '@milkdown/utils';
 import { createReplaceAllExecutor } from './commands';
 import { resolvePresetPlugins } from '../plugins/preset-common';
-import { dropCursorPlugin, gapCursorPlugin } from '../plugins/custom/cursor';
+import {
+  blockBoundaryNavigationPlugin,
+  dropCursorPlugin,
+  gapCursorPlugin
+} from '../plugins/custom/cursor';
 import {
   createImageEditableNodeView,
   configureImageResizableSchema,
@@ -215,6 +219,7 @@ export const createMilkdownEditorRuntime = (
     indent,
     imageDeleteSelection: imageDeleteSelectionPlugin,
     tableArrowEntry: tableArrowEntryPlugin,
+    blockBoundaryNavigation: blockBoundaryNavigationPlugin,
     mathBackspaceEntry: mathBackspaceEntryPlugin,
     blockquoteBackspaceLift: blockquoteBackspaceLiftPlugin,
     tableFocusActions: tableFocusActionsPlugin,

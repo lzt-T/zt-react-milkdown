@@ -8,6 +8,7 @@ import {
   isCodeBlockPreviewLanguage,
   normalizeCodeBlockLanguage
 } from '@/plugins/custom/code-block/code-block-language';
+import { moveSelectionFromSpecialBlock } from '@/plugins/custom/cursor';
 import type { EditorI18nMessages } from '@/types/editor';
 import { resolveEditorMessages } from '@/local/i18n';
 
@@ -219,6 +220,7 @@ class CodeBlockEditableNodeView implements NodeView {
     this.previewButton.addEventListener('click', this.handlePreviewClick);
     this.copyButton.addEventListener('click', this.handleCopyClick);
     this.deleteButton.addEventListener('click', this.handleDeleteClick);
+    this.previewContainer.addEventListener('keydown', this.handlePreviewKeyDown);
   }
 
   /**
@@ -235,6 +237,32 @@ class CodeBlockEditableNodeView implements NodeView {
     this.syncPreviewState();
     // 触发插件视图按新的代码块尺寸刷新浮层定位，不修改文档内容。
     this.view.dispatch(this.view.state.tr.setMeta(CODE_BLOCK_PREVIEW_LAYOUT_META, true));
+  };
+
+  /**
+   * 处理预览容器方向键边界导航。
+   */
+  private readonly handlePreviewKeyDown = (event: KeyboardEvent): void => {
+    if (
+      event.defaultPrevented ||
+      event.altKey ||
+      event.ctrlKey ||
+      event.metaKey ||
+      event.shiftKey ||
+      (event.key !== 'ArrowUp' && event.key !== 'ArrowDown')
+    ) {
+      return;
+    }
+
+    // 当前代码块位置。
+    const nodePosition = resolveNodePosition(this.getPos);
+    if (nodePosition === null) {
+      return;
+    }
+
+    if (moveSelectionFromSpecialBlock(this.view, nodePosition, this.node, event.key)) {
+      event.preventDefault();
+    }
   };
 
   /**
@@ -451,6 +479,7 @@ class CodeBlockEditableNodeView implements NodeView {
     this.previewButton.removeEventListener('click', this.handlePreviewClick);
     this.copyButton.removeEventListener('click', this.handleCopyClick);
     this.deleteButton.removeEventListener('click', this.handleDeleteClick);
+    this.previewContainer.removeEventListener('keydown', this.handlePreviewKeyDown);
     if (this.copyFeedbackTimer !== null) {
       clearTimeout(this.copyFeedbackTimer);
       this.copyFeedbackTimer = null;
