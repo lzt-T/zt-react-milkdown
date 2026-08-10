@@ -131,6 +131,7 @@
     display: flex;
     box-sizing: border-box;
     height: 26px;
+    flex-shrink: 0;
     width: 100%;
     align-items: center;
     justify-content: space-between;
