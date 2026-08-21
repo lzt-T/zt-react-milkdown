@@ -210,6 +210,8 @@ export interface ImageUploadConfig {
   upload?: ImageUploadHandler;
   /** 允许上传的最大文件体积（字节）。 */
   maxFileSize?: number;
+  /** 图片解析与序列化额外允许的 URL 协议，协议名需包含末尾冒号。 */
+  allowedProtocols?: string[];
 }
 
 /**

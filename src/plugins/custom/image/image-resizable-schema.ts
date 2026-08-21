@@ -1,6 +1,6 @@
 import { imageSchema, paragraphSchema } from '@milkdown/preset-commonmark';
 import type { GetNodeSchema } from '@milkdown/utils';
-import { normalizeSafeUrl, parseSafeImageHtml } from '../../../utils/security';
+import { normalizeSafeImageUrl, parseSafeImageHtml } from '../../../utils/security';
 
 /**
  * 图片宽度百分比最小值。
@@ -28,7 +28,10 @@ interface ImageSchemaConfigContext {
 /**
  * 解析段落中独立存在的图片节点。
  */
-const resolveStandaloneMarkdownImage = (node: any): any | null => {
+const resolveStandaloneMarkdownImage = (
+  node: any,
+  allowedProtocols: readonly string[]
+): any | null => {
   // 段落子节点列表。
   const children = Array.isArray(node.children) ? node.children : [];
   // 段落内唯一子节点。
@@ -41,7 +44,10 @@ const resolveStandaloneMarkdownImage = (node: any): any | null => {
     return child;
   }
 
-  if (child?.type === 'html' && parseSafeImageHtml(child.value, normalizeImageWidthStyle) !== null) {
+  if (
+    child?.type === 'html' &&
+    parseSafeImageHtml(child.value, normalizeImageWidthStyle, allowedProtocols) !== null
+  ) {
     return child;
   }
 
@@ -116,9 +122,12 @@ const escapeHtmlAttribute = (value: unknown): string => {
 /**
  * 序列化图片 HTML。
  */
-const serializeImageHtml = (attrs: Record<string, unknown>): string => {
+const serializeImageHtml = (
+  attrs: Record<string, unknown>,
+  allowedProtocols: readonly string[]
+): string => {
   // 归一化后的图片地址。
-  const src = normalizeSafeUrl(attrs.src);
+  const src = normalizeSafeImageUrl(attrs.src, allowedProtocols);
   if (!src) {
     return '';
   }
@@ -138,7 +147,10 @@ const serializeImageHtml = (attrs: Record<string, unknown>): string => {
 /**
  * 创建支持 width style 的图片 schema。
  */
-const createResizableImageSchema = (prevSchema: GetNodeSchema): GetNodeSchema => {
+const createResizableImageSchema = (
+  prevSchema: GetNodeSchema,
+  allowedProtocols: readonly string[]
+): GetNodeSchema => {
   return (ctx) => {
     // 原始图片 schema。
     const schema = prevSchema(ctx);
@@ -158,7 +170,7 @@ const createResizableImageSchema = (prevSchema: GetNodeSchema): GetNodeSchema =>
             // 图片 DOM 节点。
             const image = dom as HTMLImageElement;
             // 归一化后的图片地址。
-            const src = normalizeSafeUrl(image.getAttribute('src') ?? '');
+            const src = normalizeSafeImageUrl(image.getAttribute('src') ?? '', allowedProtocols);
             if (!src) {
               return false;
             }
@@ -176,13 +188,18 @@ const createResizableImageSchema = (prevSchema: GetNodeSchema): GetNodeSchema =>
         match: (node) => {
           return (
             node.type === 'image' ||
-            (node.type === 'html' && parseSafeImageHtml(node.value, normalizeImageWidthStyle) !== null)
+            (node.type === 'html' &&
+              parseSafeImageHtml(node.value, normalizeImageWidthStyle, allowedProtocols) !== null)
           );
         },
         runner: (state, node, type) => {
           if (node.type === 'html') {
             // HTML 图片属性。
-            const attrs = parseSafeImageHtml(node.value, normalizeImageWidthStyle);
+            const attrs = parseSafeImageHtml(
+              node.value,
+              normalizeImageWidthStyle,
+              allowedProtocols
+            );
             if (attrs) {
               state.addNode(type, attrs);
             }
@@ -190,7 +207,7 @@ const createResizableImageSchema = (prevSchema: GetNodeSchema): GetNodeSchema =>
           }
 
           // 归一化后的 Markdown 图片地址。
-          const src = normalizeSafeUrl(String(node.url ?? ''));
+          const src = normalizeSafeImageUrl(String(node.url ?? ''), allowedProtocols);
           if (!src) {
             return;
           }
@@ -209,7 +226,7 @@ const createResizableImageSchema = (prevSchema: GetNodeSchema): GetNodeSchema =>
         },
         runner: (state, node) => {
           // 归一化后的图片地址。
-          const src = normalizeSafeUrl(node.attrs.src);
+          const src = normalizeSafeImageUrl(node.attrs.src, allowedProtocols);
           if (!src) {
             return;
           }
@@ -218,7 +235,7 @@ const createResizableImageSchema = (prevSchema: GetNodeSchema): GetNodeSchema =>
           const style = normalizeImageWidthStyle(node.attrs.style);
           if (style) {
             // 序列化后的安全图片 HTML。
-            const html = serializeImageHtml({ ...node.attrs, src, style });
+            const html = serializeImageHtml({ ...node.attrs, src, style }, allowedProtocols);
             if (html) {
               state.addNode('html', undefined, html);
             }
@@ -242,7 +259,10 @@ const createResizableImageSchema = (prevSchema: GetNodeSchema): GetNodeSchema =>
 /**
  * 创建兼容块级图片的 paragraph schema。
  */
-const createImageCompatibleParagraphSchema = (prevSchema: GetNodeSchema): GetNodeSchema => {
+const createImageCompatibleParagraphSchema = (
+  prevSchema: GetNodeSchema,
+  allowedProtocols: readonly string[]
+): GetNodeSchema => {
   return (ctx) => {
     // 原始段落 schema。
     const schema = prevSchema(ctx);
@@ -253,7 +273,7 @@ const createImageCompatibleParagraphSchema = (prevSchema: GetNodeSchema): GetNod
         ...schema.parseMarkdown,
         runner: (state, node, type) => {
           // 独立图片节点。
-          const standaloneImage = resolveStandaloneMarkdownImage(node);
+          const standaloneImage = resolveStandaloneMarkdownImage(node, allowedProtocols);
           if (standaloneImage) {
             state.next(standaloneImage);
             return;
@@ -269,11 +289,17 @@ const createImageCompatibleParagraphSchema = (prevSchema: GetNodeSchema): GetNod
 /**
  * 配置支持尺寸调整的图片 schema。
  */
-export const configureImageResizableSchema = (ctx: ImageSchemaConfigContext): void => {
+export const configureImageResizableSchema = (
+  ctx: ImageSchemaConfigContext,
+  allowedProtocols: readonly string[] = []
+): void => {
   // 原始图片 schema 工厂。
   const prevImageSchema = ctx.get(imageSchema.key) as GetNodeSchema;
   // 原始段落 schema 工厂。
   const prevParagraphSchema = ctx.get(paragraphSchema.key) as GetNodeSchema;
-  ctx.set(imageSchema.key, createResizableImageSchema(prevImageSchema));
-  ctx.set(paragraphSchema.key, createImageCompatibleParagraphSchema(prevParagraphSchema));
+  ctx.set(imageSchema.key, createResizableImageSchema(prevImageSchema, allowedProtocols));
+  ctx.set(
+    paragraphSchema.key,
+    createImageCompatibleParagraphSchema(prevParagraphSchema, allowedProtocols)
+  );
 };

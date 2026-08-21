@@ -250,7 +250,7 @@ export const createMilkdownEditorRuntime = (
   /** 编辑器实例。 */
   const editor = Editor.make();
   editor.config((ctx: any) => {
-    configureImageResizableSchema(ctx);
+    configureImageResizableSchema(ctx, options.imageUpload?.allowedProtocols);
     ctx.set(rootCtx, options.root);
     ctx.set(defaultValueCtx, options.markdown);
     ctx.set(editorViewOptionsCtx, {

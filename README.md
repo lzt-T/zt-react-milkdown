@@ -140,7 +140,19 @@ export default function Demo() {
 - `ImageUploadConfig`
   - `upload?: (file: File) => string | Promise<string>`：自定义上传函数，返回最终图片 URL。
   - `maxFileSize?: number`：允许上传的最大文件体积（字节）。
+  - `allowedProtocols?: string[]`：图片解析与序列化额外允许的 URL 协议，协议名需包含末尾冒号，例如 `inkdown-file:`。仅配置受信任且由宿主应用安全处理的协议。
   - 未提供 `upload` 时，默认走内置本地读取流程（返回 data URL）。
+
+Electron 应用可为受主进程权限校验保护的本地图片协议显式放行：
+
+```tsx
+<MilkdownEditor
+  imageUpload={{
+    upload: importImage,
+    allowedProtocols: ['inkdown-file:']
+  }}
+/>
+```
 
 ## 本地开发
 

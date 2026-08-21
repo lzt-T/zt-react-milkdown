@@ -15,6 +15,9 @@ export interface SafeImageHtmlAttrs {
 // 允许通过的绝对 URL 协议集合。
 const ALLOWED_ABSOLUTE_PROTOCOLS = new Set(['http:', 'https:', 'mailto:', 'tel:']);
 
+// 图片内置上传需要额外允许的协议集合。
+const ALLOWED_IMAGE_PROTOCOLS = new Set(['data:']);
+
 // 安全协议检测前需要移除的控制字符与空白字符。
 const URL_PROTOCOL_NOISE_PATTERN = /[\u0000-\u0020\u007f]+/g;
 
@@ -28,9 +31,9 @@ const UNSAFE_URL_CHARACTER_PATTERN = /[<>"'`]/;
 const SAFE_IMAGE_ATTRIBUTE_NAMES = new Set(['src', 'alt', 'title', 'style']);
 
 /**
- * 规范化并校验安全 URL，仅保留白名单协议与相对路径。
+ * 使用指定协议集合规范化并校验 URL。
  */
-export const normalizeSafeUrl = (value: unknown): string => {
+const normalizeUrl = (value: unknown, allowedProtocols: ReadonlySet<string>): string => {
   if (typeof value !== 'string') {
     return '';
   }
@@ -57,7 +60,7 @@ export const normalizeSafeUrl = (value: unknown): string => {
     return trimmedValue;
   }
 
-  if (!ALLOWED_ABSOLUTE_PROTOCOLS.has(scheme)) {
+  if (!allowedProtocols.has(scheme)) {
     return '';
   }
 
@@ -69,11 +72,35 @@ export const normalizeSafeUrl = (value: unknown): string => {
 };
 
 /**
+ * 规范化并校验安全 URL，仅保留默认协议与相对路径。
+ */
+export const normalizeSafeUrl = (value: unknown): string => {
+  return normalizeUrl(value, ALLOWED_ABSOLUTE_PROTOCOLS);
+};
+
+/**
+ * 规范化并校验安全图片 URL，允许调用方扩展图片专用协议。
+ */
+export const normalizeSafeImageUrl = (
+  value: unknown,
+  allowedProtocols: readonly string[] = []
+): string => {
+  // 图片允许协议由默认 URL、内置图片和调用方配置共同组成。
+  const imageProtocols = new Set([
+    ...ALLOWED_ABSOLUTE_PROTOCOLS,
+    ...ALLOWED_IMAGE_PROTOCOLS,
+    ...allowedProtocols.map((protocol) => protocol.trim().toLowerCase())
+  ]);
+  return normalizeUrl(value, imageProtocols);
+};
+
+/**
  * 解析并校验仅包含安全图片的 HTML 片段。
  */
 export const parseSafeImageHtml = (
   html: unknown,
-  normalizeStyle: (style: unknown) => string
+  normalizeStyle: (style: unknown) => string,
+  allowedProtocols: readonly string[] = []
 ): SafeImageHtmlAttrs | null => {
   if (typeof html !== 'string') {
     return null;
@@ -114,7 +141,7 @@ export const parseSafeImageHtml = (
   }
 
   // 归一化后的图片地址。
-  const src = normalizeSafeUrl(imageElement.getAttribute('src') ?? '');
+  const src = normalizeSafeImageUrl(imageElement.getAttribute('src') ?? '', allowedProtocols);
   if (!src) {
     return null;
   }
