@@ -27,7 +27,7 @@ colors:
 typography:
   headline:
     fontFamily: "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', 'Microsoft YaHei UI', 'PingFang SC', 'Noto Sans SC', sans-serif"
-    fontSize: "1.75em"
+    fontSize: "2em"
     fontWeight: 700
     lineHeight: 1.28
   title:
@@ -103,7 +103,7 @@ components:
 ## Typography
 
 - 全界面使用系统 Sans：`ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', 'Microsoft YaHei UI', 'PingFang SC', 'Noto Sans SC', sans-serif`。不引入展示字体，不以字形噱头争夺编辑内容的注意力。
-- 正文为 `15.5px / 1.75`，保证长时间写作的稳定节奏；H1 为 `1.75em`，其余标题通过字号、600–700 字重和 `1.28` 行高建立层级。控件标签以 13–14px 为主，短而直接。
+- 正文为 `15.5px / 1.75`，保证长时间写作的稳定节奏；H1–H6 依次使用 `2em`、`1.75em`、`1.5em`、`1.25em`、`1.125em`、`1em`，并通过 600–700 字重和 `1.28` 行高建立清晰层级。控件标签以 13–14px 为主，短而直接。
 - 代码、公式源码等技术内容可使用现有等宽字体语义，但导航、按钮、输入和编辑正文仍以系统 Sans 为准。
 - 中英文混排必须保持紧凑但不拥挤；不要用全大写、夸张字距或超大标题制造“品牌感”。
 

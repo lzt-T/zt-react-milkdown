@@ -11,38 +11,38 @@
   }
 
   .zt-md-editor .ProseMirror h1 {
-    font-size: 1.75em;
+    font-size: 2em;
   }
 
   .zt-md-editor .ProseMirror h2 {
-    font-size: 1.375em;
+    font-size: 1.75em;
   }
 
   .zt-md-editor .ProseMirror h3 {
-    font-size: 1.1875em;
+    font-size: 1.5em;
   }
 
   .zt-md-editor .ProseMirror h4 {
-    font-size: 1.125em;
+    font-size: 1.25em;
     font-weight: 600;
   }
 
   .zt-md-editor .ProseMirror h5 {
-    font-size: 1em;
+    font-size: 1.125em;
     font-weight: 600;
   }
 
   .zt-md-editor .ProseMirror h6 {
-    font-size: 0.875em;
+    font-size: 1em;
     font-weight: 600;
   }
 
-  .zt-md-editor .ProseMirror :is(h1, h2, h3, h4, h5, h6) + :is(h1, h2, h3, h4, h5, h6) {
-    margin-top: 0.62em;
+  .zt-md-editor .ProseMirror :is(h1, h2, h3, h4, h5, h6) + :is(h1, h2, h3, h4, h5, h6):not(:first-child) {
+    margin-top: 0.5rem;
   }
 
-  .zt-md-editor .ProseMirror :is(h1, h2, h3):not(:first-child) {
-    margin-top: 1.35em;
+  .zt-md-editor .ProseMirror :is(h1, h2, h3, h4, h5, h6):not(:first-child) {
+    margin-top: 0.75rem;
   }
 
   .zt-md-editor .ProseMirror :is(h1, h2, h3) + :is(p, ul, ol, blockquote) {
@@ -92,11 +92,27 @@
 @media (max-width: 560px) {
   @layer components {
     .zt-md-editor .ProseMirror h1 {
-      font-size: 1.55em;
+      font-size: 1.65em;
     }
 
     .zt-md-editor .ProseMirror h2 {
-      font-size: 1.25em;
+      font-size: 1.45em;
+    }
+
+    .zt-md-editor .ProseMirror h3 {
+      font-size: 1.3em;
+    }
+
+    .zt-md-editor .ProseMirror h4 {
+      font-size: 1.15em;
+    }
+
+    .zt-md-editor .ProseMirror h5 {
+      font-size: 1em;
+    }
+
+    .zt-md-editor .ProseMirror h6 {
+      font-size: 0.875em;
     }
   }
 }
