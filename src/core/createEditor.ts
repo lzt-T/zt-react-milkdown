@@ -31,6 +31,7 @@ import {
 } from '../plugins/custom/cursor';
 import {
   createImageEditableNodeView,
+  createImagePastePlugin,
   configureImageResizableSchema,
   imageDeleteSelectionPlugin
 } from '../plugins/custom/image';
@@ -198,6 +199,8 @@ export const createMilkdownEditorRuntime = (
   const codeBlockLanguagePickerPlugin = createCodeBlockLanguagePickerPlugin(messages, options.contentPortalContainer);
   /** 行内公式编辑插件实例。 */
   const mathInlineEditPlugin = createMathInlineEditPlugin(messages, options.contentPortalContainer);
+  /** 图片粘贴上传插件实例。 */
+  const imagePastePlugin = createImagePastePlugin(options.imageUpload, messages);
 
   /** 默认插件集合。 */
   const slashSetup = createSlashMenuPlugin(
@@ -220,6 +223,7 @@ export const createMilkdownEditorRuntime = (
     clipboard,
     indent,
     imageDeleteSelection: imageDeleteSelectionPlugin,
+    imagePaste: imagePastePlugin,
     tableArrowEntry: tableArrowEntryPlugin,
     blockBoundaryNavigation: blockBoundaryNavigationPlugin,
     headingBackspaceEmptyParagraph: headingBackspaceEmptyParagraphPlugin,

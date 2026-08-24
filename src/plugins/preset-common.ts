@@ -22,6 +22,8 @@ export interface PresetPluginExports {
   indent: unknown;
   /** 图片两段式删除插件实例。 */
   imageDeleteSelection: unknown;
+  /** 图片粘贴上传插件实例。 */
+  imagePaste: unknown;
   /** 表格方向键进入插件实例。 */
   tableArrowEntry: unknown;
   /** 特殊内容块边界导航插件实例。 */
@@ -105,6 +107,7 @@ export const resolvePresetPlugins = (
     appendPluginDescriptors(descriptors, 'indent', pluginExports.indent);
   }
   appendPluginDescriptors(descriptors, 'image-delete-selection', pluginExports.imageDeleteSelection);
+  appendPluginDescriptors(descriptors, 'image-paste', pluginExports.imagePaste);
   appendPluginDescriptors(descriptors, 'table-arrow-entry', pluginExports.tableArrowEntry);
   appendPluginDescriptors(descriptors, 'block-boundary-navigation', pluginExports.blockBoundaryNavigation);
   appendPluginDescriptors(

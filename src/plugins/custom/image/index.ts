@@ -2,6 +2,8 @@
 export * from './image-editable';
 /** 图片两段式删除插件导出。 */
 export * from './image-delete-selection';
+/** 图片粘贴插件导出。 */
+export * from './image-paste';
 /** 图片宽度 schema 适配导出。 */
 export * from './image-resizable-schema';
 /** 图片上传对话框能力导出。 */
