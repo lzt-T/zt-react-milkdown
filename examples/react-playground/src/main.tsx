@@ -143,6 +143,8 @@ const createPlaygroundMarkdown = (imageUrl: string): string => {
     "- [x] 配置主题与国际化",
     "- [ ] 接入生产环境图片上传",
     "",
+    "&nbsp;",
+    "",
     "## React 示例",
     "",
     "```tsx",
