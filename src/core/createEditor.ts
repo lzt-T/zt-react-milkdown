@@ -47,6 +47,7 @@ import { headingBackspaceEmptyParagraphPlugin } from '../plugins/custom/heading'
 import {
   codeBlockModASelectPlugin,
   codeBlockPrismPlugin,
+  configureCodeBlockLanguageSchema,
   createCodeBlockEditableNodeView,
   createCodeBlockLanguagePickerPlugin
 } from '../plugins/custom/code-block';
@@ -252,6 +253,7 @@ export const createMilkdownEditorRuntime = (
   /** 编辑器实例。 */
   const editor = Editor.make();
   editor.config((ctx: any) => {
+    configureCodeBlockLanguageSchema(ctx);
     configureImageResizableSchema(ctx, options.imageUpload?.allowedProtocols);
     ctx.set(rootCtx, options.root);
     ctx.set(defaultValueCtx, options.markdown);

@@ -534,7 +534,8 @@ class CodeBlockLanguagePickerView {
       ...codeBlockNode.attrs,
       language: normalizedLanguage
     };
-    const currentLanguage = normalizeCodeBlockLanguage(String(codeBlockNode.attrs.language ?? ''));
+    // 当前节点实际存储的语言值。
+    const currentLanguage = String(codeBlockNode.attrs.language ?? '');
     if (currentLanguage === normalizedLanguage) {
       return;
     }
