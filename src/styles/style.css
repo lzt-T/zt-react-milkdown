@@ -88,14 +88,7 @@
 @layer components {
   .zt-md {
     @apply relative w-full overflow-visible rounded-[var(--zt-radius-lg)] border border-zt-border bg-zt-surface font-sans text-zt-fg;
-    transition:
-      border-color 150ms ease-out,
-      box-shadow 150ms ease-out;
-  }
-
-  .zt-md:focus-within {
-    border-color: var(--zt-primary);
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--zt-primary) 22%, transparent);
+    transition: border-color 150ms ease-out;
   }
 
   .zt-md[data-readonly='true']::after {
