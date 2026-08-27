@@ -151,7 +151,12 @@ export const MilkdownEditor = (props: MilkdownEditorProps): JSX.Element => {
       return;
     }
 
-    if (target.closest('.ProseMirror') || target.closest('.zt-md-content-portal')) {
+    // 当前点击所属的 ProseMirror 根节点。
+    const proseMirror = target.closest('.ProseMirror');
+    if (
+      target.closest('.zt-md-content-portal') ||
+      (proseMirror !== null && target !== proseMirror)
+    ) {
       return;
     }
 

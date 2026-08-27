@@ -355,15 +355,26 @@ export const createMilkdownEditorRuntime = (
     editor.action((ctx: any) => {
       /** 当前 ProseMirror 视图。 */
       const view = ctx.get(editorViewCtx);
+      // 文档末尾节点。
+      const lastNode = view.state.doc.lastChild;
+      // 文档末尾节点在 ProseMirror 中的起始位置。
+      const lastNodePosition = lastNode
+        ? view.state.doc.content.size - lastNode.nodeSize
+        : null;
+      // 文档末尾节点对应的 DOM。
+      const lastNodeDom = lastNodePosition === null ? null : view.nodeDOM(lastNodePosition);
+      // 可用于测量文档内容底部的元素。
+      const lastNodeElement =
+        lastNodeDom instanceof Element ? lastNodeDom : (lastNodeDom?.parentElement ?? null);
       // 点击位置是否位于编辑器内容下方。
       const isBelowEditorContent =
-        coordinates !== undefined && coordinates.top > view.dom.getBoundingClientRect().bottom;
+        coordinates !== undefined &&
+        lastNodeElement !== null &&
+        coordinates.top > lastNodeElement.getBoundingClientRect().bottom;
 
       if (isBelowEditorContent) {
         // 普通段落节点类型。
         const paragraphType = view.state.schema.nodes.paragraph;
-        // 文档末尾节点。
-        const lastNode = view.state.doc.lastChild;
         // 文档末尾是否已有可聚焦的空段落。
         const hasTrailingEmptyParagraph =
           lastNode?.type === paragraphType && lastNode.content.size === 0;
