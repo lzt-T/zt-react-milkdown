@@ -1,6 +1,6 @@
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { Trash2 } from 'lucide-react';
+import { ImageOff, Trash2 } from 'lucide-react';
 import type { Node as ProseNode } from '@milkdown/prose/model';
 import type { EditorView, NodeView, NodeViewConstructor } from '@milkdown/prose/view';
 import type { EditorI18nMessages } from '../../../types/editor';
@@ -69,6 +69,9 @@ const renderLucideIconMarkup = (icon: typeof Trash2): string => {
 // 删除按钮图标。
 const deleteIconMarkup = renderLucideIconMarkup(Trash2);
 
+// 图片加载失败图标。
+const imageLoadErrorIconMarkup = renderLucideIconMarkup(ImageOff);
+
 /**
  * 解析 NodeView 的节点位置。
  */
@@ -107,6 +110,8 @@ class ImageEditableNodeView implements NodeView {
   private readonly deleteAriaLabel: string;
   // 图片元素。
   private readonly imageElement: HTMLImageElement;
+  // 图片加载失败占位元素。
+  private readonly imageLoadErrorElement: HTMLSpanElement;
   // 操作区容器。
   private readonly actionsContainer: HTMLSpanElement;
   // 删除按钮。
@@ -156,6 +161,13 @@ class ImageEditableNodeView implements NodeView {
     this.imageElement.addEventListener('load', this.handleImageLoad);
     this.imageElement.addEventListener('error', this.handleImageError);
 
+    // 图片加载失败占位元素。
+    this.imageLoadErrorElement = document.createElement('span');
+    this.imageLoadErrorElement.className = 'zt-md-image-load-error';
+    this.imageLoadErrorElement.contentEditable = 'false';
+    this.imageLoadErrorElement.innerHTML = imageLoadErrorIconMarkup;
+    this.imageLoadErrorElement.append(messages.imageUploadLoadFailed);
+
     // 左侧缩放手柄。
     this.leftResizeHandle = this.createResizeHandle(IMAGE_RESIZE_SIDE_LEFT);
 
@@ -174,7 +186,13 @@ class ImageEditableNodeView implements NodeView {
     this.deleteButton.innerHTML = deleteIconMarkup;
 
     this.actionsContainer.appendChild(this.deleteButton);
-    this.dom.append(this.imageElement, this.leftResizeHandle, this.rightResizeHandle, this.actionsContainer);
+    this.dom.append(
+      this.imageElement,
+      this.imageLoadErrorElement,
+      this.leftResizeHandle,
+      this.rightResizeHandle,
+      this.actionsContainer
+    );
     this.syncFromNode(node);
 
     this.deleteButton.addEventListener('click', this.handleDeleteClick);
@@ -246,6 +264,7 @@ class ImageEditableNodeView implements NodeView {
   private markImageLoading(): void {
     this.clearImageLoadingFinishTimer();
     this.imageLoadingStartedAt = performance.now();
+    delete this.dom.dataset.loadError;
     this.dom.dataset.loading = 'true';
   }
 
@@ -292,6 +311,7 @@ class ImageEditableNodeView implements NodeView {
    * 响应图片加载完成。
    */
   private readonly handleImageLoad = (): void => {
+    delete this.dom.dataset.loadError;
     this.finishImageLoadingWithMinimumDuration();
   };
 
@@ -299,6 +319,7 @@ class ImageEditableNodeView implements NodeView {
    * 响应图片加载失败。
    */
   private readonly handleImageError = (): void => {
+    this.dom.dataset.loadError = 'true';
     this.finishImageLoadingWithMinimumDuration();
   };
 
@@ -450,8 +471,11 @@ class ImageEditableNodeView implements NodeView {
     // 图片地址是否变化。
     const isImageSrcChanged = src !== this.currentImageSrc;
 
-    if (isImageSrcChanged && src) {
-      this.markImageLoading();
+    if (isImageSrcChanged) {
+      delete this.dom.dataset.loadError;
+      if (src) {
+        this.markImageLoading();
+      }
     }
 
     this.imageElement.setAttribute('src', src);

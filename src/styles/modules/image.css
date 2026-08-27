@@ -12,14 +12,22 @@
     outline-offset: 2px;
   }
 
-  .zt-md-editor .zt-md-image[data-loading='true'] {
+  .zt-md-editor .zt-md-image[data-loading='true'],
+  .zt-md-editor .zt-md-image[data-load-error='true'] {
     width: min(100%, 320px);
     aspect-ratio: 3 / 2;
     overflow: hidden;
     border: 1px solid color-mix(in srgb, var(--zt-border) 78%, transparent);
     border-radius: calc(var(--zt-radius) + 2px);
     background: color-mix(in srgb, var(--zt-muted) 10%, var(--zt-surface));
+  }
+
+  .zt-md-editor .zt-md-image[data-loading='true'] {
     pointer-events: none;
+  }
+
+  .zt-md-editor .zt-md-image[data-load-error='true']:not([data-loading='true']) {
+    aspect-ratio: 2 / 1;
   }
 
   .zt-md-editor .zt-md-image[data-loading='true'][data-selected='true'] {
@@ -43,8 +51,36 @@
     background: var(--zt-elevated);
   }
 
-  .zt-md-editor .zt-md-image[data-loading='true'] img {
+  .zt-md-editor .zt-md-image[data-loading='true'] img,
+  .zt-md-editor .zt-md-image[data-load-error='true'] img {
     display: none;
+  }
+
+  .zt-md-editor .zt-md-image-load-error {
+    display: none;
+  }
+
+  .zt-md-editor .zt-md-image[data-load-error='true'] .zt-md-image-load-error {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    color: var(--zt-muted);
+    font-size: 13px;
+    line-height: 1.4;
+    pointer-events: none;
+  }
+
+  .zt-md-editor .zt-md-image[data-loading='true'][data-load-error='true'] .zt-md-image-load-error {
+    display: none;
+  }
+
+  .zt-md-editor .zt-md-image-load-error svg {
+    width: 2rem;
+    height: 2rem;
   }
 
   .zt-md-editor .zt-md-image[data-has-width='true'] img {
@@ -111,9 +147,9 @@
     pointer-events: auto;
   }
 
-  .zt-md-editor .zt-md-image[data-loading='true'] .zt-md-image-resize-handle {
-    @apply opacity-0;
-    pointer-events: none;
+  .zt-md-editor .zt-md-image[data-loading='true'] .zt-md-image-resize-handle,
+  .zt-md-editor .zt-md-image[data-load-error='true'] .zt-md-image-resize-handle {
+    display: none;
   }
 
   @keyframes zt-md-image-placeholder-shimmer {

@@ -234,6 +234,27 @@ const handleDirectionalBoundary = (
 };
 
 /**
+ * 在文档最终文本分支按向下键时插入下一行。
+ */
+const insertTrailingParagraphOnArrowDown = (view: EditorView): boolean => {
+  // 当前文档与选区。
+  const { doc, selection } = view.state;
+  if (!(selection instanceof TextSelection) || !selection.empty) {
+    return false;
+  }
+
+  // 当前选区是否位于文档最终内容分支。
+  const isOnLastDocumentBranch =
+    selection.$from.after(1) === doc.content.size &&
+    isSelectionOnDirectionalBranch(selection.$from, 1, BLOCK_BOUNDARY_DIRECTION_DOWN);
+  if (!isOnLastDocumentBranch || !view.endOfTextblock('down')) {
+    return false;
+  }
+
+  return insertBoundaryParagraph(view, doc.content.size);
+};
+
+/**
  * 处理向上离开特殊内容块。
  */
 const handleArrowUpBoundary = (view: EditorView): boolean => {
@@ -241,10 +262,13 @@ const handleArrowUpBoundary = (view: EditorView): boolean => {
 };
 
 /**
- * 处理向下离开特殊内容块。
+ * 处理向下边界导航。
  */
 const handleArrowDownBoundary = (view: EditorView): boolean => {
-  return handleDirectionalBoundary(view, BLOCK_BOUNDARY_DIRECTION_DOWN);
+  return (
+    handleDirectionalBoundary(view, BLOCK_BOUNDARY_DIRECTION_DOWN) ||
+    insertTrailingParagraphOnArrowDown(view)
+  );
 };
 
 // 方向键到边界导航策略的固定映射表。
@@ -254,7 +278,7 @@ const BLOCK_BOUNDARY_KEY_STRATEGY_MAP: Readonly<Record<string, (view: EditorView
 };
 
 /**
- * 判断键盘事件是否应跳过特殊内容块边界导航。
+ * 判断键盘事件是否应跳过内容块边界导航。
  */
 const shouldSkipBoundaryKeydown = (view: EditorView, event: KeyboardEvent): boolean => {
   return (
@@ -290,7 +314,7 @@ export const moveSelectionFromSpecialBlock = (
 };
 
 /**
- * 特殊内容块边界导航插件。
+ * 内容块边界导航插件。
  */
 export const blockBoundaryNavigationPlugin = $prose(() => {
   return new Plugin({

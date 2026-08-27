@@ -349,12 +349,40 @@ export const createMilkdownEditorRuntime = (
   const runReplaceAll = createReplaceAllExecutor(replaceAll, editor as any);
 
   /**
-   * 聚焦编辑器并将现有选区折叠为光标。
+   * 聚焦编辑器，并在点击内容下方时补充末尾空段落。
    */
   const focusEditor = (coordinates?: FocusEditorCoordinates): void => {
     editor.action((ctx: any) => {
       /** 当前 ProseMirror 视图。 */
       const view = ctx.get(editorViewCtx);
+      // 点击位置是否位于编辑器内容下方。
+      const isBelowEditorContent =
+        coordinates !== undefined && coordinates.top > view.dom.getBoundingClientRect().bottom;
+
+      if (isBelowEditorContent) {
+        // 普通段落节点类型。
+        const paragraphType = view.state.schema.nodes.paragraph;
+        // 文档末尾节点。
+        const lastNode = view.state.doc.lastChild;
+        // 文档末尾是否已有可聚焦的空段落。
+        const hasTrailingEmptyParagraph =
+          lastNode?.type === paragraphType && lastNode.content.size === 0;
+
+        if (!hasTrailingEmptyParagraph) {
+          // 插入末尾空段落的事务。
+          const transaction = view.state.tr.insert(
+            view.state.doc.content.size,
+            paragraphType.create()
+          );
+          transaction
+            .setSelection(TextSelection.atEnd(transaction.doc))
+            .scrollIntoView();
+          view.dispatch(transaction);
+          view.focus();
+          return;
+        }
+      }
+
       /** 坐标解析得到的文档位置。 */
       const coordinatePosition = coordinates ? view.posAtCoords(coordinates) : null;
       /** 下一次应写入的空文本选区。 */
