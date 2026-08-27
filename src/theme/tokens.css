@@ -27,12 +27,12 @@
 
 .zt-md-dark {
   color-scheme: dark;
-  --zt-bg: #0c1220;
-  --zt-surface: #131d31;
-  --zt-elevated: #1a2740;
-  --zt-fg: #e8efff;
-  --zt-muted: #93a7c3;
-  --zt-border: #2f4366;
+  --zt-bg: #09090b;
+  --zt-surface: #111113;
+  --zt-elevated: #1c1c1f;
+  --zt-fg: #f4f4f5;
+  --zt-muted: #a1a1aa;
+  --zt-border: #303036;
   --zt-primary: #8c9bff;
   --zt-primary-foreground: #111116;
   --zt-secondary: #aab2ff;

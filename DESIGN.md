@@ -13,12 +13,12 @@ colors:
   light-secondary: "#5a65bc"
   light-destructive: "#b4232d"
   light-destructive-fg: "#ffffff"
-  dark-bg: "#0C1220"
-  dark-surface: "#131D31"
-  dark-elevated: "#1A2740"
-  dark-fg: "#E8EFFF"
-  dark-muted: "#93A7C3"
-  dark-border: "#2F4366"
+  dark-bg: "#09090B"
+  dark-surface: "#111113"
+  dark-elevated: "#1C1C1F"
+  dark-fg: "#F4F4F5"
+  dark-muted: "#A1A1AA"
+  dark-border: "#303036"
   dark-primary: "#8c9bff"
   dark-primary-fg: "#111116"
   dark-secondary: "#aab2ff"
@@ -90,11 +90,11 @@ components:
 
 **Creative North Star：灰蓝精密工作台 / The Slate-Blue Precision Workbench。**
 
-界面像一张经过校准的专业写作工作台：冷静的灰蓝中性色负责承载内容，群青是唯一的常规交互色。视觉表达安静、准确、克制，让编辑行为和文档结构始终先于装饰；Light 是默认体验，Dark 必须保持同等的信息层级、可读性与完成度。
+界面像一张经过校准的专业写作工作台：Light 使用冷静的灰蓝中性色，Dark 使用具有细腻层次的中性石墨黑，群青是唯一的常规交互色。视觉表达安静、准确、克制，让编辑行为和文档结构始终先于装饰；Light 是默认体验，Dark 必须保持同等的信息层级、可读性与完成度。
 
 ## Colors
 
-- 背景采用三级冷灰蓝层次：页面背景 `bg`、工作表面 `surface`、轻度抬升区域 `elevated`。层次主要依赖色调差与边框，不依赖大面积阴影。
+- 背景采用三级中性层次：Light 使用冷灰蓝，Dark 使用石墨黑；页面背景 `bg`、工作表面 `surface`、轻度抬升区域 `elevated` 主要依赖色调差与边框区分，不依赖大面积阴影。
 - 前景使用 `fg`，次级说明使用 `muted`，结构分隔使用 `border`。不要用降低整体透明度代替明确的语义色。
 - 群青 `primary` 是链接、选中、聚焦、勾选和主要操作的唯一常规交互色；`secondary` 只作为群青体系的弱化补充，不另起一套强调色。
 - `destructive` 仅用于删除、失败和不可逆风险。不要把错误红用于普通提醒，也不要用群青表达破坏性动作。
@@ -130,7 +130,7 @@ components:
 ## Components
 
 - **分段按钮**：作为固定选项切换，容器使用中性层，激活项用群青明确标识；未选项保持中性，hover 只做轻微群青混合。移动端每个选项保证 44px 触控高度。
-- **编辑器容器**：Light 使用白色工作表面，Dark 使用深灰蓝表面；10px 圆角、细边框、默认无阴影。内容区是最高视觉优先级。
+- **编辑器容器**：Light 使用白色工作表面，Dark 使用石墨黑表面；10px 圆角、细边框、默认无阴影。内容区是最高视觉优先级。
 - **浮层菜单**：10px 圆角、8px 内边距、细边框和中性浮层阴影。条目采用 6px 圆角；hover、selected 和 focus 使用低浓度群青背景并保持文字清晰。
 - **输入框**：6px 圆角、中性背景和明确边框。focus 使用群青边框及克制的 2px 聚焦环；placeholder 使用 `muted`，不能代替可见标签。
 - **图标按钮**：桌面紧凑尺寸可为 28px；移动端可点击区域扩展到至少 44px。默认透明底和次级前景，hover/active 才进入低浓度群青状态；危险动作改用 `destructive`。
@@ -138,7 +138,7 @@ components:
 
 ## Do's and Don'ts
 
-- **Do** 让灰蓝中性层级承载大部分界面，只在真实交互状态使用群青。
+- **Do** 让 Light 的灰蓝与 Dark 的石墨黑中性层级承载大部分界面，只在真实交互状态使用群青。
 - **Do** 同步验证 Light、Dark、桌面与移动端；两种主题都应像最终产品，而不是主主题的降级版本。
 - **Do** 保持默认平面，仅为真正悬浮的菜单、Popover 和工具栏提供中性阴影。
 - **Do** 为 `prefers-reduced-motion: reduce` 移除非必要位移、缩放和过渡，保留即时状态反馈。
