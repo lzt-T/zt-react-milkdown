@@ -8,6 +8,8 @@ export interface PresetPluginExports {
   listener: unknown;
   /** commonmark 插件实例。 */
   commonmark: unknown;
+  /** 行内代码右边界导航插件实例。 */
+  inlineCodeBoundaryNavigation: unknown;
   /** gfm 插件实例。 */
   gfm: unknown;
   /** history 插件实例。 */
@@ -98,6 +100,11 @@ export const resolvePresetPlugins = (
 
   appendPluginDescriptors(descriptors, 'listener', pluginExports.listener);
   appendPluginDescriptors(descriptors, 'commonmark', pluginExports.commonmark);
+  appendPluginDescriptors(
+    descriptors,
+    'inline-code-boundary-navigation',
+    pluginExports.inlineCodeBoundaryNavigation
+  );
   appendPluginDescriptors(descriptors, 'gfm', pluginExports.gfm);
   appendPluginDescriptors(descriptors, 'history', pluginExports.history);
   appendPluginDescriptors(descriptors, 'code-block-prism', pluginExports.codeBlockPrism);

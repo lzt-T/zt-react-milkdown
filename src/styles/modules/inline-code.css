@@ -1,6 +1,12 @@
+@keyframes zt-md-inline-code-boundary-indicator-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
 @layer components {
   .zt-md-editor .ProseMirror p code {
-    @apply rounded-[6px] px-2 py-[1px] align-baseline;
+    @apply mx-0.5 rounded-[6px] px-1.5 py-[1px] align-baseline;
     border: 1px solid transparent;
     background: var(--zt-elevated);
     color: color-mix(in srgb, var(--zt-fg) 94%, var(--zt-primary));
@@ -8,5 +14,51 @@
     font-size: 0.9em;
     line-height: 1.3;
     white-space: break-spaces;
+  }
+
+  .zt-md-inline-code-boundary-indicator {
+    position: relative;
+    display: inline-block;
+    width: 0;
+    height: 0;
+    line-height: 0;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .zt-md-editor .ProseMirror.zt-md-inline-code-boundary-active {
+    caret-color: transparent;
+  }
+
+  .zt-md-inline-code-boundary-indicator::after {
+    position: absolute;
+    bottom: -0.15em;
+    left: 0;
+    width: 1px;
+    height: 1.15em;
+    background: var(--zt-fg);
+    content: '';
+    animation: zt-md-inline-code-boundary-indicator-blink 1s step-end infinite;
+  }
+
+  .zt-md-inline-code-boundary-indicator[data-placement='outside'][data-side='left']::after {
+    transform: translateX(var(--zt-md-inline-code-boundary-offset-x, -1px));
+  }
+
+  .zt-md-inline-code-boundary-indicator[data-placement='outside'][data-side='right']::after {
+    transform: translateX(var(--zt-md-inline-code-boundary-offset-x, 1px));
+  }
+
+  .zt-md-inline-code-boundary-indicator[data-placement='inside'][data-side='left']::after {
+    transform: translateX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  @layer components {
+    .zt-md .zt-md-inline-code-boundary-indicator::after {
+      opacity: 1;
+      animation: none !important;
+    }
   }
 }

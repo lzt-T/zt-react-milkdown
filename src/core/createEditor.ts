@@ -57,6 +57,7 @@ import { createSlashMenuPlugin } from '../plugins/custom/slash-menu';
 import { createTableFocusActionsPlugin, tableArrowEntryPlugin } from '../plugins/custom/table';
 import { taskListToggle } from '../plugins/custom/list';
 import { tabSpaceIndentPlugin } from '../plugins/custom/indent';
+import { inlineCodeBoundaryNavigationPlugin } from '../plugins/custom/inline-code-boundary-navigation';
 import { resolveEditorMessages } from '../local/i18n';
 import type { PresetPluginExports } from '../plugins/preset-common';
 import { normalizeSafeUrl } from '../utils/security';
@@ -216,6 +217,7 @@ export const createMilkdownEditorRuntime = (
   const presetPluginExports: PresetPluginExports = {
     listener,
     commonmark,
+    inlineCodeBoundaryNavigation: inlineCodeBoundaryNavigationPlugin,
     gfm,
     history,
     codeBlockPrism: codeBlockPrismPlugin,
