@@ -113,17 +113,6 @@ export const handleInlineCodeBoundaryVisualNavigation = (
     return false;
   }
 
-  if (visualState.side === 'right' && visualState.requiresInwardConfirmation) {
-    event.preventDefault();
-    view.dispatch(
-      view.state.tr.setMeta(pluginKey, {
-        ...visualState,
-        requiresInwardConfirmation: false
-      } satisfies InlineCodeBoundaryVisualState)
-    );
-    return true;
-  }
-
   // 当前退出侧紧邻行内代码的节点属性。
   const adjacentNodeKey = INLINE_CODE_EXIT_ADJACENT_NODE_KEY_MAP[visualState.side];
   // 当前退出侧紧邻的文档节点。

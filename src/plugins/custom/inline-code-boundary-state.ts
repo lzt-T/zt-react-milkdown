@@ -15,8 +15,6 @@ export interface InlineCodeBoundaryVisualState {
   side: InlineCodeBoundarySide;
   /** 指示光标位于标签内部或外部。 */
   placement: InlineCodeBoundaryPlacement;
-  /** 鼠标外侧入口是否仍需首次向内方向键确认。 */
-  requiresInwardConfirmation?: boolean;
 }
 
 // 行内代码边界导航插件 key 实例。

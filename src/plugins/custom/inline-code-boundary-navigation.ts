@@ -13,10 +13,7 @@ import {
   resolveInlineCodeEndMark,
   resolveInlineCodeStartMark
 } from './inline-code-boundary-mark';
-import {
-  handleInlineCodeMouseDown,
-  shouldPreserveInlineCodeRightPointerBoundary
-} from './inline-code-boundary-mouse';
+import { handleInlineCodeBoundaryClick } from './inline-code-boundary-mouse';
 import {
   inlineCodeBoundaryNavigationPluginKey,
   type InlineCodeBoundaryVisualState
@@ -448,6 +445,14 @@ const handleInlineCodeClick = (
   position: number,
   event: MouseEvent
 ): boolean => {
+  if (!view.state.selection.empty) {
+    return false;
+  }
+
+  if (handleInlineCodeBoundaryClick(view, event)) {
+    return true;
+  }
+
   // 点击目标是否属于行内代码。
   const isInlineCodeTarget = isInlineCodeClickTarget(event.target);
   // 当前行内代码 mark 类型。
@@ -463,11 +468,6 @@ const handleInlineCodeClick = (
 
   // 当前行内代码边界视觉状态。
   const visualState = inlineCodeBoundaryNavigationPluginKey.getState(view.state);
-  if (shouldPreserveInlineCodeRightPointerBoundary(view, position, event, visualState)) {
-    event.preventDefault();
-    return true;
-  }
-
   if (!isInlineCodeTarget || !visualState) {
     return false;
   }
@@ -623,7 +623,6 @@ export const inlineCodeBoundaryNavigationPlugin = $prose(() => {
       handleClick: handleInlineCodeClick,
       decorations: createInlineCodeBoundaryDecorations,
       handleDOMEvents: {
-        mousedown: handleInlineCodeMouseDown,
         blur: handleInlineCodeBlur
       }
     }

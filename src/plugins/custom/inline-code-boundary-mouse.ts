@@ -89,47 +89,9 @@ const resolveInlineCodeEndBoundaryContext = (
 };
 
 /**
- * 判断点击是否属于已由鼠标固定的右侧外部边界。
+ * 在普通点击完成后固定行内代码左右边界的标签内外输入状态。
  */
-export const shouldPreserveInlineCodeRightPointerBoundary = (
-  view: EditorView,
-  position: number,
-  event: MouseEvent,
-  visualState: InlineCodeBoundaryVisualState | null
-): boolean => {
-  if (
-    visualState?.side !== 'right' ||
-    visualState.placement !== 'outside' ||
-    !visualState.requiresInwardConfirmation
-  ) {
-    return false;
-  }
-
-  if (position === visualState.position) {
-    return true;
-  }
-
-  if (position !== visualState.position + 1) {
-    return false;
-  }
-
-  // 右侧外部状态相邻的真实代码元素。
-  const codeElement = resolveInlineCodeElementAtBoundary(view, visualState.position, -1);
-  if (!codeElement) {
-    return false;
-  }
-
-  // 真实代码元素的视口外框。
-  const codeRect = codeElement.getBoundingClientRect();
-  return event.clientX >= codeRect.right && event.clientX <= (
-    codeRect.right + INLINE_CODE_RIGHT_OUTSIDE_GAP_WIDTH
-  );
-};
-
-/**
- * 在鼠标按下阶段固定行内代码左右边界的标签内外输入状态。
- */
-export const handleInlineCodeMouseDown = (view: EditorView, event: MouseEvent): boolean => {
+export const handleInlineCodeBoundaryClick = (view: EditorView, event: MouseEvent): boolean => {
   if (
     event.button !== 0 ||
     event.altKey ||
@@ -239,8 +201,7 @@ export const handleInlineCodeMouseDown = (view: EditorView, event: MouseEvent): 
     ? {
         position: normalizedBoundaryPosition,
         side: 'right',
-        placement: 'outside',
-        requiresInwardConfirmation: true
+        placement: 'outside'
       } satisfies InlineCodeBoundaryVisualState
     : null;
 
