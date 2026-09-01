@@ -309,7 +309,7 @@ const App = (): JSX.Element => {
               //   upload: resolvePlaygroundImageUrl,
               // }}
 
-              shortcutMode="modAlt"
+              // shortcutMode="modAlt"
               headerSlot={
                 <div className="playground-editor-context" role="note">
                   <span className="playground-editor-context-item">

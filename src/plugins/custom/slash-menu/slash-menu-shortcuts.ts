@@ -5,21 +5,13 @@ import type {
   ImageUploadConfig,
   SlashMenuCommand
 } from '@/types/editor';
-import { SLASH_MENU_SHORTCUT_DEFINITIONS } from '@/plugins/custom/block-transform';
+import { resolveSlashMenuShortcutDefinitions } from '@/plugins/custom/block-transform';
 import { showImageUploadDialog } from '@/plugins/custom/image/image-upload-dialog';
 import { isEditorViewEditable } from './slash-menu-logic';
 import { runSlashCommand } from './slash-menu-commands';
 
 // macOS 平台匹配规则。
 const MAC_PLATFORM_PATTERN = /Mac|iPhone|iPad|iPod/;
-
-// 物理键码到 slash 命令的分发表。
-const SLASH_MENU_COMMAND_BY_CODE = Object.fromEntries(
-  Object.entries(SLASH_MENU_SHORTCUT_DEFINITIONS).map(([command, definition]) => [
-    definition.code,
-    command
-  ])
-) as Record<string, SlashMenuCommand>;
 
 /**
  * 判断当前快捷键是否匹配指定修饰键模式。
@@ -67,6 +59,16 @@ export const createEditorShortcutKeyDownHandler = (
   shortcutMode: EditorShortcutMode,
   imageUpload?: ImageUploadConfig
 ): ((view: EditorView, event: KeyboardEvent) => boolean) => {
+  // 当前模式使用的助记键配置。
+  const shortcutDefinitions = resolveSlashMenuShortcutDefinitions(shortcutMode);
+  // 当前模式的物理键码命令分发表。
+  const shortcutCommandByCode = Object.fromEntries(
+    Object.entries(shortcutDefinitions).map(([command, definition]) => [
+      definition.code,
+      command
+    ])
+  ) as Record<string, SlashMenuCommand>;
+
   /**
    * 优先处理编辑器内置快捷键。
    */
@@ -80,7 +82,7 @@ export const createEditorShortcutKeyDownHandler = (
     }
 
     // 当前物理键码对应的内置命令。
-    const command = SLASH_MENU_COMMAND_BY_CODE[event.code];
+    const command = shortcutCommandByCode[event.code];
     if (!command) {
       return false;
     }

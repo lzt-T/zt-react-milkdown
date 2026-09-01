@@ -132,7 +132,7 @@ export default function Demo() {
 - 未传 `debounceMs` 时默认使用 `160`（毫秒）。
 - `slashMenu` 对应 Slash 菜单行为配置。
 - `imageUpload` 对应图片上传策略配置。
-- `shortcutMode` 只改变修饰键，两种模式使用相同的助记主键。
+- `shortcutMode` 主要改变修饰键；普通文本命令为兼容 Windows 使用不同主键。
 - `messages` 对应内置文案覆盖。
 - 搜索相关文案可通过 `messages.searchPanelAriaLabel`、`messages.searchInputPlaceholder`、`messages.searchReplaceInputPlaceholder`、搜索选项与操作标签字段进行局部覆盖。
 - `debounceMs` / `maxHeight` / `readOnly` 对应编辑交互行为控制。
@@ -158,7 +158,7 @@ export default function Demo() {
 
 | 命令 | 主键 | `modShift`（Windows/Linux） | `modAlt`（Windows/Linux） |
 | --- | --- | --- | --- |
-| 普通文本 | `0` | `Ctrl+Shift+0` | `Ctrl+Alt+0` |
+| 普通文本 | `P / 0` | `Ctrl+Shift+P` | `Ctrl+Alt+0` |
 | 标题 1–6 | `1–6` | `Ctrl+Shift+1–6` | `Ctrl+Alt+1–6` |
 | 无序列表 | `U` | `Ctrl+Shift+U` | `Ctrl+Alt+U` |
 | 有序列表 | `O` | `Ctrl+Shift+O` | `Ctrl+Alt+O` |

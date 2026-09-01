@@ -20,20 +20,34 @@ import { runBlockTransformCommand } from './block-transform';
 const MAC_PLATFORM_PATTERN = /Mac|iPhone|iPad|iPod/;
 
 /**
- * 定义单个命令的助记键配置。
+ * 定义单个快捷键的主键与物理键码。
  */
-interface ShortcutDefinition {
+interface ShortcutKeyDefinition {
   /** ProseMirror 快捷键使用的主键。 */
   key: string;
   /** 浏览器键盘事件使用的物理键码。 */
   code: string;
 }
 
+/**
+ * 定义单个命令的助记键配置。
+ */
+interface ShortcutDefinition extends ShortcutKeyDefinition {
+  /** 指定模式使用的快捷键覆盖项。 */
+  modeOverrides?: Partial<Record<EditorShortcutMode, ShortcutKeyDefinition>>;
+}
+
 // 所有内置命令共用的助记键配置。
 export const SLASH_MENU_SHORTCUT_DEFINITIONS: Readonly<
   Record<SlashMenuCommand, ShortcutDefinition>
 > = {
-  paragraph: { key: '0', code: 'Digit0' },
+  paragraph: {
+    key: 'p',
+    code: 'KeyP',
+    modeOverrides: {
+      modAlt: { key: '0', code: 'Digit0' }
+    }
+  },
   heading1: { key: '1', code: 'Digit1' },
   heading2: { key: '2', code: 'Digit2' },
   heading3: { key: '3', code: 'Digit3' },
@@ -50,6 +64,20 @@ export const SLASH_MENU_SHORTCUT_DEFINITIONS: Readonly<
   inlineMath: { key: 'f', code: 'KeyF' },
   mathBlock: { key: 'b', code: 'KeyB' },
   image: { key: 'i', code: 'KeyI' }
+};
+
+/**
+ * 解析指定模式使用的助记键配置。
+ */
+export const resolveSlashMenuShortcutDefinitions = (
+  shortcutMode: EditorShortcutMode
+): Record<SlashMenuCommand, ShortcutKeyDefinition> => {
+  return Object.fromEntries(
+    Object.entries(SLASH_MENU_SHORTCUT_DEFINITIONS).map(([command, definition]) => [
+      command,
+      definition.modeOverrides?.[shortcutMode] ?? definition
+    ])
+  ) as Record<SlashMenuCommand, ShortcutKeyDefinition>;
 };
 
 // Windows/Linux 快捷键标签映射。
@@ -81,8 +109,10 @@ export const resolveSlashMenuShortcutMap = (
 ): Record<SlashMenuCommand, string> => {
   // 当前模式使用的 ProseMirror 修饰键。
   const modifier = shortcutMode === 'modAlt' ? 'Mod-Alt' : 'Mod-Shift';
+  // 当前模式使用的助记键配置。
+  const shortcutDefinitions = resolveSlashMenuShortcutDefinitions(shortcutMode);
   return Object.fromEntries(
-    Object.entries(SLASH_MENU_SHORTCUT_DEFINITIONS).map(([command, definition]) => [
+    Object.entries(shortcutDefinitions).map(([command, definition]) => [
       command,
       `${modifier}-${definition.key}`
     ])
