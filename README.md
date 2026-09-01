@@ -123,6 +123,7 @@ export default function Demo() {
 | `headerSlot` | `ReactNode` | 头部插槽 |
 | `slashMenu` | `SlashMenuConfig` | slash 菜单配置 |
 | `imageUpload` | `ImageUploadConfig` | 图片上传配置 |
+| `shortcutMode` | `'modShift' \| 'modAlt'` | 内置快捷键修饰键模式，默认 `modShift` |
 
 说明：
 - `placeholder` 优先级高于 `messages.placeholder`。
@@ -131,6 +132,7 @@ export default function Demo() {
 - 未传 `debounceMs` 时默认使用 `160`（毫秒）。
 - `slashMenu` 对应 Slash 菜单行为配置。
 - `imageUpload` 对应图片上传策略配置。
+- `shortcutMode` 只改变修饰键，两种模式使用相同的助记主键。
 - `messages` 对应内置文案覆盖。
 - 搜索相关文案可通过 `messages.searchPanelAriaLabel`、`messages.searchInputPlaceholder`、`messages.searchReplaceInputPlaceholder`、搜索选项与操作标签字段进行局部覆盖。
 - `debounceMs` / `maxHeight` / `readOnly` 对应编辑交互行为控制。
@@ -147,7 +149,29 @@ export default function Demo() {
   - `icon?: string`：菜单项图标键名（对应 `lucide-react` 图标）。
   - `command: SlashMenuCommand`：菜单项执行命令。
 - `SlashMenuCommand`
-  - `'paragraph' | 'heading1' | 'heading2' | 'heading3' | 'heading4' | 'heading5' | 'heading6' | 'bulletList' | 'orderedList' | 'taskList' | 'blockquote' | 'inlineCode' | 'codeBlock' | 'mathBlock' | 'table' | 'image'`
+  - `'paragraph' | 'heading1' | 'heading2' | 'heading3' | 'heading4' | 'heading5' | 'heading6' | 'bulletList' | 'orderedList' | 'taskList' | 'blockquote' | 'inlineCode' | 'codeBlock' | 'table' | 'inlineMath' | 'mathBlock' | 'image'`
+- `EditorShortcutMode`
+  - `'modShift'`：使用 `Mod+Shift+主键`，不占用 AltGr；部分组合可能被浏览器或 Electron 菜单抢占。
+  - `'modAlt'`：使用 `Mod+Alt+主键`，物理键兜底可避免 ProseMirror 的 AltGr 漏判，但会占用相应 AltGr 字符组合。
+
+内置命令主键：
+
+| 命令 | 主键 | `modShift`（Windows/Linux） | `modAlt`（Windows/Linux） |
+| --- | --- | --- | --- |
+| 普通文本 | `P` | `Ctrl+Shift+P` | `Ctrl+Alt+P` |
+| 标题 1–6 | `1–6` | `Ctrl+Shift+1–6` | `Ctrl+Alt+1–6` |
+| 无序列表 | `U` | `Ctrl+Shift+U` | `Ctrl+Alt+U` |
+| 有序列表 | `O` | `Ctrl+Shift+O` | `Ctrl+Alt+O` |
+| 任务列表 | `9` | `Ctrl+Shift+9` | `Ctrl+Alt+9` |
+| 引用 | `Q` | `Ctrl+Shift+Q` | `Ctrl+Alt+Q` |
+| 行内代码 | `E` | `Ctrl+Shift+E` | `Ctrl+Alt+E` |
+| 代码块 | `C` | `Ctrl+Shift+C` | `Ctrl+Alt+C` |
+| 表格 | `T` | `Ctrl+Shift+T` | `Ctrl+Alt+T` |
+| 行内公式 | `F` | `Ctrl+Shift+F` | `Ctrl+Alt+F` |
+| 公式块 | `B` | `Ctrl+Shift+B` | `Ctrl+Alt+B` |
+| 图片 | `I` | `Ctrl+Shift+I` | `Ctrl+Alt+I` |
+
+macOS 使用相同主键，并分别将前缀显示为 `⌘⇧` 和 `⌘⌥`。宿主保留键无法由编辑器覆盖，集成方应按运行环境选择模式。
 - `ImageUploadConfig`
   - `upload?: (file: File) => string | Promise<string>`：自定义上传函数，返回最终图片 URL。
   - `maxFileSize?: number`：允许上传的最大文件体积（字节）。

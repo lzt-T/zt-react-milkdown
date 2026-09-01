@@ -6,3 +6,5 @@ export * from './slash-menu-logic';
 export * from './slash-menu-view';
 /** slash 菜单主插件导出。 */
 export * from './slash-menu';
+/** slash 菜单快捷键插件导出。 */
+export * from './slash-menu-shortcuts';

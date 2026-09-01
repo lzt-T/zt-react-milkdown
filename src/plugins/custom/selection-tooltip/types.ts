@@ -42,6 +42,8 @@ export interface SelectionBlockTransformItem {
   icon: BlockTransformIcon;
   /** 展示文案。 */
   label: string;
+  /** 快捷键展示文案。 */
+  shortcut: string;
 }
 
 /**

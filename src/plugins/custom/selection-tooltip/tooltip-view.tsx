@@ -143,7 +143,7 @@ export const BlockTransformPopoverControl = (props: BlockTransformPopoverControl
     portalContainer: props.portalContainer,
     editorWrapper: props.collisionBoundary,
     offsetY: 8,
-    fallbackWidth: 176,
+    fallbackWidth: 224,
     fallbackHeight: 360,
     onOutside: () => props.onOpenChange(false)
   });
@@ -166,10 +166,9 @@ export const BlockTransformPopoverControl = (props: BlockTransformPopoverControl
       return;
     }
 
-    void runBlockTransformCommand(view, command).then(() => {
-      props.onOpenChange(false);
-      view.focus();
-    });
+    runBlockTransformCommand(view, command);
+    props.onOpenChange(false);
+    view.focus();
   };
 
   /**
@@ -208,7 +207,7 @@ export const BlockTransformPopoverControl = (props: BlockTransformPopoverControl
       {
         panel,
         portalContainer: props.portalContainer,
-        className: 'zt-md-selection-transform-popover !w-[176px] p-1',
+        className: 'zt-md-selection-transform-popover !w-[224px] p-1',
         onMouseDown: preventMouseDown
       },
       createElement('p', { className: 'zt-md-selection-transform-popover-title' }, props.menuTitle),
@@ -216,6 +215,7 @@ export const BlockTransformPopoverControl = (props: BlockTransformPopoverControl
         'div',
         { className: 'zt-md-selection-transform-popover-list' },
         ...props.items.map((item) => {
+          // 当前块转换菜单项是否处于激活状态。
           const isActive = props.activeCommands.has(item.command);
           return createElement(
             'button',
@@ -233,7 +233,8 @@ export const BlockTransformPopoverControl = (props: BlockTransformPopoverControl
               className: 'zt-md-selection-transform-item-icon',
               'aria-hidden': 'true'
             }),
-            createElement('span', { className: 'zt-md-selection-transform-item-label' }, item.label)
+            createElement('span', { className: 'zt-md-selection-transform-item-label' }, item.label),
+            createElement('kbd', { className: 'zt-md-selection-transform-item-shortcut' }, item.shortcut)
           );
         })
       )

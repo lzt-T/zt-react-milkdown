@@ -1,7 +1,6 @@
 import { setBlockType, toggleMark } from '@milkdown/prose/commands';
 import { NodeSelection, TextSelection } from '@milkdown/prose/state';
-import type { SlashMenuCommand } from '../../../types/editor';
-import type { BlockTransformCommand } from '../../../types/editor';
+import type { BlockTransformCommand, SlashMenuCommand } from '@/types/editor';
 import { runBlockTransformCommand } from '../block-transform';
 import { mathInlineEditPluginKey } from '../math/math-inline-edit-plugin';
 
@@ -9,6 +8,16 @@ import { mathInlineEditPluginKey } from '../math/math-inline-edit-plugin';
  * slash 命令执行器类型。
  */
 type EditorCommandExecutor = (state: unknown, dispatch: unknown, view: unknown) => boolean;
+
+/**
+ * 非块级 slash 命令类型。
+ */
+type InlineSlashMenuCommand = Exclude<SlashMenuCommand, BlockTransformCommand | 'image'>;
+
+/**
+ * 非块级 slash 命令处理器类型。
+ */
+type SlashMenuCommandHandler = (view: any) => boolean;
 
 /**
  * 执行 ProseMirror 命令。
@@ -46,6 +55,7 @@ const findTableStartPos = (view: any, startPos: number): number => {
     return -1;
   }
 
+  // 限制在文档范围内的起始位置。
   const boundedPos = Math.min(Math.max(startPos, 0), doc.content.size);
   // 解析后的文档位置对象。
   const resolvedPos = doc.resolve(boundedPos);
@@ -74,9 +84,13 @@ const createTableNode = (view: any, rows: number, cols: number, withHeaderRow: b
 
   // 表格相关节点类型。
   const tableType = nodes.table;
+  // 表头行节点类型。
   const tableHeaderRowType = nodes.table_header_row;
+  // 普通表格行节点类型。
   const tableRowType = nodes.table_row;
+  // 表头单元格节点类型。
   const tableHeaderType = nodes.table_header;
+  // 普通单元格节点类型。
   const tableCellType = nodes.table_cell;
   if (!tableType || !tableHeaderRowType || !tableRowType || !tableHeaderType || !tableCellType) {
     return null;
@@ -84,6 +98,7 @@ const createTableNode = (view: any, rows: number, cols: number, withHeaderRow: b
 
   // 基础单元格数量。
   const normalizedRows = Math.max(1, rows);
+  // 基础表格列数。
   const normalizedCols = Math.max(1, cols);
   // 表格行节点集合。
   const tableRows = Array.from({ length: normalizedRows }, (_rowValue, rowIndex) => {
@@ -104,7 +119,7 @@ const createTableNode = (view: any, rows: number, cols: number, withHeaderRow: b
 /**
  * 插入默认表格并将光标定位到首个单元格。
  */
-const insertDefaultTable = async (view: any): Promise<boolean> => {
+const insertDefaultTable = (view: any): boolean => {
   if (!view?.state || !view?.dispatch) {
     return false;
   }
@@ -149,7 +164,7 @@ const insertDefaultTable = async (view: any): Promise<boolean> => {
  * 从 schema marks 中按候选名解析 mark 类型。
  */
 const resolveMarkType = (view: any, markNames: string[]): unknown | null => {
-  // 当前 schema mark 集合。
+  /** 当前 schema mark 集合。 */
   const marks = (view?.state?.schema?.marks ?? {}) as Record<string, unknown>;
   // 命中的 mark 名称。
   const matchedName = markNames.find((markName) => marks[markName]);
@@ -184,7 +199,7 @@ const isBlockTransformCommand = (command: SlashMenuCommand): command is BlockTra
 /**
  * 插入空行内公式并选中该节点。
  */
-const insertInlineMath = async (view: any): Promise<boolean> => {
+const insertInlineMath = (view: any): boolean => {
   // 行内公式节点类型。
   const mathInlineType = view?.state?.schema?.nodes?.math_inline;
   if (!mathInlineType || !view?.dispatch) {
@@ -205,86 +220,90 @@ const insertInlineMath = async (view: any): Promise<boolean> => {
 };
 
 /**
+ * 切换行内代码格式。
+ */
+const toggleInlineCode = (view: any): boolean => {
+  // inline code mark 类型（兼容不同命名）。
+  const inlineCodeMarkType = resolveMarkType(view, ['inlineCode', 'code_inline']);
+  if (!inlineCodeMarkType) {
+    return false;
+  }
+
+  /** 行内代码切换命令。 */
+  const inlineCodeCommand = (toggleMark as (markType: unknown, attrs?: Record<string, unknown>) => EditorCommandExecutor)(
+    inlineCodeMarkType
+  );
+  return runCommand(inlineCodeCommand, view);
+};
+
+/**
+ * 插入公式块并进入编辑态。
+ */
+const insertMathBlock = (view: any): boolean => {
+  // 公式块节点类型。
+  const mathBlockType = view.state.schema.nodes?.math_block;
+  if (!mathBlockType) {
+    return false;
+  }
+
+  /** 公式块转换命令（依赖 math_block 默认 attrs.value 为空字符串）。 */
+  const mathBlockCommand = (setBlockType as (type: unknown, attrs?: Record<string, unknown>) => EditorCommandExecutor)(
+    mathBlockType
+  );
+  // 是否成功转换为公式块。
+  const converted = runCommand(mathBlockCommand, view);
+  if (!converted) {
+    return false;
+  }
+
+  // 当前选区起点（转换后的选区解析对象）。
+  const from = view.state.selection?.$from;
+  if (!from) {
+    return true;
+  }
+
+  // 当前 math_block 节点在文档中的真实起始位置。
+  let mathBlockPosition: number | null = null;
+  for (let depth = from.depth; depth > 0; depth -= 1) {
+    // 当前层节点。
+    const currentNode = from.node(depth);
+    if (currentNode?.type?.name !== 'math_block') {
+      continue;
+    }
+    mathBlockPosition = from.before(depth);
+    break;
+  }
+
+  if (mathBlockPosition === null) {
+    return true;
+  }
+
+  // 选中公式块节点，触发 NodeView.selectNode -> enterEditMode -> textarea.focus。
+  const nodeSelection = NodeSelection.create(view.state.doc, mathBlockPosition);
+  view.dispatch(view.state.tr.setSelection(nodeSelection).scrollIntoView());
+  return true;
+};
+
+// 非块级 slash 命令分发表。
+const INLINE_SLASH_MENU_COMMAND_HANDLERS: Record<InlineSlashMenuCommand, SlashMenuCommandHandler> = {
+  inlineCode: toggleInlineCode,
+  inlineMath: insertInlineMath,
+  mathBlock: insertMathBlock,
+  table: insertDefaultTable
+};
+
+/**
  * 运行 slash 命令并返回是否成功。
  */
-export const runSlashCommand = async (view: any, command: SlashMenuCommand): Promise<boolean> => {
+export const runSlashCommand = (view: any, command: SlashMenuCommand): boolean => {
   if (!view?.state || !view?.dispatch) {
     return false;
   }
 
-  // 编辑器 schema。
-  const schema = view.state.schema as Record<string, unknown>;
-  // 节点类型集合。
-  const nodes = (schema?.nodes ?? {}) as Record<string, unknown>;
   if (isBlockTransformCommand(command)) {
     return runBlockTransformCommand(view, command);
   }
 
-  if (command === 'inlineCode') {
-    // inline code mark 类型（兼容不同命名）。
-    const inlineCodeMarkType = resolveMarkType(view, ['inlineCode', 'code_inline']);
-    if (!inlineCodeMarkType) {
-      return false;
-    }
-    // 行内代码切换命令。
-    const inlineCodeCommand = (toggleMark as (markType: unknown, attrs?: Record<string, unknown>) => EditorCommandExecutor)(
-      inlineCodeMarkType
-    );
-    return runCommand(inlineCodeCommand, view);
-  }
-
-  if (command === 'inlineMath') {
-    return insertInlineMath(view);
-  }
-
-  if (command === 'mathBlock') {
-    // 公式块节点类型。
-    const mathBlockType = nodes.math_block;
-    if (!mathBlockType) {
-      return false;
-    }
-    // 公式块转换命令（依赖 math_block 默认 attrs.value 为空字符串）。
-    const mathBlockCommand = (setBlockType as (type: unknown, attrs?: Record<string, unknown>) => EditorCommandExecutor)(
-      mathBlockType
-    );
-    // 是否成功转换为公式块。
-    const converted = runCommand(mathBlockCommand, view);
-    if (!converted) {
-      return false;
-    }
-
-    // 当前选区起点（转换后的选区解析对象）。
-    const from = view.state.selection?.$from;
-    if (!from) {
-      return true;
-    }
-
-    // 当前 math_block 节点在文档中的真实起始位置。
-    let mathBlockPosition: number | null = null;
-    for (let depth = from.depth; depth > 0; depth -= 1) {
-      // 当前层节点。
-      const currentNode = from.node(depth);
-      if (currentNode?.type?.name !== 'math_block') {
-        continue;
-      }
-      mathBlockPosition = from.before(depth);
-      break;
-    }
-
-    if (mathBlockPosition === null) {
-      return true;
-    }
-
-    // 选中公式块节点，触发 NodeView.selectNode -> enterEditMode -> textarea.focus。
-    const nodeSelection = NodeSelection.create(view.state.doc, mathBlockPosition);
-    view.dispatch(view.state.tr.setSelection(nodeSelection).scrollIntoView());
-    return true;
-  }
-
-  if (command === 'table') {
-    return insertDefaultTable(view);
-  }
-
-  return false;
+  return command === 'image' ? false : INLINE_SLASH_MENU_COMMAND_HANDLERS[command](view);
 };
 

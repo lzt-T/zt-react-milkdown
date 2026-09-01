@@ -43,6 +43,16 @@
     flex: 1 1 auto;
   }
 
+  .slash-menu-item-shortcut {
+    flex: 0 0 auto;
+    margin-left: auto;
+    color: var(--zt-muted);
+    font-family: inherit;
+    font-size: 11px;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
   .slash-menu-item:hover,
   .slash-menu-item[data-selected='true'] {
     background: color-mix(in srgb, var(--zt-primary) 12%, var(--zt-surface));

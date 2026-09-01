@@ -265,6 +265,11 @@ export interface SlashMenuConfig {
 }
 
 /**
+ * 定义编辑器内置快捷键的修饰键模式。
+ */
+export type EditorShortcutMode = 'modShift' | 'modAlt';
+
+/**
  * 定义编辑器变更事件回调。
  */
 export type EditorChangeHandler = (markdown: string) => void;
@@ -301,4 +306,6 @@ export interface MilkdownEditorProps {
   slashMenu?: SlashMenuConfig;
   /** 图片上传配置。 */
   imageUpload?: ImageUploadConfig;
+  /** 内置快捷键修饰键模式。 */
+  shortcutMode?: EditorShortcutMode;
 }

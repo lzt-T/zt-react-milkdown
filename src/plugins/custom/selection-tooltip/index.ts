@@ -4,7 +4,11 @@ import type { EditorView } from '@milkdown/prose/view';
 import { $prose } from '@milkdown/utils';
 import { createElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import type { BlockTransformCommand, EditorI18nMessages } from '../../../types/editor';
+import type {
+  BlockTransformCommand,
+  EditorI18nMessages,
+  EditorShortcutMode
+} from '@/types/editor';
 import {
   SELECTION_TOOLTIP_ICON_SIZE,
   SELECTION_TOOLTIP_ICON_STROKE_WIDTH,
@@ -28,12 +32,13 @@ import {
 const createSelectionTooltipPluginView = (
   view: EditorView,
   portalContainer: HTMLElement,
-  messages: EditorI18nMessages
+  messages: EditorI18nMessages,
+  shortcutMode: EditorShortcutMode
 ): PluginView => {
   // 当前语言下的选区菜单项。
   const items = resolveSelectionTooltipItems(messages);
   // 当前语言下的块级转换菜单项。
-  const blockTransformItems = resolveSelectionBlockTransformItems(messages);
+  const blockTransformItems = resolveSelectionBlockTransformItems(messages, shortcutMode);
   // 当前编辑器视图引用。
   let currentView: EditorView | null = view;
   // 链接 Popover 展开状态。
@@ -294,12 +299,14 @@ const createSelectionTooltipPluginView = (
  */
 export const createSelectionTooltipPlugin = (
   portalContainer: HTMLElement,
-  messages: EditorI18nMessages
+  messages: EditorI18nMessages,
+  shortcutMode: EditorShortcutMode
 ): ReturnType<typeof $prose> => {
   return $prose(() => {
     return new Plugin({
       key: new PluginKey(SELECTION_TOOLTIP_ID),
-      view: (view) => createSelectionTooltipPluginView(view as EditorView, portalContainer, messages)
+      view: (view) =>
+        createSelectionTooltipPluginView(view as EditorView, portalContainer, messages, shortcutMode)
     });
   });
 };

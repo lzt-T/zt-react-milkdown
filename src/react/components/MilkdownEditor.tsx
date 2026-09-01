@@ -17,7 +17,7 @@ import type {
   EditorSearchOptions,
   EditorSearchSnapshot
 } from '@/plugins/custom/search';
-import type { MilkdownEditorProps } from '../../types/editor';
+import type { MilkdownEditorProps } from '@/types/editor';
 import { SearchPanel } from './SearchPanel';
 import { useControlledState } from '../hooks/useControlledState';
 import { useMilkdownEditor } from '../hooks/useMilkdownEditor';
@@ -75,6 +75,7 @@ const MilkdownRuntime = (props: {
   messages: ReturnType<typeof resolveEditorMessages>;
   slashMenu: MilkdownEditorProps['slashMenu'];
   imageUpload: MilkdownEditorProps['imageUpload'];
+  shortcutMode: NonNullable<MilkdownEditorProps['shortcutMode']>;
   portalContainer: HTMLElement;
   contentPortalContainer: HTMLElement;
   focusEditorRef: MutableRefObject<((coordinates?: FocusEditorCoordinates) => void) | null>;
@@ -96,6 +97,7 @@ const MilkdownRuntime = (props: {
     locale: props.locale,
     slashMenu: props.slashMenu,
     imageUpload: props.imageUpload,
+    shortcutMode: props.shortcutMode,
     onMarkdownChange: props.onMarkdownChange,
     onInitReady: props.onInitReady,
     onInitError: props.onInitError,
@@ -138,6 +140,8 @@ export const MilkdownEditor = (props: MilkdownEditorProps): JSX.Element => {
   const readOnlyLabel = READ_ONLY_LABELS[props.locale ?? 'zh-CN'];
   /** 内容变更防抖时长。 */
   const debounceMs = props.debounceMs ?? DEFAULT_DEBOUNCE_MS;
+  /** 当前内置快捷键修饰键模式。 */
+  const shortcutMode = props.shortcutMode ?? 'modShift';
 
   /** 统一受控与非受控状态。 */
   const { markdown, setMarkdown } = useControlledState(
@@ -418,6 +422,7 @@ export const MilkdownEditor = (props: MilkdownEditorProps): JSX.Element => {
                 messages={messages}
                 slashMenu={props.slashMenu}
                 imageUpload={props.imageUpload}
+                shortcutMode={shortcutMode}
                 onMarkdownChange={handleMarkdownChange}
                 onInitReady={handleInitReady}
                 onInitError={handleInitError}

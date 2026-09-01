@@ -4,9 +4,10 @@ import { useEffect, useRef, type MutableRefObject } from 'react';
 import type {
   EditorI18nMessages,
   EditorLocale,
+  EditorShortcutMode,
   ImageUploadConfig,
   SlashMenuConfig
-} from '../../types/editor';
+} from '@/types/editor';
 import {
   createMilkdownEditorRuntime,
   type FocusEditorCoordinates,
@@ -40,6 +41,8 @@ export interface UseMilkdownEditorOptions {
   slashMenu?: SlashMenuConfig;
   /** 图片上传配置。 */
   imageUpload?: ImageUploadConfig;
+  /** 内置快捷键修饰键模式。 */
+  shortcutMode: EditorShortcutMode;
   /** 编辑器聚焦方法引用。 */
   focusEditorRef?: MutableRefObject<((coordinates?: FocusEditorCoordinates) => void) | null>;
   /** 编辑器搜索控制器引用。 */
@@ -133,6 +136,7 @@ export const useMilkdownEditor = (options: UseMilkdownEditorOptions): void => {
         locale: options.locale,
         slashMenu: options.slashMenu,
         imageUpload: options.imageUpload,
+        shortcutMode: options.shortcutMode,
         onChange: (nextMarkdown) => {
           currentMarkdownRef.current = nextMarkdown;
           debouncedEmitRef.current?.(nextMarkdown);
@@ -165,6 +169,7 @@ export const useMilkdownEditor = (options: UseMilkdownEditorOptions): void => {
       options.contentPortalContainer,
       options.readOnly,
       options.locale,
+      options.shortcutMode,
       options.focusEditorRef,
       options.searchControllerRef
     ]
@@ -220,6 +225,7 @@ export const useMilkdownEditor = (options: UseMilkdownEditorOptions): void => {
     options.contentPortalContainer,
     options.readOnly,
     options.locale,
+    options.shortcutMode,
     options.focusEditorRef,
     options.searchControllerRef
   ]);

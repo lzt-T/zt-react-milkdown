@@ -1,4 +1,11 @@
-import type { EditorI18nMessages, EditorLocale, ImageUploadConfig, SlashMenuConfig, SlashMenuItem } from '../../../types/editor';
+import type {
+  EditorI18nMessages,
+  EditorLocale,
+  EditorShortcutMode,
+  ImageUploadConfig,
+  SlashMenuConfig,
+  SlashMenuItem
+} from '@/types/editor';
 import { slashFactory } from '@milkdown/plugin-slash';
 import { resolveEditorWrapper, resolvePlacement, toContentAnchor } from '../../../lib/editor-overlay-position';
 import { showImageUploadDialog } from '../image/image-upload-dialog';
@@ -51,7 +58,7 @@ const resolveSlashRuntime = (): SlashRuntime | null => {
     return null;
   }
 
-  // slash 工厂返回值。
+  /** slash 工厂返回值。 */
   const tuple = (slashFactory as (id: string) => unknown)('zt-md-slash');
   // tuple 第一位（spec）。
   const tupleSpec = Array.isArray(tuple) ? tuple[0] : undefined;
@@ -91,7 +98,8 @@ export const createSlashMenuPlugin = (
   config?: SlashMenuConfig,
   messages?: EditorI18nMessages,
   imageUpload?: ImageUploadConfig,
-  locale: EditorLocale = 'zh-CN'
+  locale: EditorLocale = 'zh-CN',
+  shortcutMode: EditorShortcutMode = 'modShift'
 ): SlashPluginSetup => {
   if (config?.enabled === false) {
     return { plugins: [], config: null };
@@ -107,7 +115,7 @@ export const createSlashMenuPlugin = (
     // 最终菜单项配置。
     const items = resolveSlashMenuItems(config, locale);
     // slash 菜单视图控制器。
-    const menuView = createSlashMenuViewController(portalContainer);
+    const menuView = createSlashMenuViewController(portalContainer, shortcutMode);
     // 当前高亮索引。
     let activeIndex = 0;
     // 当前编辑器视图引用。
@@ -167,11 +175,13 @@ export const createSlashMenuPlugin = (
      * 解析当前光标在视口中的锚点矩形。
      */
     const resolveAnchorRect = (view: any): DOMRect | null => {
+      // 当前选区位置。
       const from = view?.state?.selection?.from;
       if (typeof from !== 'number') {
         return null;
       }
 
+      // 当前选区视口坐标。
       const coords = view?.coordsAtPos?.(from) as
         | { top: number; bottom: number; left: number; right: number }
         | null;
@@ -210,11 +220,16 @@ export const createSlashMenuPlugin = (
         return;
       }
 
+      // 当前菜单锚点矩形。
       const anchorRect = resolveAnchorRect(view);
+      // 当前编辑器滚动容器。
       const editorWrapper = resolveEditorWrapper(view?.dom as HTMLElement | null);
       if (anchorRect && editorWrapper) {
+        // 菜单翻转方向的可用空间阈值。
         const placementThreshold = 320;
+        // 当前菜单展开方向。
         const placement = resolvePlacement(anchorRect, placementThreshold);
+        // 当前锚点内容坐标。
         const contentAnchor = toContentAnchor(anchorRect, editorWrapper);
         menuView.updatePositionContext({
           editorWrapper,
@@ -239,7 +254,7 @@ export const createSlashMenuPlugin = (
     /**
      * 根据索引执行命令。
      */
-    const runActiveCommand = async (): Promise<void> => {
+    const runActiveCommand = (): void => {
       if (!isEditorViewEditable(currentView)) {
         menuInteractable = false;
         menuView.updatePositionContext(null);
@@ -270,7 +285,7 @@ export const createSlashMenuPlugin = (
         return;
       }
       // 当前命令是否执行成功。
-      const success = await runSlashCommand(currentView, item.command);
+      const success = runSlashCommand(currentView, item.command);
       if (!success) {
         return;
       }
@@ -312,7 +327,9 @@ export const createSlashMenuPlugin = (
       void runActiveCommand();
     });
 
-    // slash 上下文配置器。
+    /**
+     * 配置 slash 插件上下文。
+     */
     const setup = (ctx: any): void => {
       ctx.set(runtime.key, {
         props: {

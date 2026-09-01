@@ -175,7 +175,18 @@
   }
 
   .zt-md-selection-transform-item-label {
+    min-width: 0;
+    flex: 1;
     font-size: 13px;
+    line-height: 1;
+  }
+
+  .zt-md-selection-transform-item-shortcut {
+    flex: 0 0 auto;
+    margin-left: auto;
+    color: var(--zt-muted);
+    font-family: inherit;
+    font-size: 11px;
     line-height: 1;
   }
 

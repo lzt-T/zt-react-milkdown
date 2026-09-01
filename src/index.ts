@@ -5,6 +5,7 @@ export type {
   EditorChangeHandler,
   EditorI18nMessages,
   EditorLocale,
+  EditorShortcutMode,
   EditorTheme,
   ImageUploadConfig,
   ImageUploadHandler,

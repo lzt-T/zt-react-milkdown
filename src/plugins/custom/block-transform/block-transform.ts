@@ -100,7 +100,7 @@ const BLOCK_TRANSFORM_COMMAND_PRIORITY: BlockTransformCommand[] = [
 /**
  * 执行块级转换命令。
  */
-export const runBlockTransformCommand = async (view: EditorView, command: BlockTransformCommand): Promise<boolean> => {
+export const runBlockTransformCommand = (view: EditorView, command: BlockTransformCommand): boolean => {
   if (!view?.state || !view?.dispatch) {
     return false;
   }

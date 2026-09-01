@@ -2,9 +2,10 @@ import type {
   EditorChangeHandler,
   EditorI18nMessages,
   EditorLocale,
+  EditorShortcutMode,
   ImageUploadConfig,
   SlashMenuConfig
-} from '../types/editor';
+} from '@/types/editor';
 import type { Node as ProseNode } from '@milkdown/prose/model';
 import { TextSelection } from '@milkdown/prose/state';
 import {
@@ -53,7 +54,10 @@ import {
   createCodeBlockLanguagePickerPlugin
 } from '../plugins/custom/code-block';
 import { createSelectionTooltipPlugin } from '../plugins/custom/selection-tooltip';
-import { createSlashMenuPlugin } from '../plugins/custom/slash-menu';
+import {
+  createEditorShortcutKeyDownHandler,
+  createSlashMenuPlugin
+} from '../plugins/custom/slash-menu';
 import { createTableFocusActionsPlugin, tableArrowEntryPlugin } from '../plugins/custom/table';
 import { taskListToggle } from '../plugins/custom/list';
 import { tabSpaceIndentPlugin } from '../plugins/custom/indent';
@@ -68,6 +72,10 @@ import {
 import { resolveEditorMessages } from '../local/i18n';
 import type { PresetPluginExports } from '../plugins/preset-common';
 import { normalizeSafeUrl } from '../utils/security';
+import {
+  createTaskListTransformKeymap,
+  configureBlockTransformShortcuts
+} from '@/plugins/custom/block-transform';
 
 /**
  * 定义 Milkdown 原生编辑器实例类型。
@@ -122,6 +130,8 @@ export interface CreateMilkdownEditorRuntimeOptions {
   slashMenu?: SlashMenuConfig;
   /** 图片上传配置。 */
   imageUpload?: ImageUploadConfig;
+  /** 内置快捷键修饰键模式。 */
+  shortcutMode: EditorShortcutMode;
   /** Markdown 变化事件。 */
   onChange: EditorChangeHandler;
   /** 搜索结果快照变化事件。 */
@@ -206,7 +216,11 @@ export const createMilkdownEditorRuntime = (
   /** 表格聚焦操作插件实例。 */
   const tableFocusActionsPlugin = createTableFocusActionsPlugin(options.contentPortalContainer, messages);
   /** 选区 tooltip 菜单插件实例。 */
-  const selectionTooltipPlugin = createSelectionTooltipPlugin(options.contentPortalContainer, messages);
+  const selectionTooltipPlugin = createSelectionTooltipPlugin(
+    options.contentPortalContainer,
+    messages,
+    options.shortcutMode
+  );
   /** 代码块语言选择器插件实例。 */
   const codeBlockLanguagePickerPlugin = createCodeBlockLanguagePickerPlugin(messages, options.contentPortalContainer);
   /** 行内公式编辑插件实例。 */
@@ -222,14 +236,25 @@ export const createMilkdownEditorRuntime = (
     options.slashMenu,
     messages,
     options.imageUpload,
-    options.locale
+    options.locale,
+    options.shortcutMode
   );
   /** slash 插件实例列表。 */
   const slashPlugins = slashSetup.plugins;
+  /** 编辑器内置快捷键处理器。 */
+  const handleEditorShortcutKeyDown = createEditorShortcutKeyDownHandler(
+    options.portalContainer,
+    messages,
+    options.shortcutMode,
+    options.imageUpload
+  );
+  /** 当前模式的任务列表块转换快捷键。 */
+  const taskListTransformKeymap = createTaskListTransformKeymap(options.shortcutMode);
   /** 预设插件导出集合。 */
   const presetPluginExports: PresetPluginExports = {
     listener,
     commonmark,
+    taskListTransformKeymap,
     inlineCodeBoundaryNavigation: inlineCodeBoundaryNavigationPlugin,
     gfm,
     history,
@@ -273,12 +298,14 @@ export const createMilkdownEditorRuntime = (
   /** 编辑器实例。 */
   const editor = Editor.make();
   editor.config((ctx: any) => {
+    configureBlockTransformShortcuts(ctx, options.shortcutMode);
     configureCodeBlockLanguageSchema(ctx);
     configureImageResizableSchema(ctx, options.imageUpload?.allowedProtocols);
     ctx.set(rootCtx, options.root);
     ctx.set(defaultValueCtx, options.markdown);
     ctx.set(editorViewOptionsCtx, {
       editable: () => !options.readOnly,
+      handleKeyDown: handleEditorShortcutKeyDown,
       handleDOMEvents: {
         mousedown: (_view: unknown, event: Event) => {
           return event instanceof MouseEvent

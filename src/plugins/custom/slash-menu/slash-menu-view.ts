@@ -1,4 +1,4 @@
-import type { SlashMenuItem } from '../../../types/editor';
+import type { EditorShortcutMode, SlashMenuCommand, SlashMenuItem } from '@/types/editor';
 import { createElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import {
@@ -22,7 +22,12 @@ import {
   Type,
   type LucideIcon
 } from 'lucide-react';
-import { createOverlayRepositionScheduler, toPortalPosition, type OverlayPlacement } from '../../../lib/editor-overlay-position';
+import { resolveSlashMenuShortcutLabels } from '@/plugins/custom/block-transform';
+import {
+  createOverlayRepositionScheduler,
+  toPortalPosition,
+  type OverlayPlacement
+} from '@/lib/editor-overlay-position';
 
 /**
  * slash 菜单展开方向。
@@ -104,7 +109,8 @@ const renderMenuItems = (
   menu: HTMLDivElement,
   items: SlashMenuItem[],
   activeIndex: number,
-  iconRoots: Root[]
+  iconRoots: Root[],
+  shortcutLabels: Readonly<Record<SlashMenuCommand, string>>
 ): void => {
   // 清理上次图标渲染 root，避免重复挂载。
   iconRoots.splice(0).forEach((iconRoot) => {
@@ -136,6 +142,7 @@ const renderMenuItems = (
     // 当前菜单项图标组件。
     const iconComponent = item.icon ? (SLASH_MENU_ICON_MAP[item.icon] ?? FALLBACK_SLASH_MENU_ICON) : null;
     if (iconComponent) {
+      // 当前菜单项图标渲染 root。
       const iconRoot = createRoot(iconNode);
       iconRoot.render(createElement(iconComponent, { size: 16, strokeWidth: 2 }));
       iconRoots.push(iconRoot);
@@ -146,8 +153,20 @@ const renderMenuItems = (
     labelNode.className = 'slash-menu-item-label';
     labelNode.textContent = item.label;
 
+    // 当前菜单项对应的快捷键文案。
+    const shortcutLabel = shortcutLabels[item.command];
+    // 菜单项快捷键容器。
+    const shortcutNode = shortcutLabel ? document.createElement('kbd') : null;
+    if (shortcutNode) {
+      shortcutNode.className = 'slash-menu-item-shortcut';
+      shortcutNode.textContent = shortcutLabel;
+    }
+
     itemNode.appendChild(iconNode);
     itemNode.appendChild(labelNode);
+    if (shortcutNode) {
+      itemNode.appendChild(shortcutNode);
+    }
     menu.appendChild(itemNode);
   });
 };
@@ -155,7 +174,10 @@ const renderMenuItems = (
 /**
  * 创建 slash 菜单视图控制器。
  */
-export const createSlashMenuViewController = (portalContainer: HTMLElement): SlashMenuViewController => {
+export const createSlashMenuViewController = (
+  portalContainer: HTMLElement,
+  shortcutMode: EditorShortcutMode
+): SlashMenuViewController => {
   // 菜单容器节点。
   const menu = document.createElement('div');
   menu.className = 'slash-menu';
@@ -172,6 +194,8 @@ export const createSlashMenuViewController = (portalContainer: HTMLElement): Sla
   let positionContext: SlashMenuPositionContext | null = null;
   // 当前已挂载图标 root 集合。
   const iconRoots: Root[] = [];
+  // 当前平台 slash 菜单快捷键文案。
+  const shortcutLabels = resolveSlashMenuShortcutLabels(shortcutMode);
 
   /**
    * 第二段：将内容坐标换算为 Portal 内坐标并写入 absolute 菜单样式。
@@ -181,6 +205,7 @@ export const createSlashMenuViewController = (portalContainer: HTMLElement): Sla
       return;
     }
 
+    // 当前浮层定位参数。
     const {
       editorWrapper,
       anchorTopInContent,
@@ -266,13 +291,15 @@ export const createSlashMenuViewController = (portalContainer: HTMLElement): Sla
    * 仅在渲染输入变化时重绘菜单。
    */
   const renderIfNeeded = (items: SlashMenuItem[], activeIndex: number): void => {
+    // 当前可见命令签名。
     const commandsSignature = items.map((item) => item.command).join('|');
+    // 当前菜单渲染签名。
     const renderSignature = `${commandsSignature}::${activeIndex}`;
     if (lastRenderSignature === renderSignature) {
       return;
     }
 
-    renderMenuItems(menu, items, activeIndex, iconRoots);
+    renderMenuItems(menu, items, activeIndex, iconRoots, shortcutLabels);
     lastRenderSignature = renderSignature;
   };
 
