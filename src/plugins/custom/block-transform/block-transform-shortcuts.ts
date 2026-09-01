@@ -33,7 +33,7 @@ interface ShortcutDefinition {
 export const SLASH_MENU_SHORTCUT_DEFINITIONS: Readonly<
   Record<SlashMenuCommand, ShortcutDefinition>
 > = {
-  paragraph: { key: 'p', code: 'KeyP' },
+  paragraph: { key: '0', code: 'Digit0' },
   heading1: { key: '1', code: 'Digit1' },
   heading2: { key: '2', code: 'Digit2' },
   heading3: { key: '3', code: 'Digit3' },

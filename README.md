@@ -158,7 +158,7 @@ export default function Demo() {
 
 | 命令 | 主键 | `modShift`（Windows/Linux） | `modAlt`（Windows/Linux） |
 | --- | --- | --- | --- |
-| 普通文本 | `P` | `Ctrl+Shift+P` | `Ctrl+Alt+P` |
+| 普通文本 | `0` | `Ctrl+Shift+0` | `Ctrl+Alt+0` |
 | 标题 1–6 | `1–6` | `Ctrl+Shift+1–6` | `Ctrl+Alt+1–6` |
 | 无序列表 | `U` | `Ctrl+Shift+U` | `Ctrl+Alt+U` |
 | 有序列表 | `O` | `Ctrl+Shift+O` | `Ctrl+Alt+O` |
