@@ -199,7 +199,7 @@
   }
 }
 
-@media (max-width: 767px) {
+@media (max-width: 560px) {
   @layer components {
     .zt-md-search-panel {
       left: 0.5rem;
