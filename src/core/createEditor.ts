@@ -45,7 +45,10 @@ import {
   mathBackspaceEntryPlugin
 } from '../plugins/custom/math';
 import { blockquoteBackspaceLiftPlugin } from '../plugins/custom/blockquote';
-import { headingBackspaceEmptyParagraphPlugin } from '../plugins/custom/heading';
+import {
+  headingBackspaceEmptyParagraphPlugin,
+  headingFocusIndicatorPlugin
+} from '../plugins/custom/heading';
 import {
   codeBlockModASelectPlugin,
   codeBlockPrismPlugin,
@@ -268,6 +271,7 @@ export const createMilkdownEditorRuntime = (
     tableArrowEntry: tableArrowEntryPlugin,
     blockBoundaryNavigation: blockBoundaryNavigationPlugin,
     headingBackspaceEmptyParagraph: headingBackspaceEmptyParagraphPlugin,
+    headingFocusIndicator: headingFocusIndicatorPlugin,
     mathBackspaceEntry: mathBackspaceEntryPlugin,
     blockquoteBackspaceLift: blockquoteBackspaceLiftPlugin,
     tableFocusActions: tableFocusActionsPlugin,

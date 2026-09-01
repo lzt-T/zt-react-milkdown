@@ -37,6 +37,27 @@
     font-weight: 600;
   }
 
+  .zt-md-editor .ProseMirror .zt-md-heading-focused {
+    position: relative;
+  }
+
+  .zt-md-editor:not(.zt-md-readonly) .ProseMirror-focused .zt-md-heading-focused::before {
+    content: attr(data-heading-level);
+    position: absolute;
+    top: 0em;
+    left: -1.08rem;
+    width: max-content;
+    color: var(--zt-primary);
+    font-size: 12px;
+    font-weight: 550;
+    line-height: 1;
+    letter-spacing: 0;
+    text-align: center;
+    white-space: nowrap;
+    pointer-events: none;
+    user-select: none;
+  }
+
   .zt-md-editor .ProseMirror :is(h1, h2, h3, h4, h5, h6) + :is(h1, h2, h3, h4, h5, h6):not(:first-child) {
     margin-top: 0.5rem;
   }

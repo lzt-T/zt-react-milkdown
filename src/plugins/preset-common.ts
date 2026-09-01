@@ -36,6 +36,8 @@ export interface PresetPluginExports {
   blockBoundaryNavigation: unknown;
   /** 标题前空白段落 Backspace 删除插件实例。 */
   headingBackspaceEmptyParagraph: unknown;
+  /** 标题聚焦层级提示插件实例。 */
+  headingFocusIndicator: unknown;
   /** 公式块 Backspace 进入插件实例。 */
   mathBackspaceEntry: unknown;
   /** 引用块首段 Backspace 提升插件实例。 */
@@ -128,6 +130,7 @@ export const resolvePresetPlugins = (
     'heading-backspace-empty-paragraph',
     pluginExports.headingBackspaceEmptyParagraph
   );
+  appendPluginDescriptors(descriptors, 'heading-focus-indicator', pluginExports.headingFocusIndicator);
   appendPluginDescriptors(descriptors, 'math-backspace-entry', pluginExports.mathBackspaceEntry);
   appendPluginDescriptors(descriptors, 'blockquote-backspace-lift', pluginExports.blockquoteBackspaceLift);
   appendPluginDescriptors(descriptors, 'table-focus-actions', pluginExports.tableFocusActions);
