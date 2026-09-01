@@ -218,7 +218,7 @@ class MathInlineEditPluginView {
     this.messages = messages;
     this.host = document.createElement('span');
     this.host.className = 'zt-md-math-inline-editor';
-    this.host.style.display = 'none';
+    this.host.hidden = true;
 
     this.sourceInput = document.createElement('input');
     this.sourceInput.type = 'text';
@@ -239,6 +239,7 @@ class MathInlineEditPluginView {
     this.sourceInput.addEventListener('keydown', this.handleKeyDown);
     this.sourceInput.addEventListener('blur', this.handleBlur);
     this.host.addEventListener('mousedown', this.handleMouseDown);
+    this.view.dom.addEventListener('focusin', this.handleEditorFocusIn);
     this.update(view);
   }
 
@@ -309,6 +310,23 @@ class MathInlineEditPluginView {
   };
 
   /**
+   * 编辑区重新获得焦点时关闭残留的行内公式编辑器。
+   */
+  private readonly handleEditorFocusIn = (event: FocusEvent): void => {
+    if (this.isCommitting || this.currentPosition === null) {
+      return;
+    }
+
+    // 当前获得焦点的节点。
+    const focusTarget = event.target;
+    if (focusTarget instanceof Node && this.host.contains(focusTarget)) {
+      return;
+    }
+
+    this.commitCurrentValue();
+  };
+
+  /**
    * 渲染公式预览。
    */
   private renderMath(source: string): void {
@@ -371,7 +389,7 @@ class MathInlineEditPluginView {
     this.currentMathInlineElement = mathInlineElement;
     mathInlineElement.dataset.editing = 'true';
     mathInlineElement.append(this.host);
-    this.host.style.display = 'inline-flex';
+    this.host.hidden = false;
     requestAnimationFrame(() => {
       if (this.currentPosition !== position) {
         return;
@@ -433,7 +451,7 @@ class MathInlineEditPluginView {
     }
     this.currentPosition = null;
     this.currentMathInlineElement = null;
-    this.host.style.display = 'none';
+    this.host.hidden = true;
     this.host.remove();
     if (shouldDispatch) {
       this.view.dispatch(this.view.state.tr.setMeta(mathInlineEditPluginKey, { type: 'close' } as MathInlineEditMeta));
@@ -489,10 +507,8 @@ class MathInlineEditPluginView {
     this.sourceInput.removeEventListener('keydown', this.handleKeyDown);
     this.sourceInput.removeEventListener('blur', this.handleBlur);
     this.host.removeEventListener('mousedown', this.handleMouseDown);
-    if (this.currentMathInlineElement) {
-      this.currentMathInlineElement.dataset.editing = 'false';
-    }
-    this.host.remove();
+    this.view.dom.removeEventListener('focusin', this.handleEditorFocusIn);
+    this.closeEditor(false);
   }
 }
 

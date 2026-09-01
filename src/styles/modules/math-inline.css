@@ -19,6 +19,10 @@
     @apply hidden;
   }
 
+  .zt-md-editor .zt-md-math-inline:not([data-editing='true']) > .zt-md-math-inline-editor {
+    display: none !important;
+  }
+
   .zt-md-editor .zt-md-math-inline-preview {
     @apply max-w-full overflow-x-auto overflow-y-hidden;
   }

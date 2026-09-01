@@ -336,7 +336,10 @@ export const MilkdownEditor = (props: MilkdownEditorProps): JSX.Element => {
   const handleEditorKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>): void => {
     // 当前按键是否为实例内搜索快捷键。
     const isSearchShortcut =
-      (event.ctrlKey || event.metaKey) && !event.altKey && event.key.toLowerCase() === 'f';
+      (event.ctrlKey || event.metaKey) &&
+      !event.altKey &&
+      !event.shiftKey &&
+      event.key.toLowerCase() === 'f';
     if (isSearchShortcut) {
       event.preventDefault();
       openSearchPanel();
