@@ -2,7 +2,7 @@
   .zt-md-editor .ProseMirror blockquote {
     margin: 0.75em 0;
     padding: 0.55em 0.8em;
-    border-left: 1px solid var(--zt-primary);
+    border-left: 3px solid var(--zt-primary);
     border-radius: 0 var(--zt-radius) var(--zt-radius) 0;
     background: color-mix(in srgb, var(--zt-primary) 6%, var(--zt-surface));
     color: inherit;
