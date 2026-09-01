@@ -13,6 +13,10 @@ import {
   type MilkdownEditorRuntime,
   type NativeMilkdownEditor
 } from '../../core/createEditor';
+import type {
+  EditorSearchController,
+  EditorSearchSnapshot
+} from '@/plugins/custom/search';
 
 /**
  * 定义 useMilkdownEditor 的输入参数。
@@ -38,12 +42,16 @@ export interface UseMilkdownEditorOptions {
   imageUpload?: ImageUploadConfig;
   /** 编辑器聚焦方法引用。 */
   focusEditorRef?: MutableRefObject<((coordinates?: FocusEditorCoordinates) => void) | null>;
+  /** 编辑器搜索控制器引用。 */
+  searchControllerRef?: MutableRefObject<EditorSearchController | null>;
   /** 编辑器内容变更回调。 */
   onMarkdownChange: (markdown: string) => void;
   /** 编辑器初始化失败回调。 */
   onInitError?: (error: unknown) => void;
   /** 编辑器初始化成功回调。 */
   onInitReady?: () => void;
+  /** 搜索结果快照变化回调。 */
+  onSearchSnapshotChange?: (snapshot: EditorSearchSnapshot) => void;
 }
 
 /**
@@ -93,6 +101,10 @@ export const useMilkdownEditor = (options: UseMilkdownEditorOptions): void => {
   const onInitErrorRef = useRef<((error: unknown) => void) | undefined>(options.onInitError);
   /** 初始化成功回调引用。 */
   const onInitReadyRef = useRef<(() => void) | undefined>(options.onInitReady);
+  /** 搜索结果快照变化回调引用。 */
+  const onSearchSnapshotChangeRef = useRef<
+    ((snapshot: EditorSearchSnapshot) => void) | undefined
+  >(options.onSearchSnapshotChange);
   /** markdown 变化外发防抖器引用。 */
   const debouncedEmitRef = useRef<ReturnType<typeof debounce<(markdown: string) => void>> | null>(
     null
@@ -104,6 +116,9 @@ export const useMilkdownEditor = (options: UseMilkdownEditorOptions): void => {
       runtimeRef.current = null;
       if (options.focusEditorRef) {
         options.focusEditorRef.current = null;
+      }
+      if (options.searchControllerRef) {
+        options.searchControllerRef.current = null;
       }
       currentMarkdownRef.current = options.markdown;
 
@@ -121,6 +136,9 @@ export const useMilkdownEditor = (options: UseMilkdownEditorOptions): void => {
         onChange: (nextMarkdown) => {
           currentMarkdownRef.current = nextMarkdown;
           debouncedEmitRef.current?.(nextMarkdown);
+        },
+        onSearchSnapshotChange: (snapshot) => {
+          onSearchSnapshotChangeRef.current?.(snapshot);
         }
       });
 
@@ -131,6 +149,9 @@ export const useMilkdownEditor = (options: UseMilkdownEditorOptions): void => {
           runtimeRef.current = runtime;
           if (options.focusEditorRef) {
             options.focusEditorRef.current = runtime.focusEditor;
+          }
+          if (options.searchControllerRef) {
+            options.searchControllerRef.current = runtime.searchController;
           }
           onInitReadyRef.current?.();
         },
@@ -144,7 +165,8 @@ export const useMilkdownEditor = (options: UseMilkdownEditorOptions): void => {
       options.contentPortalContainer,
       options.readOnly,
       options.locale,
-      options.focusEditorRef
+      options.focusEditorRef,
+      options.searchControllerRef
     ]
   );
 
@@ -159,6 +181,10 @@ export const useMilkdownEditor = (options: UseMilkdownEditorOptions): void => {
   useEffect(() => {
     onInitReadyRef.current = options.onInitReady;
   }, [options.onInitReady]);
+
+  useEffect(() => {
+    onSearchSnapshotChangeRef.current = options.onSearchSnapshotChange;
+  }, [options.onSearchSnapshotChange]);
 
   useEffect(() => {
     if (debouncedEmitRef.current) {
@@ -185,13 +211,17 @@ export const useMilkdownEditor = (options: UseMilkdownEditorOptions): void => {
       if (options.focusEditorRef) {
         options.focusEditorRef.current = null;
       }
+      if (options.searchControllerRef) {
+        options.searchControllerRef.current = null;
+      }
     };
   }, [
     options.portalContainer,
     options.contentPortalContainer,
     options.readOnly,
     options.locale,
-    options.focusEditorRef
+    options.focusEditorRef,
+    options.searchControllerRef
   ]);
 
   useEffect(() => {

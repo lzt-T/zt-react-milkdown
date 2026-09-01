@@ -58,6 +58,13 @@ import { createTableFocusActionsPlugin, tableArrowEntryPlugin } from '../plugins
 import { taskListToggle } from '../plugins/custom/list';
 import { tabSpaceIndentPlugin } from '../plugins/custom/indent';
 import { inlineCodeBoundaryNavigationPlugin } from '../plugins/custom/inline-code-boundary-navigation';
+import {
+  createEditorSearchController,
+  createEditorSearchPlugins,
+  type EditorSearchActionRunner,
+  type EditorSearchController,
+  type EditorSearchSnapshot
+} from '@/plugins/custom/search';
 import { resolveEditorMessages } from '../local/i18n';
 import type { PresetPluginExports } from '../plugins/preset-common';
 import { normalizeSafeUrl } from '../utils/security';
@@ -89,6 +96,8 @@ export interface MilkdownEditorRuntime {
   focusEditor: (coordinates?: FocusEditorCoordinates) => void;
   /** 同步 Markdown 内容。 */
   setMarkdown: (markdown: string) => void;
+  /** 当前编辑器实例的搜索控制器。 */
+  searchController: EditorSearchController;
 }
 
 /**
@@ -115,6 +124,8 @@ export interface CreateMilkdownEditorRuntimeOptions {
   imageUpload?: ImageUploadConfig;
   /** Markdown 变化事件。 */
   onChange: EditorChangeHandler;
+  /** 搜索结果快照变化事件。 */
+  onSearchSnapshotChange: (snapshot: EditorSearchSnapshot) => void;
 }
 
 /**
@@ -202,6 +213,8 @@ export const createMilkdownEditorRuntime = (
   const mathInlineEditPlugin = createMathInlineEditPlugin(messages, options.contentPortalContainer);
   /** 图片粘贴上传插件实例。 */
   const imagePastePlugin = createImagePastePlugin(options.imageUpload, messages);
+  /** 编辑器搜索插件实例列表。 */
+  const editorSearchPlugins = createEditorSearchPlugins(options.onSearchSnapshotChange);
 
   /** 默认插件集合。 */
   const slashSetup = createSlashMenuPlugin(
@@ -220,6 +233,7 @@ export const createMilkdownEditorRuntime = (
     inlineCodeBoundaryNavigation: inlineCodeBoundaryNavigationPlugin,
     gfm,
     history,
+    editorSearch: editorSearchPlugins,
     codeBlockPrism: codeBlockPrismPlugin,
     codeBlockLanguagePicker: codeBlockLanguagePickerPlugin,
     clipboard,
@@ -327,6 +341,19 @@ export const createMilkdownEditorRuntime = (
   });
 
   /**
+   * 在当前 Milkdown EditorView 中执行搜索动作。
+   */
+  const runSearchAction: EditorSearchActionRunner = (action): void => {
+    editor.action((ctx: any) => {
+      // 当前 ProseMirror 视图。
+      const view = ctx.get(editorViewCtx);
+      action(view);
+    });
+  };
+  /** 当前编辑器实例的搜索控制器。 */
+  const searchController = createEditorSearchController(runSearchAction);
+
+  /**
    * 注册运行时延迟插件。
    */
   const installRuntimePlugins = (): void => {
@@ -415,6 +442,7 @@ export const createMilkdownEditorRuntime = (
     editor,
     installRuntimePlugins,
     focusEditor,
+    searchController,
     setMarkdown: (markdown: string): void => {
       runReplaceAll(markdown);
     }

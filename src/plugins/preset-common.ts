@@ -14,6 +14,8 @@ export interface PresetPluginExports {
   gfm: unknown;
   /** history 插件实例。 */
   history: unknown;
+  /** 编辑器搜索插件实例。 */
+  editorSearch: unknown | unknown[];
   /** 代码块 prism 高亮插件实例。 */
   codeBlockPrism: unknown;
   /** 代码块语言选择器插件实例。 */
@@ -107,6 +109,7 @@ export const resolvePresetPlugins = (
   );
   appendPluginDescriptors(descriptors, 'gfm', pluginExports.gfm);
   appendPluginDescriptors(descriptors, 'history', pluginExports.history);
+  appendPluginDescriptors(descriptors, 'editor-search', pluginExports.editorSearch);
   appendPluginDescriptors(descriptors, 'code-block-prism', pluginExports.codeBlockPrism);
   appendPluginDescriptors(descriptors, 'code-block-language-picker', pluginExports.codeBlockLanguagePicker);
   if (includeRuntime) {

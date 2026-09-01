@@ -20,6 +20,30 @@ export interface EditorI18nMessages {
   initError: string;
   /** 编辑器区域无障碍标签。 */
   editorAriaLabel: string;
+  /** 搜索面板无障碍标签。 */
+  searchPanelAriaLabel: string;
+  /** 搜索输入占位文案。 */
+  searchInputPlaceholder: string;
+  /** 替换输入占位文案。 */
+  searchReplaceInputPlaceholder: string;
+  /** 上一项按钮无障碍标签。 */
+  searchPreviousAriaLabel: string;
+  /** 下一项按钮无障碍标签。 */
+  searchNextAriaLabel: string;
+  /** 关闭搜索按钮无障碍标签。 */
+  searchCloseAriaLabel: string;
+  /** 区分大小写选项文案。 */
+  searchCaseSensitiveLabel: string;
+  /** 全词匹配选项文案。 */
+  searchWholeWordLabel: string;
+  /** 正则表达式选项文案。 */
+  searchRegexpLabel: string;
+  /** 替换当前项按钮文案。 */
+  searchReplaceLabel: string;
+  /** 全部替换按钮文案。 */
+  searchReplaceAllLabel: string;
+  /** 无效正则表达式提示。 */
+  searchInvalidRegexp: string;
   /** 公式块源码输入无障碍标签。 */
   mathBlockSourceAriaLabel: string;
   /** 公式块复制按钮无障碍标签。 */

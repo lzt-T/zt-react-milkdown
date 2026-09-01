@@ -80,6 +80,15 @@ export default function Demo() {
 - 选区工具栏
   - 选中文本后支持常用格式操作：加粗、斜体、删除线、行内代码、链接。
 
+- 文档搜索与替换
+  - 编辑器实例内按 `Ctrl+F`（macOS 为 `Cmd+F`）打开搜索栏；焦点在编辑器外时保留浏览器默认查找。
+  - 支持普通文本、区分大小写、全词和正则表达式搜索，并高亮全部匹配与当前匹配。
+  - `Enter` 定位下一项，`Shift+Enter` 定位上一项，`Escape` 关闭搜索栏，结果支持首尾循环；导航后会根据匹配坐标显式调整当前 `.zt-md-editor` 的内部滚动位置，不滚动页面或其他编辑器实例。
+  - 搜索输入保持主要宽度，大小写、全词和正则选项使用紧凑分段控制，上一项、下一项与关闭操作按职责分组。
+  - 可编辑模式的替换区域默认收起，可按需展开；支持替换当前项和全部替换，两个操作具有明确主次层级，正则替换支持 `$1`、`$2` 等捕获组引用。
+  - 只读模式保留搜索和导航，但不提供替换操作。
+  - 搜索范围为 ProseMirror 文档文本，包括代码块源码；不搜索图片、公式渲染结果或代码预览 iframe 内容。
+
 - 国际化
   - 内置 `zh-CN` / `en-US` 两种语言。
   - 可通过 `messages` 对内置文案进行局部覆盖。
@@ -89,6 +98,7 @@ export default function Demo() {
   - 通过 `theme` 属性切换主题。
 
 - 浮层隔离
+  - 搜索栏作为编辑器固定控件直接位于 `.zt-md-body`，不使用 Portal，且不受 `maxHeight` 编辑区滚动裁剪；导航定位会将搜索栏实际底部作为顶部安全线，替换区域展开或窄屏换行后仍避免遮挡当前匹配。
   - Slash 命令菜单等编辑器级锚点浮层挂载到编辑器内部 `.zt-md-portal`，继承当前主题且不受编辑区滚动裁剪。
   - 全屏 Dialog/Modal 类浮层挂载到 `document.body` 下的隔离宿主，宿主会同步编辑器主题类名与主题变量，避免被父级 `overflow` 或 `transform` 裁切。
   - 选区工具栏子菜单、代码块语言选择器、表格操作等内容附属浮层挂载到 `.zt-md-editor` 内部 `.zt-md-content-portal`，会随 `maxHeight` 编辑区滚动视口裁剪。
@@ -122,6 +132,7 @@ export default function Demo() {
 - `slashMenu` 对应 Slash 菜单行为配置。
 - `imageUpload` 对应图片上传策略配置。
 - `messages` 对应内置文案覆盖。
+- 搜索相关文案可通过 `messages.searchPanelAriaLabel`、`messages.searchInputPlaceholder`、`messages.searchReplaceInputPlaceholder`、搜索选项与操作标签字段进行局部覆盖。
 - `debounceMs` / `maxHeight` / `readOnly` 对应编辑交互行为控制。
 
 类型详情：
