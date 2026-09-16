@@ -22,6 +22,9 @@ import { indent, indentConfig } from '@milkdown/plugin-indent';
 import { listener, listenerCtx } from '@milkdown/plugin-listener';
 import { commonmark } from '@milkdown/preset-commonmark';
 import { gfm } from '@milkdown/preset-gfm';
+import { prismConfig } from '@milkdown/plugin-prism';
+import { configureCodeBlockHighlighter } from '@/plugins/custom/code-block/code-block-highlighter';
+import { codeBlockPrismPlugin } from '@/plugins/custom/code-block/code-block-prism-refresh';
 import { replaceAll } from '@milkdown/utils';
 import { createReplaceAllExecutor } from './commands';
 import { resolvePresetPlugins } from '../plugins/preset-common';
@@ -51,11 +54,10 @@ import {
 } from '../plugins/custom/heading';
 import {
   codeBlockModASelectPlugin,
-  codeBlockPrismPlugin,
   configureCodeBlockLanguageSchema,
   createCodeBlockEditableNodeView,
   createCodeBlockLanguagePickerPlugin
-} from '../plugins/custom/code-block';
+} from '@/plugins/custom/code-block';
 import { createSelectionTooltipPlugin } from '../plugins/custom/selection-tooltip';
 import {
   createEditorShortcutKeyDownHandler,
@@ -262,7 +264,7 @@ export const createMilkdownEditorRuntime = (
     gfm,
     history,
     editorSearch: editorSearchPlugins,
-    codeBlockPrism: codeBlockPrismPlugin,
+    codeBlockPrism: [codeBlockPrismPlugin, prismConfig],
     codeBlockLanguagePicker: codeBlockLanguagePickerPlugin,
     clipboard,
     indent,
@@ -304,6 +306,7 @@ export const createMilkdownEditorRuntime = (
   editor.config((ctx: any) => {
     configureBlockTransformShortcuts(ctx, options.shortcutMode);
     configureCodeBlockLanguageSchema(ctx);
+    ctx.set(prismConfig.key, { configureRefractor: configureCodeBlockHighlighter });
     configureImageResizableSchema(ctx, options.imageUpload?.allowedProtocols);
     ctx.set(rootCtx, options.root);
     ctx.set(defaultValueCtx, options.markdown);

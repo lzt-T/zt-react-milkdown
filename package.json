@@ -48,6 +48,7 @@
     "@milkdown/plugin-history": "^7.21.1",
     "@milkdown/plugin-indent": "^7.21.1",
     "@milkdown/plugin-listener": "^7.21.1",
+    "@milkdown/plugin-prism": "^7.21.1",
     "@milkdown/plugin-slash": "^7.21.1",
     "@milkdown/plugin-tooltip": "^7.21.1",
     "@milkdown/preset-commonmark": "^7.21.1",

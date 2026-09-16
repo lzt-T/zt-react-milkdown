@@ -64,6 +64,7 @@ export default function Demo() {
   
 - 代码块能力
   - 支持代码块编辑、语言选择与语法高亮。
+  - 语法高亮使用 Milkdown 官方 `@milkdown/plugin-prism`，通过 `refractor/all` 同步加载当前安装版本提供的全部语法及别名（包括 Dart、Scala、Elixir）；语言菜单与高亮共用注册配置。纯文本不着色，库未提供的语言保留源码和语言标识。全量加载会增加包体积与初始化开销。
 
 - 图片能力
   - 支持图片插入。

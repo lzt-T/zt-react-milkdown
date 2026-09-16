@@ -16,7 +16,7 @@ import {
   type ReactElement
 } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import { refractor } from 'refractor';
+import { refractor } from '@/plugins/custom/code-block/code-block-highlighter';
 import {
   normalizeCodeBlockLanguage,
   PLAIN_TEXT_LANGUAGE_VALUE
@@ -44,25 +44,6 @@ const CODE_BLOCK_LANGUAGE_PICKER_FALLBACK_HEIGHT = 26;
 const CODE_BLOCK_LANGUAGE_PICKER_PANEL_WIDTH = 224;
 // 语言面板首帧定位高度兜底。
 const CODE_BLOCK_LANGUAGE_PICKER_PANEL_HEIGHT = 220;
-// 语言展示名映射表。
-const LANGUAGE_LABEL_MAP: Record<string, string> = {
-  javascript: 'JavaScript',
-  typescript: 'TypeScript',
-  jsx: 'JSX',
-  tsx: 'TSX',
-  json: 'JSON',
-  html: 'HTML',
-  css: 'CSS',
-  bash: 'Bash',
-  shell: 'Shell',
-  sh: 'Shell',
-  markdown: 'Markdown',
-  md: 'Markdown',
-  yaml: 'YAML',
-  yml: 'YAML',
-  sql: 'SQL',
-  xml: 'XML'
-};
 
 /**
  * 可选语言项。
@@ -83,15 +64,6 @@ interface FocusedCodeBlock {
   /** 代码块节点。 */
   node: ProseNode;
 }
-
-/**
- * 解析语言展示文本。
- */
-const resolveLanguageLabel = (language: string): string => {
-  const normalizedLanguage = normalizeCodeBlockLanguage(language);
-
-  return LANGUAGE_LABEL_MAP[normalizedLanguage] ?? normalizedLanguage;
-};
 
 /**
  * 解析语言下拉项列表。
@@ -115,7 +87,7 @@ const resolveLanguageOptions = (messages: EditorI18nMessages): CodeLanguageOptio
     },
     ...sortedLanguages.map((language) => ({
       value: language,
-      label: resolveLanguageLabel(language)
+      label: language
     }))
   ];
 };
@@ -204,7 +176,9 @@ const CodeBlockLanguagePicker = (props: CodeBlockLanguagePickerProps): ReactElem
   // 当前规范化语言值。
   const normalizedCurrentLanguage = normalizeCodeBlockLanguage(props.currentLanguage);
   // 当前语言显示文本。
-  const currentLanguageLabel = resolveLanguageLabel(normalizedCurrentLanguage);
+  const currentLanguageLabel = normalizedCurrentLanguage === PLAIN_TEXT_LANGUAGE_VALUE
+    ? props.messages.codeBlockLanguagePlainText
+    : normalizedCurrentLanguage;
   // 语言选项列表。
   const languageOptions = useMemo(() => resolveLanguageOptions(props.messages), [props.messages]);
   // 过滤后的语言列表。

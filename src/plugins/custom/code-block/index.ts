@@ -6,5 +6,3 @@ export * from './code-block-language-picker';
 export * from './code-block-language';
 /** 代码块内 Mod-A 全选插件导出。 */
 export * from './code-block-mod-a-select';
-/** 代码块 Prism 高亮插件导出。 */
-export * from './code-block-prism';
