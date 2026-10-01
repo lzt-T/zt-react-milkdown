@@ -1,3 +1,4 @@
+import { observeEditorMessages } from '@/local/message-updates';
 import katex from 'katex';
 import type { Node as ProseNode } from '@milkdown/prose/model';
 import type { EditorView, NodeView, NodeViewConstructor } from '@milkdown/prose/view';
@@ -43,6 +44,8 @@ const resolveInlineMathSource = (node: ProseNode): string => {
  * 创建可点击编辑的行内公式 NodeView。
  */
 class MathInlineEditableNodeView implements NodeView {
+  // 视图销毁时解除文案观察。
+  private readonly stopObservingMessages: () => void;
   // 当前节点快照。
   node: ProseNode;
   // 节点根容器。
@@ -103,6 +106,9 @@ class MathInlineEditableNodeView implements NodeView {
     this.syncFromNode(node);
     this.dom.addEventListener('mousedown', this.handleMouseDown);
     this.dom.addEventListener('click', this.handleClick);
+    this.stopObservingMessages = observeEditorMessages(messages, () => {
+      if (!this.errorContainer.hidden) this.errorContainer.textContent = messages.mathRenderError;
+    });
   }
 
   /**
@@ -205,6 +211,7 @@ class MathInlineEditableNodeView implements NodeView {
    * 销毁时解绑监听器。
    */
   destroy(): void {
+    this.stopObservingMessages();
     this.dom.removeEventListener('mousedown', this.handleMouseDown);
     this.dom.removeEventListener('click', this.handleClick);
   }

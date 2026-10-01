@@ -1,3 +1,4 @@
+import { observeEditorMessages } from '@/local/message-updates';
 import { Plugin, PluginKey } from '@milkdown/prose/state';
 import type { Node as ProseNode } from '@milkdown/prose/model';
 import type { EditorView } from '@milkdown/prose/view';
@@ -318,11 +319,20 @@ const CodeBlockLanguagePicker = (props: CodeBlockLanguagePickerProps): ReactElem
       return;
     }
 
-    const activeOption = optionsContainerRef.current?.querySelector<HTMLElement>('[data-active="true"]');
-    activeOption?.scrollIntoView({
-      block: 'nearest',
-      inline: 'nearest'
-    });
+    // 仅滚动语言列表，避免文案更新后的布局变化滚动编辑区祖先。
+    const container = optionsContainerRef.current;
+    // 当前键盘高亮项。
+    const activeOption = container?.querySelector<HTMLElement>('[data-active="true"]');
+    if (!container || !activeOption) return;
+    // 列表可见范围。
+    const containerRect = container.getBoundingClientRect();
+    // 高亮项可见范围。
+    const optionRect = activeOption.getBoundingClientRect();
+    if (optionRect.top < containerRect.top) {
+      container.scrollTop += optionRect.top - containerRect.top;
+    } else if (optionRect.bottom > containerRect.bottom) {
+      container.scrollTop += optionRect.bottom - containerRect.bottom;
+    }
   }, [activeOptionIndex, filteredOptions, open]);
 
   return createElement(
@@ -430,6 +440,8 @@ const CodeBlockLanguagePicker = (props: CodeBlockLanguagePickerProps): ReactElem
  * 管理代码块语言选择器的插件视图。
  */
 class CodeBlockLanguagePickerView {
+  // 视图销毁时解除文案观察。
+  private readonly stopObservingMessages: () => void;
   // 编辑器视图。
   private view: EditorView;
   // 编辑器文案。
@@ -485,6 +497,12 @@ class CodeBlockLanguagePickerView {
     this.repositionScheduler.bindGlobal();
     this.repositionScheduler.bindWrapper(this.editorWrapper);
     this.update(view);
+    this.stopObservingMessages = observeEditorMessages(messages, () => {
+      // 清除渲染缓存，使同一代码语言也能刷新文案。
+      const language = this.currentRenderedLanguage;
+      this.currentRenderedLanguage = null;
+      if (language !== null) this.render(language);
+    });
   }
 
   /**
@@ -535,7 +553,7 @@ class CodeBlockLanguagePickerView {
     this.hostRoot.render(
       createElement(CodeBlockLanguagePicker, {
         currentLanguage: language,
-        messages: this.messages,
+        messages: { ...this.messages },
         portalContainer: this.portalContainer,
         collisionBoundary: this.editorWrapper,
         onSelectLanguage: (nextLanguage) => this.applyLanguage(nextLanguage),
@@ -673,6 +691,7 @@ class CodeBlockLanguagePickerView {
    * 销毁插件视图。
    */
   destroy(): void {
+    this.stopObservingMessages();
     this.detach();
     this.repositionScheduler.destroy();
     this.hostRoot.unmount();

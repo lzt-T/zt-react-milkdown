@@ -17,6 +17,8 @@ import { createSlashMenuViewController } from './slash-menu-view';
  * slash 插件初始化结果。
  */
 export interface SlashPluginSetup {
+  /** 更新内置菜单语言，不重建插件。 */
+  updateLocale?: (locale: EditorLocale) => void;
   /** slash 插件实例列表（可包含 spec + plugin）。 */
   plugins: unknown[];
   /** slash 上下文配置器。 */
@@ -113,7 +115,7 @@ export const createSlashMenuPlugin = (
     }
 
     // 最终菜单项配置。
-    const items = resolveSlashMenuItems(config, locale);
+    let items = resolveSlashMenuItems(config, locale);
     // slash 菜单视图控制器。
     const menuView = createSlashMenuViewController(portalContainer, shortcutMode);
     // 当前高亮索引。
@@ -343,6 +345,7 @@ export const createSlashMenuPlugin = (
             syncMenuState(view);
           },
           destroy: () => {
+            currentView = null;
             menuInteractable = false;
             menuView.destroy();
           }
@@ -350,7 +353,24 @@ export const createSlashMenuPlugin = (
       });
     };
 
-    return { plugins: runtime.plugins, config: setup };
+    return {
+      plugins: runtime.plugins,
+      config: setup,
+      /** 重新解析内置菜单并保留当前查询及高亮命令。 */
+      updateLocale: (nextLocale): void => {
+        if (locale === nextLocale) return;
+        // 更新前的高亮命令。
+        const activeCommand = visibleItems[activeIndex]?.command;
+        locale = nextLocale;
+        items = resolveSlashMenuItems(config, locale);
+        if (currentView) {
+          // 新语言下相同查询的可见项。
+          const nextItems = resolveMenuState(currentView, items).visibleItems;
+          activeIndex = Math.max(0, nextItems.findIndex((item) => item.command === activeCommand));
+          syncMenuState(currentView);
+        }
+      }
+    };
   } catch (error) {
     console.error('[zt-md/slash] init failed', error);
     return { plugins: [], config: null };

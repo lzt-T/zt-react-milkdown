@@ -1,3 +1,4 @@
+import { observeEditorMessages } from '@/local/message-updates';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { ImageOff, Trash2 } from 'lucide-react';
@@ -98,6 +99,8 @@ const isEditorViewEditable = (view: EditorView): boolean => {
  * 创建带悬停删除按钮的图片 NodeView。
  */
 class ImageEditableNodeView implements NodeView {
+  // 视图销毁时解除文案观察。
+  private readonly stopObservingMessages: () => void;
   // 当前节点快照。
   node: ProseNode;
   // 节点根容器。
@@ -198,6 +201,12 @@ class ImageEditableNodeView implements NodeView {
     this.deleteButton.addEventListener('click', this.handleDeleteClick);
     this.leftResizeHandle.addEventListener('pointerdown', this.handleResizePointerDown);
     this.rightResizeHandle.addEventListener('pointerdown', this.handleResizePointerDown);
+    this.stopObservingMessages = observeEditorMessages(messages, () => {
+      this.deleteButton.setAttribute('aria-label', messages.imageDeleteAriaLabel);
+      // 保留占位图标，仅替换尾部提示文本。
+      const errorText = this.imageLoadErrorElement.lastChild;
+      if (errorText) errorText.textContent = messages.imageUploadLoadFailed;
+    });
   }
 
   /**
@@ -558,6 +567,7 @@ class ImageEditableNodeView implements NodeView {
    * 销毁时解绑监听器。
    */
   destroy(): void {
+    this.stopObservingMessages();
     this.removeResizeWindowListeners();
     this.clearImageLoadingFinishTimer();
     this.imageElement.removeEventListener('load', this.handleImageLoad);

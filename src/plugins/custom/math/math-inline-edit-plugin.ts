@@ -1,3 +1,4 @@
+import { observeEditorMessages } from '@/local/message-updates';
 import katex from 'katex';
 import type { Node as ProseNode } from '@milkdown/prose/model';
 import { Plugin, PluginKey, TextSelection, type Selection } from '@milkdown/prose/state';
@@ -91,6 +92,8 @@ export const openMathInlineEditor = (
  * 管理行内公式编辑器的插件视图。
  */
 class MathInlineEditPluginView {
+  // 视图销毁时解除文案观察。
+  private readonly stopObservingMessages: () => void;
   // 编辑器视图。
   private view: EditorView;
   // 编辑器文案。
@@ -241,6 +244,10 @@ class MathInlineEditPluginView {
     this.host.addEventListener('mousedown', this.handleMouseDown);
     this.view.dom.addEventListener('focusin', this.handleEditorFocusIn);
     this.update(view);
+    this.stopObservingMessages = observeEditorMessages(messages, () => {
+      this.sourceInput.setAttribute('aria-label', messages.mathBlockSourceAriaLabel);
+      if (!this.errorContainer.hidden) this.errorContainer.textContent = messages.mathRenderError;
+    });
   }
 
   /**
@@ -502,6 +509,7 @@ class MathInlineEditPluginView {
    * 销毁插件视图。
    */
   destroy(): void {
+    this.stopObservingMessages();
     this.sourceInput.removeEventListener('input', this.handleInput);
     this.sourceInput.removeEventListener('beforeinput', this.handleBeforeInput);
     this.sourceInput.removeEventListener('keydown', this.handleKeyDown);

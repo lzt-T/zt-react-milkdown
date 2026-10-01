@@ -1,3 +1,4 @@
+import { resolveEditorMessages } from '@/local/i18n';
 import { useEditor } from '@milkdown/react';
 import { debounce } from 'es-toolkit/function';
 import { useEffect, useRef, type MutableRefObject } from 'react';
@@ -13,7 +14,7 @@ import {
   type FocusEditorCoordinates,
   type MilkdownEditorRuntime,
   type NativeMilkdownEditor
-} from '../../core/createEditor';
+} from '@/core/createEditor';
 import type {
   EditorSearchController,
   EditorSearchSnapshot
@@ -168,7 +169,6 @@ export const useMilkdownEditor = (options: UseMilkdownEditorOptions): void => {
       options.portalContainer,
       options.contentPortalContainer,
       options.readOnly,
-      options.locale,
       options.shortcutMode,
       options.focusEditorRef,
       options.searchControllerRef
@@ -224,11 +224,19 @@ export const useMilkdownEditor = (options: UseMilkdownEditorOptions): void => {
     options.portalContainer,
     options.contentPortalContainer,
     options.readOnly,
-    options.locale,
     options.shortcutMode,
     options.focusEditorRef,
     options.searchControllerRef
   ]);
+
+  useEffect(() => {
+    if (!editorInfo.loading) {
+      runtimeRef.current?.updateLocalization(
+        options.locale ?? 'zh-CN',
+        options.messages ?? resolveEditorMessages(options.locale)
+      );
+    }
+  }, [editorInfo.loading, options.locale, options.messages]);
 
   useEffect(() => {
     /** 当前编辑器运行时。 */

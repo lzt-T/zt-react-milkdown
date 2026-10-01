@@ -71,8 +71,8 @@ export const ImageUploadDialog = ({
   const [altText, setAltText] = useState('');
   // 当前预览图是否加载失败。
   const [previewLoadError, setPreviewLoadError] = useState(false);
-  // 当前错误提示。
-  const [error, setError] = useState('');
+  // 当前错误的语义键或外部上传器返回的原始信息。
+  const [error, setError] = useState<{ key: keyof EditorI18nMessages } | { text: string } | null>(null);
   // 当前是否正在上传或读取。
   const [isUploading, setIsUploading] = useState(false);
   // 当前是否正在准备插入图片。
@@ -91,8 +91,10 @@ export const ImageUploadDialog = ({
   const isInteractionLocked = isUploading || isPreparingInsert;
   // 是否展示重选提示。
   const shouldShowReselectHint = uploadType === 'file' && Boolean(imageUrl) && !isInteractionLocked;
-  // 当前提示行优先显示错误，其次显示重选提示。
-  const imageUploadHint = error || (shouldShowReselectHint ? messages.imageUploadReselectHint : '');
+  // 按当前语言解析内置错误，外部错误保持原始信息。
+  const errorMessage = error ? ('key' in error ? messages[error.key].replace('{size}', formatFileSize(maxFileSize)) : error.text) : '';
+  // 当前提示行优先使用最新语言的错误文案。
+  const imageUploadHint = errorMessage || (shouldShowReselectHint ? messages.imageUploadReselectHint : '');
   // 当前提示行是否处于错误态。
   const isImageUploadHintError = Boolean(error);
   // 当前提示行是否展示可见文案。
@@ -109,18 +111,18 @@ export const ImageUploadDialog = ({
     if (!file.type.startsWith('image/')) {
       setImageUrl('');
       setAltText('');
-      setError(messages.imageUploadInvalidType);
+      setError({ key: 'imageUploadInvalidType' });
       return;
     }
 
     if (file.size > maxFileSize) {
       setImageUrl('');
       setAltText('');
-      setError(messages.imageUploadFileSizeExceeded.replace('{size}', formatFileSize(maxFileSize)));
+      setError({ key: 'imageUploadFileSizeExceeded' });
       return;
     }
 
-    setError('');
+    setError(null);
     setAltText(getDefaultImageAltText(file.name));
     setPreviewLoadError(false);
     setIsUploading(true);
@@ -133,7 +135,7 @@ export const ImageUploadDialog = ({
       }
       if (!nextImageUrl) {
         setImageUrl('');
-        setError(messages.imageUploadFailed);
+        setError({ key: 'imageUploadFailed' });
         return;
       }
 
@@ -143,17 +145,17 @@ export const ImageUploadDialog = ({
         return;
       }
       // 上传错误提示。
-      const uploadErrorMessage = imageUpload?.upload
-        ? uploadError instanceof Error ? uploadError.message : messages.imageUploadFailed
-        : messages.imageUploadFileReadFailed;
+      const uploadErrorMessage = imageUpload?.upload && uploadError instanceof Error ? uploadError.message : '';
+      // 内置错误保存语义键，让异步结束后的提示也使用当前语言。
+      const fallbackKey = imageUpload?.upload ? 'imageUploadFailed' : 'imageUploadFileReadFailed';
       setImageUrl('');
-      setError(uploadErrorMessage || messages.imageUploadFailed);
+      setError(uploadErrorMessage ? { text: uploadErrorMessage } : { key: fallbackKey });
     } finally {
       if (mountedRef.current) {
         setIsUploading(false);
       }
     }
-  }, [imageUpload, maxFileSize, messages]);
+  }, [imageUpload, maxFileSize]);
 
   /**
    * 处理文件输入变化。
@@ -176,11 +178,11 @@ export const ImageUploadDialog = ({
     setImageUrl(nextUrl);
 
     if (!nextUrl) {
-      setError('');
+      setError(null);
       return;
     }
-    setError(isValidUrl(nextUrl) ? '' : messages.imageUploadInvalidUrl);
-  }, [messages.imageUploadInvalidUrl]);
+    setError(isValidUrl(nextUrl) ? null : { key: 'imageUploadInvalidUrl' });
+  }, []);
 
   /**
    * 处理拖拽经过。
@@ -234,7 +236,7 @@ export const ImageUploadDialog = ({
     setImageUrl('');
     setAltText('');
     setPreviewLoadError(false);
-    setError('');
+    setError(null);
   }, [isInteractionLocked]);
 
   /**
@@ -242,19 +244,19 @@ export const ImageUploadDialog = ({
    */
   const handleConfirm = useCallback(async (): Promise<void> => {
     if (isInteractionLocked) {
-      setError(messages.imageUploadUploadingWait);
+      setError({ key: 'imageUploadUploadingWait' });
       return;
     }
     if (!imageUrl) {
-      setError(messages.imageUploadSelectOrEnterImage);
+      setError({ key: 'imageUploadSelectOrEnterImage' });
       return;
     }
     if (uploadType === 'url' && !isValidUrl(imageUrl)) {
-      setError(messages.imageUploadInvalidUrl);
+      setError({ key: 'imageUploadInvalidUrl' });
       return;
     }
 
-    setError('');
+    setError(null);
     setIsPreparingInsert(true);
     try {
       await preloadImage(imageUrl);
@@ -268,7 +270,7 @@ export const ImageUploadDialog = ({
     } catch {
       if (mountedRef.current) {
         setPreviewLoadError(true);
-        setError(messages.imageUploadLoadFailed);
+        setError({ key: 'imageUploadLoadFailed' });
       }
     } finally {
       if (mountedRef.current) {
@@ -279,10 +281,6 @@ export const ImageUploadDialog = ({
     altText,
     imageUrl,
     isInteractionLocked,
-    messages.imageUploadInvalidUrl,
-    messages.imageUploadLoadFailed,
-    messages.imageUploadSelectOrEnterImage,
-    messages.imageUploadUploadingWait,
     onConfirm,
     uploadType
   ]);

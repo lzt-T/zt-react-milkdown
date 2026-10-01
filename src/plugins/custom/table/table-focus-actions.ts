@@ -1,3 +1,4 @@
+import { observeEditorMessages } from '@/local/message-updates';
 import { createElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { renderToStaticMarkup } from 'react-dom/server';
@@ -77,6 +78,8 @@ const isEditorViewEditable = (view: EditorView): boolean => {
  * 创建并维护“聚焦表格删除按钮”插件视图。
  */
 class TableFocusActionsView {
+  // 视图销毁时解除文案观察。
+  private readonly stopObservingMessages: () => void;
   // 编辑器视图。
   private view: EditorView;
   // 编辑器文案。
@@ -156,6 +159,13 @@ class TableFocusActionsView {
     this.repositionScheduler.bindGlobal();
     this.repositionScheduler.bindWrapper(this.editorWrapper);
     this.update(view);
+    this.stopObservingMessages = observeEditorMessages(messages, () => {
+      this.deleteButton.setAttribute('aria-label', messages.tableDeleteAriaLabel);
+      this.alignLeftButton.setAttribute('aria-label', messages.tableAlignLeftAriaLabel);
+      this.alignCenterButton.setAttribute('aria-label', messages.tableAlignCenterAriaLabel);
+      this.alignRightButton.setAttribute('aria-label', messages.tableAlignRightAriaLabel);
+      this.update(this.view);
+    });
   }
 
   /**
@@ -513,6 +523,7 @@ class TableFocusActionsView {
    * 销毁插件视图。
    */
   destroy(): void {
+    this.stopObservingMessages();
     this.detach();
     this.repositionScheduler.destroy();
     this.moreActionsRoot.unmount();
@@ -528,7 +539,8 @@ class TableFocusActionsView {
  * 表格聚焦操作插件：聚焦表格时显示删除按钮。
  */
 export const createTableFocusActionsPlugin = (portalContainer: HTMLElement, messages?: EditorI18nMessages): ReturnType<typeof $prose> => {
-  const resolvedMessages = resolveEditorMessages(undefined, messages);
+  // 保留运行时文案引用，让视图接收同一实例的更新。
+  const resolvedMessages = messages ?? resolveEditorMessages();
 
   return $prose(() => {
     return new Plugin({

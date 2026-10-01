@@ -1,3 +1,4 @@
+import { observeEditorMessages } from '@/local/message-updates';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { Check, Code2, Copy, Eye, Trash2 } from 'lucide-react';
@@ -111,6 +112,8 @@ const isEditorViewEditable = (view: EditorView): boolean => {
  * 创建带悬浮操作按钮的代码块 NodeView。
  */
 class CodeBlockEditableNodeView implements NodeView {
+  // 视图销毁时解除文案观察。
+  private readonly stopObservingMessages: () => void;
   // 当前节点快照。
   node: ProseNode;
   // 节点根容器。
@@ -221,6 +224,16 @@ class CodeBlockEditableNodeView implements NodeView {
     this.copyButton.addEventListener('click', this.handleCopyClick);
     this.deleteButton.addEventListener('click', this.handleDeleteClick);
     this.previewContainer.addEventListener('keydown', this.handlePreviewKeyDown);
+    this.stopObservingMessages = observeEditorMessages(messages, () => {
+      this.previewContainer.setAttribute('aria-label', messages.codeBlockPreviewAriaLabel);
+      this.copyButton.setAttribute('aria-label', messages.codeBlockCopyAriaLabel);
+      this.deleteButton.setAttribute('aria-label', messages.codeBlockDeleteAriaLabel);
+      // 只更新标签，不刷新 iframe 或改变源码输入。
+      const label = this.isPreviewAvailable && this.isPreviewMode ? messages.codeBlockSourceAriaLabel : messages.codeBlockPreviewAriaLabel;
+      this.previewButton.setAttribute('aria-label', label);
+      this.previewButton.title = label;
+      if (this.previewFrame) this.previewFrame.title = messages.codeBlockPreviewAriaLabel;
+    });
   }
 
   /**
@@ -476,6 +489,7 @@ class CodeBlockEditableNodeView implements NodeView {
    * 销毁时解绑监听器。
    */
   destroy(): void {
+    this.stopObservingMessages();
     this.previewButton.removeEventListener('click', this.handlePreviewClick);
     this.copyButton.removeEventListener('click', this.handleCopyClick);
     this.deleteButton.removeEventListener('click', this.handleDeleteClick);

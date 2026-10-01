@@ -292,7 +292,7 @@ export const createSlashMenuViewController = (
    */
   const renderIfNeeded = (items: SlashMenuItem[], activeIndex: number): void => {
     // 当前可见命令签名。
-    const commandsSignature = items.map((item) => item.command).join('|');
+    const commandsSignature = JSON.stringify(items.map((item) => [item.command, item.label, item.group, item.icon]));
     // 当前菜单渲染签名。
     const renderSignature = `${commandsSignature}::${activeIndex}`;
     if (lastRenderSignature === renderSignature) {

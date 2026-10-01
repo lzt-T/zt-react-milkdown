@@ -1,3 +1,4 @@
+import { observeEditorMessages } from '@/local/message-updates';
 import katex from 'katex';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
@@ -64,6 +65,8 @@ const isEditorViewEditable = (view: EditorView): boolean => {
  * 创建可点击编辑的公式块 NodeView。
  */
 class MathBlockEditableNodeView implements NodeView {
+  // 视图销毁时解除文案观察。
+  private readonly stopObservingMessages: () => void;
   // 当前节点快照。
   node: ProseNode;
   // 节点根容器。
@@ -185,6 +188,12 @@ class MathBlockEditableNodeView implements NodeView {
     this.sourceTextarea.addEventListener('input', this.handleInput);
     this.sourceTextarea.addEventListener('keydown', this.handleKeyDown);
     this.sourceTextarea.addEventListener('blur', this.handleBlur);
+    this.stopObservingMessages = observeEditorMessages(messages, () => {
+      this.sourceTextarea.setAttribute('aria-label', messages.mathBlockSourceAriaLabel);
+      this.copyButton.setAttribute('aria-label', messages.mathBlockCopyAriaLabel);
+      this.deleteButton.setAttribute('aria-label', messages.mathBlockDeleteAriaLabel);
+      if (!this.errorContainer.hidden) this.errorContainer.textContent = messages.mathRenderError;
+    });
   }
 
   /**
@@ -523,6 +532,7 @@ class MathBlockEditableNodeView implements NodeView {
    * 销毁时解绑监听器。
    */
   destroy(): void {
+    this.stopObservingMessages();
     this.dom.removeEventListener('click', this.handleClick);
     this.dom.removeEventListener('pointerdown', this.handlePointerDown);
     this.dom.removeEventListener('pointermove', this.handlePointerMove);

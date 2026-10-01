@@ -1,6 +1,7 @@
+import { observeEditorMessages } from '@/local/message-updates';
 import { createElement } from 'react';
 import { createRoot } from 'react-dom/client';
-import type { EditorI18nMessages, ImageUploadConfig } from '../../../../types/editor';
+import type { EditorI18nMessages, ImageUploadConfig } from '@/types/editor';
 import { insertImageNode } from '../image-insert';
 import { ImageUploadDialog } from './ImageUploadDialog';
 
@@ -85,6 +86,7 @@ export const showImageUploadDialog = (options: ImageUploadDialogOptions): void =
    * 卸载弹窗。
    */
   const unmountDialog = (onAfterUnmount?: () => void): void => {
+    stopObservingMessages();
     queueMicrotask(() => {
       root.unmount();
       host.remove();
@@ -101,26 +103,32 @@ export const showImageUploadDialog = (options: ImageUploadDialogOptions): void =
     });
   };
 
-  root.render(
-    createElement(ImageUploadDialog, {
-      messages: options.messages,
-      portalContainer: host,
-      imageUpload: options.imageUpload,
-      onConfirm: (payload) => {
-        // 弹窗与粘贴共用同一块级图片插入行为。
-        const didInsertImage = insertImageNode(options.view, {
-          src: payload.src,
-          alt: payload.alt,
-          title: ''
-        });
-        unmountDialog(() => {
-          if (didInsertImage) {
-            options.view?.focus?.();
-          }
-        });
-      },
-      onCancel: closeDialog
-    })
-  );
+  /** 在同一 React 根刷新文案，保留上传及表单状态。 */
+  const renderDialog = (): void => {
+    root.render(
+      createElement(ImageUploadDialog, {
+        messages: { ...options.messages },
+        portalContainer: host,
+        imageUpload: options.imageUpload,
+        onConfirm: (payload) => {
+          // 弹窗与粘贴共用同一块级图片插入行为。
+          const didInsertImage = insertImageNode(options.view, {
+            src: payload.src,
+            alt: payload.alt,
+            title: ''
+          });
+          unmountDialog(() => {
+            if (didInsertImage) {
+              options.view?.focus?.();
+            }
+          });
+        },
+        onCancel: closeDialog
+      })
+    );
+  };
+  // 弹窗关闭时解除实例文案观察。
+  const stopObservingMessages = observeEditorMessages(options.messages, renderDialog);
+  renderDialog();
 };
 

@@ -1,3 +1,4 @@
+import { updateEditorMessages } from '@/local/message-updates';
 import type {
   EditorChangeHandler,
   EditorI18nMessages,
@@ -101,6 +102,8 @@ export interface FocusEditorCoordinates {
  * 定义已配置编辑器的运行时句柄。
  */
 export interface MilkdownEditorRuntime {
+  /** 同步语言和完整文案，保留编辑器及编辑状态。 */
+  updateLocalization: (locale: EditorLocale, messages: EditorI18nMessages) => void;
   /** Milkdown 原生编辑器实例。 */
   editor: NativeMilkdownEditor;
   /** 注册需要在 create 后延迟启用的插件。 */
@@ -217,7 +220,7 @@ export const createMilkdownEditorRuntime = (
   options: CreateMilkdownEditorRuntimeOptions
 ): MilkdownEditorRuntime => {
   /** 编辑器文案。 */
-  const messages = options.messages ?? resolveEditorMessages();
+  const messages = { ...(options.messages ?? resolveEditorMessages(options.locale)) };
   /** 表格聚焦操作插件实例。 */
   const tableFocusActionsPlugin = createTableFocusActionsPlugin(options.contentPortalContainer, messages);
   /** 选区 tooltip 菜单插件实例。 */
@@ -474,6 +477,11 @@ export const createMilkdownEditorRuntime = (
 
   return {
     editor,
+    /** 更新实例文案及语言派生的菜单项。 */
+    updateLocalization: (locale, nextMessages): void => {
+      updateEditorMessages(messages, nextMessages);
+      slashSetup.updateLocale?.(locale);
+    },
     installRuntimePlugins,
     focusEditor,
     searchController,

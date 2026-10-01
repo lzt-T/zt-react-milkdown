@@ -129,6 +129,9 @@ export default function Demo() {
 说明：
 - `placeholder` 优先级高于 `messages.placeholder`。
 - 未传 `locale` 时默认使用 `zh-CN`。
+- 运行时修改 `locale`、`messages` 或 `placeholder` 会同步更新内置界面文案，保留编辑器实例、文档、选区、撤销/重做历史、搜索状态及编辑区滚动位置；已展开的菜单和弹层也会更新，保留当前输入。
+- 移除某个 `messages` 覆盖字段后恢复当前语言默认值；移除显式 `placeholder` 后回退到 `messages.placeholder` 或当前语言默认值。
+- 多个编辑器的语言与文案独立。自定义 `slashMenu.items` 的标签和分组由使用者提供，不随内置语言切换自动翻译。
 - 未传 `readOnly` 时默认使用 `false`。
 - 未传 `debounceMs` 时默认使用 `160`（毫秒）。
 - `slashMenu` 对应 Slash 菜单行为配置。

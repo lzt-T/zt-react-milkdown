@@ -1,3 +1,4 @@
+import { observeEditorMessages } from '@/local/message-updates';
 import { TooltipProvider } from '@milkdown/plugin-tooltip';
 import { Plugin, PluginKey, type PluginView } from '@milkdown/prose/state';
 import type { EditorView } from '@milkdown/prose/view';
@@ -36,9 +37,9 @@ const createSelectionTooltipPluginView = (
   shortcutMode: EditorShortcutMode
 ): PluginView => {
   // 当前语言下的选区菜单项。
-  const items = resolveSelectionTooltipItems(messages);
+  let items = resolveSelectionTooltipItems(messages);
   // 当前语言下的块级转换菜单项。
-  const blockTransformItems = resolveSelectionBlockTransformItems(messages, shortcutMode);
+  let blockTransformItems = resolveSelectionBlockTransformItems(messages, shortcutMode);
   // 当前编辑器视图引用。
   let currentView: EditorView | null = view;
   // 链接 Popover 展开状态。
@@ -255,6 +256,22 @@ const createSelectionTooltipPluginView = (
   view.dom.addEventListener('blur', handleEditorBlur);
   document.addEventListener('mousedown', handleDocumentMouseDown, true);
 
+  // 文案更新只刷新现有按钮及 React 根，保留 Popover 输入状态。
+  const stopObservingMessages = observeEditorMessages(messages, () => {
+    items = resolveSelectionTooltipItems(messages);
+    blockTransformItems = resolveSelectionBlockTransformItems(messages, shortcutMode);
+    items.forEach((item) => {
+      // 当前已挂载的菜单按钮。
+      const button = tooltip.querySelector<HTMLButtonElement>(`[data-command="${item.command}"]`);
+      if (button) {
+        button.title = item.title;
+        button.setAttribute('aria-label', item.title);
+      }
+    });
+    renderBlockTransformControl();
+    if (resolveMarkType(view, ['link'])) renderLinkControl();
+  });
+
   return {
     update: (nextView, previousState) => {
       currentView = nextView as EditorView;
@@ -279,6 +296,7 @@ const createSelectionTooltipPluginView = (
       provider.update(currentView, previousState);
     },
     destroy: () => {
+      stopObservingMessages();
       isDestroyed = true;
       currentView = null;
       view.dom.removeEventListener('blur', handleEditorBlur);
