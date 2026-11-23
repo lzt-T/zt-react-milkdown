@@ -23,39 +23,40 @@ button {
 }
 
 .playground-main {
-  width: min(1040px, calc(100% - 48px));
+  width: min(920px, calc(100% - 48px));
   margin: 0 auto;
-  padding: 28px 0 40px;
+  padding: 32px 0 56px;
 }
 
 .playground-workbench {
-  overflow: hidden;
-  border: 1px solid var(--zt-border);
-  border-radius: var(--zt-radius-lg);
-  background: var(--zt-surface);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
 }
 
 .playground-toolbar {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: space-between;
-  min-height: 64px;
-  gap: 28px;
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--zt-border);
-  background: color-mix(in srgb, var(--zt-surface) 82%, var(--zt-bg));
+  gap: 20px;
+  padding: 0;
+  border-bottom: 0;
+  background: transparent;
 }
 
 .playground-brand {
-  min-width: 240px;
+  min-width: 220px;
 }
 
 .playground-product-name {
   margin: 0;
   color: var(--zt-fg);
-  font-size: 16px;
-  font-weight: 700;
-  letter-spacing: -0.018em;
+  font-size: 17px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
   line-height: 1.25;
 }
 
@@ -63,7 +64,7 @@ button {
   max-width: 52ch;
   margin: 4px 0 0;
   color: var(--zt-muted);
-  font-size: 12.5px;
+  font-size: 13px;
   line-height: 1.45;
 }
 
@@ -77,63 +78,60 @@ button {
 .playground-control {
   display: grid;
   min-width: 0;
-  gap: 6px;
+  gap: 5px;
 }
 
 .playground-control-label {
   color: var(--zt-muted);
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 500;
   line-height: 1;
 }
 
 .playground-segmented {
   display: inline-flex;
   width: 100%;
-  overflow: hidden;
   box-sizing: border-box;
+  gap: 2px;
+  padding: 2px;
   border: 1px solid var(--zt-border);
-  border-radius: var(--zt-radius);
-  background: transparent;
+  border-radius: 8px;
+  background: var(--zt-elevated);
 }
 
 .playground-segmented-button {
   min-width: 0;
-  min-height: 32px;
+  min-height: 28px;
   padding: 0 10px;
   border: 0;
-  border-left: 1px solid var(--zt-border);
-  border-radius: 0;
+  border-radius: var(--zt-radius);
   background: transparent;
   color: var(--zt-muted);
   cursor: pointer;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 12.5px;
+  font-weight: 500;
   line-height: 1;
   transition:
     background-color 120ms ease-out,
-    color 120ms ease-out;
-}
-
-.playground-segmented-button:first-child {
-  border-left: 0;
+    color 120ms ease-out,
+    box-shadow 120ms ease-out;
 }
 
 .playground-segmented-button:hover {
-  background: color-mix(in srgb, var(--zt-primary) 6%, transparent);
   color: var(--zt-fg);
 }
 
 .playground-segmented-button[aria-pressed='true'] {
-  background: color-mix(in srgb, var(--zt-primary) 12%, var(--zt-surface));
-  color: var(--zt-primary);
+  background: var(--zt-control-active);
+  color: var(--zt-fg);
+  box-shadow: var(--zt-shadow-sm);
 }
 
 .playground-segmented-button:focus-visible {
   position: relative;
   z-index: 1;
-  outline: 2px solid var(--zt-primary);
-  outline-offset: -2px;
+  outline: 2px solid var(--zt-accent);
+  outline-offset: 1px;
 }
 
 .playground-editor {
@@ -141,63 +139,64 @@ button {
 }
 
 .playground-editor > .zt-md {
-  border: 0;
-  border-radius: 0;
+  border: 1px solid var(--zt-border);
+  border-radius: var(--zt-radius-lg);
+  box-shadow: var(--zt-shadow-sm);
 }
 
 .playground-editor .zt-md-header {
-  padding: 9px 18px;
-  background: var(--zt-elevated);
+  padding: 9px 24px;
+  background: color-mix(in srgb, var(--zt-elevated) 55%, var(--zt-surface));
 }
 
 .playground-editor-context {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 14px;
   color: var(--zt-muted);
-  font-size: 13px;
+  font-size: 12.5px;
   line-height: 1.35;
 }
 
 .playground-editor-context-item {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: 6px;
 }
 
 .playground-editor-context-item + .playground-editor-context-item::before {
   content: "";
   width: 1px;
   height: 12px;
-  margin-right: 9px;
+  margin-right: 8px;
   background: var(--zt-border);
 }
 
 .playground-editor-context kbd {
   min-width: 20px;
-  padding: 2px 5px;
-  border: 1px solid var(--zt-border);
-  border-radius: var(--zt-radius);
+  padding: 2px 6px;
+  border: 1px solid var(--zt-border-strong);
+  border-radius: 5px;
   background: var(--zt-surface);
-  color: var(--zt-primary);
-  font-family: var(--zt-font);
-  font-size: 13px;
-  font-weight: 700;
+  color: var(--zt-fg);
+  font-family: var(--zt-font-mono);
+  font-size: 11px;
+  font-weight: 600;
   line-height: 1.2;
   text-align: center;
+  box-shadow: 0 1px 0 var(--zt-border);
 }
 
 @media (max-width: 840px) {
   .playground-main {
-    width: min(100% - 32px, 1040px);
-    padding-top: 20px;
+    width: min(100% - 32px, 920px);
+    padding-top: 24px;
   }
 
   .playground-toolbar {
     align-items: flex-start;
     flex-direction: column;
-    gap: 16px;
-    padding: 14px;
+    gap: 14px;
   }
 
   .playground-controls {
@@ -208,13 +207,16 @@ button {
 
 @media (max-width: 560px) {
   .playground-main {
-    width: min(100% - 20px, 1040px);
-    padding: 10px 0 20px;
+    width: min(100% - 20px, 920px);
+    padding: 14px 0 28px;
+  }
+
+  .playground-workbench {
+    gap: 12px;
   }
 
   .playground-toolbar {
-    gap: 14px;
-    padding: 14px 12px 12px;
+    gap: 12px;
   }
 
   .playground-controls {
@@ -234,7 +236,7 @@ button {
   }
 
   .playground-editor .zt-md-header {
-    padding: 10px 12px;
+    padding: 10px 16px;
   }
 
   .playground-editor-context {

@@ -3,7 +3,7 @@ import { createElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { AlignCenter, AlignLeft, AlignRight, Trash2 } from 'lucide-react';
-import { Plugin, PluginKey } from '@milkdown/prose/state';
+import { Plugin, PluginKey, TextSelection } from '@milkdown/prose/state';
 import type { EditorView } from '@milkdown/prose/view';
 import { $prose } from '@milkdown/utils';
 import type { EditorI18nMessages } from '../../../types/editor';
@@ -23,31 +23,25 @@ import {
   resolveEditorWrapper,
   toContentAnchor,
   toPortalPosition,
-  type OverlayContentAnchor,
   type OverlayPlacement
 } from '../../../lib/editor-overlay-position';
 
 // 表格操作插件唯一键。
 const TABLE_FOCUS_ACTIONS_PLUGIN_KEY = 'zt-md-table-focus-actions';
-// 按钮容器右边缘与表格右边缘对齐偏移（像素）。
-const ACTION_BUTTON_ALIGNMENT_OFFSET = 0;
-// 表格顶部操作留白槽高度（像素）。
-const TABLE_ACTIONS_GAP_HEIGHT = 24;
-// 按钮位于留白槽内时距槽顶的偏移（像素）。
-const TABLE_ACTIONS_GAP_INSET = 4;
-// 浮层边界内边距（像素）。
-const OVERLAY_BOUNDARY_INSET = 4;
-// 表格按钮使用上方锚定位。
-const TABLE_ACTION_PLACEMENT: OverlayPlacement = 'top';
+// 浮层与当前聚焦单元格的垂直间距（像素）。
+const OVERLAY_OFFSET_Y = 8;
+// 浮层距离滚动容器边缘的安全内边距（像素）。
+const OVERLAY_BOUNDARY_INSET = 8;
 // 表格列默认对齐方式。
 const DEFAULT_TABLE_ALIGNMENT: TableCellAlignment = 'left';
+
 /**
  * 基于 lucide-react 组件渲染 SVG 字符串。
  */
 const renderLucideIconMarkup = (iconComponent: typeof Trash2): string => {
   return renderToStaticMarkup(
     createElement(iconComponent, {
-      size: 14,
+      size: 15,
       strokeWidth: 2,
       'aria-hidden': 'true'
     })
@@ -75,7 +69,44 @@ const isEditorViewEditable = (view: EditorView): boolean => {
 };
 
 /**
- * 创建并维护“聚焦表格删除按钮”插件视图。
+ * 判断当前是否存在非空文本选区，用于让位给选区工具栏。
+ */
+const hasNonEmptyTextSelection = (view: EditorView): boolean => {
+  const { selection, doc } = view.state;
+  if (selection.empty || !(selection instanceof TextSelection)) {
+    return false;
+  }
+
+  return doc.textBetween(selection.from, selection.to).trim().length > 0;
+};
+
+/**
+ * 创建操作栏分组分隔线节点。
+ */
+const createActionsDivider = (): HTMLSpanElement => {
+  const divider = document.createElement('span');
+  divider.className = 'zt-md-table-actions-divider';
+  divider.setAttribute('aria-hidden', 'true');
+  return divider;
+};
+
+/**
+ * 解析当前聚焦单元格 DOM，找不到时返回 null。
+ */
+const resolveFocusedCellElement = (
+  tableElement: HTMLTableElement,
+  rowIndex: number,
+  columnIndex: number
+): HTMLElement | null => {
+  if (rowIndex < 0 || columnIndex < 0) {
+    return null;
+  }
+
+  return tableElement.rows.item(rowIndex)?.cells.item(columnIndex) ?? null;
+};
+
+/**
+ * 创建并维护“聚焦表格操作胶囊”插件视图。
  */
 class TableFocusActionsView {
   // 视图销毁时解除文案观察。
@@ -110,8 +141,10 @@ class TableFocusActionsView {
   private currentColumnIndex: number | null = null;
   // 当前聚焦列对齐方式。
   private currentColumnAlignment: TableCellAlignment = DEFAULT_TABLE_ALIGNMENT;
-  // 当前聚焦表格 DOM。
-  private currentTableElement: HTMLTableElement | null = null;
+  // 当前定位锚点 DOM（优先聚焦单元格，兜底表格节点）。
+  private currentAnchorElement: HTMLElement | null = null;
+  // 当前绑定横向滚动监听的表格外层滚动容器。
+  private currentTableWrapper: HTMLElement | null = null;
   // 当前锚点位置是否有效。
   private hasPositionContext = false;
   // 浮层重定位调度器。
@@ -146,9 +179,11 @@ class TableFocusActionsView {
     this.moreActionsRoot = createRoot(this.moreActionsMount);
     this.actionsContainer.append(
       this.moreActionsMount,
+      createActionsDivider(),
       this.alignLeftButton,
       this.alignCenterButton,
       this.alignRightButton,
+      createActionsDivider(),
       this.deleteButton
     );
     this.actionsContainer.addEventListener('mousedown', this.handleActionsMouseDown);
@@ -174,6 +209,41 @@ class TableFocusActionsView {
   private readonly handleActionsMouseDown = (event: MouseEvent): void => {
     event.preventDefault();
   };
+
+  /**
+   * 表格横向滚动时触发浮层重定位。
+   */
+  private readonly handleTableWrapperScroll = (): void => {
+    this.repositionScheduler.schedule();
+  };
+
+  /**
+   * 绑定当前表格横向滚动容器的滚动监听。
+   */
+  private bindTableWrapperScroll(tableElement: HTMLTableElement): void {
+    const nextWrapper = tableElement.closest('.tableWrapper') as HTMLElement | null;
+    if (this.currentTableWrapper === nextWrapper) {
+      return;
+    }
+
+    this.unbindTableWrapperScroll();
+    this.currentTableWrapper = nextWrapper;
+    if (this.currentTableWrapper) {
+      this.currentTableWrapper.addEventListener('scroll', this.handleTableWrapperScroll, { passive: true });
+    }
+  }
+
+  /**
+   * 解绑当前表格横向滚动容器的滚动监听。
+   */
+  private unbindTableWrapperScroll(): void {
+    if (!this.currentTableWrapper) {
+      return;
+    }
+
+    this.currentTableWrapper.removeEventListener('scroll', this.handleTableWrapperScroll);
+    this.currentTableWrapper = null;
+  }
 
   /**
    * 创建列对齐按钮。
@@ -379,70 +449,54 @@ class TableFocusActionsView {
   }
 
   /**
-   * 解析当前表格对应的浮层锚点。
+   * 解析操作栏容器实时尺寸。
    */
-  private resolveTableAnchor(tableElement: HTMLTableElement, actionsWidth: number): OverlayContentAnchor | null {
-    if (!this.editorWrapper) {
+  private resolveActionsContainerSize(): { width: number; height: number } | null {
+    // 优先使用真实布局宽高，避免首次渲染读取 0 导致定位偏移。
+    const rect = this.actionsContainer.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) {
       return null;
     }
 
-    const tableRect = tableElement.getBoundingClientRect();
-    const rawAnchor = toContentAnchor(tableRect, this.editorWrapper);
-    const tableWidth = tableRect.width;
-    const tableRightInContent = rawAnchor.anchorLeftInContent + tableWidth;
-    const desiredLeftInContent = tableRightInContent - actionsWidth - ACTION_BUTTON_ALIGNMENT_OFFSET;
-    const desiredTopInContent = rawAnchor.anchorTopInContent - TABLE_ACTIONS_GAP_HEIGHT + TABLE_ACTIONS_GAP_INSET;
-
-    return {
-      anchorLeftInContent: desiredLeftInContent,
-      anchorTopInContent: desiredTopInContent,
-      anchorBottomInContent: desiredTopInContent
-    };
+    return { width: rect.width, height: rect.height };
   }
 
   /**
-   * 解析按钮容器实时宽度。
-   */
-  private resolveActionsContainerWidth(): number | null {
-    // 优先使用真实布局宽度，避免首次渲染读取 0 导致锚点左偏。
-    const width = this.actionsContainer.getBoundingClientRect().width;
-    if (width <= 0) {
-      return null;
-    }
-
-    return width;
-  }
-
-  /**
-   * 基于当前实时几何信息更新按钮定位（Portal 内 absolute 坐标）。
+   * 基于当前实时几何信息更新胶囊定位（优先单元格上方居中，空间不足时向下翻转）。
    */
   private updateOverlayPosition(): void {
     if (
       !this.editorWrapper ||
-      !this.currentTableElement ||
+      !this.currentAnchorElement ||
       this.actionsContainer.parentElement !== this.portalContainer
     ) {
       return;
     }
 
-    const actionsWidth = this.resolveActionsContainerWidth();
-    if (actionsWidth === null) {
+    const size = this.resolveActionsContainerSize();
+    if (!size) {
       return;
     }
 
-    const currentAnchor = this.resolveTableAnchor(this.currentTableElement, actionsWidth);
-    if (!currentAnchor) {
-      return;
-    }
+    const anchorRect = this.currentAnchorElement.getBoundingClientRect();
+    const wrapperRect = this.editorWrapper.getBoundingClientRect();
+    const spaceAbove = anchorRect.top - wrapperRect.top;
+    const spaceBelow = wrapperRect.bottom - anchorRect.bottom;
+    const placement: OverlayPlacement =
+      spaceAbove >= size.height + OVERLAY_OFFSET_Y + OVERLAY_BOUNDARY_INSET || spaceAbove >= spaceBelow
+        ? 'top'
+        : 'bottom';
+    const currentAnchor = toContentAnchor(anchorRect, this.editorWrapper);
 
-    // 按钮组在编辑器 Portal 内的定位坐标。
+    // 操作胶囊在编辑器 Portal 内的定位坐标。
     const portalPosition = toPortalPosition(
       {
         wrapper: this.editorWrapper,
         anchor: currentAnchor,
-        overlaySize: { width: actionsWidth },
-        placement: TABLE_ACTION_PLACEMENT,
-        offsetY: 0,
+        overlaySize: size,
+        placement,
+        horizontalAlign: 'center',
+        offsetY: OVERLAY_OFFSET_Y,
         boundaryInset: OVERLAY_BOUNDARY_INSET
       },
       this.portalContainer
@@ -457,7 +511,7 @@ class TableFocusActionsView {
   update(view: EditorView): void {
     this.view = view;
 
-    if (!this.editorWrapper || !isEditorViewEditable(view)) {
+    if (!this.editorWrapper || !isEditorViewEditable(view) || hasNonEmptyTextSelection(view)) {
       this.detach();
       return;
     }
@@ -496,7 +550,9 @@ class TableFocusActionsView {
     this.updateAlignmentButtonsState(canInsertColumn);
     this.renderMoreActions(canInsertRowAbove, canInsertColumn, canDeleteRow, canDeleteColumn);
 
-    this.currentTableElement = tableElement;
+    this.bindTableWrapperScroll(tableElement);
+    this.currentAnchorElement =
+      resolveFocusedCellElement(tableElement, focusedTable.rowIndex, focusedTable.columnIndex) ?? tableElement;
     this.currentTableStart = focusedTable.tableStart;
     this.currentTableNodeSize = focusedTable.tableNodeSize;
     this.hasPositionContext = true;
@@ -508,9 +564,10 @@ class TableFocusActionsView {
    * 卸载按钮与容器状态。
    */
   private detach(): void {
+    this.unbindTableWrapperScroll();
     this.moreActionsRoot.render(null);
     this.actionsContainer.remove();
-    this.currentTableElement = null;
+    this.currentAnchorElement = null;
     this.currentTableStart = null;
     this.currentTableNodeSize = null;
     this.currentColumnIndex = null;
@@ -536,7 +593,7 @@ class TableFocusActionsView {
 }
 
 /**
- * 表格聚焦操作插件：聚焦表格时显示删除按钮。
+ * 表格聚焦操作插件：聚焦表格时显示操作胶囊。
  */
 export const createTableFocusActionsPlugin = (portalContainer: HTMLElement, messages?: EditorI18nMessages): ReturnType<typeof $prose> => {
   // 保留运行时文案引用，让视图接收同一实例的更新。
@@ -549,4 +606,3 @@ export const createTableFocusActionsPlugin = (portalContainer: HTMLElement, mess
     });
   });
 };
-

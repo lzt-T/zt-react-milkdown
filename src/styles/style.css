@@ -12,7 +12,6 @@
 @import "./modules/drop-cursor.css";
 @import "./modules/math-block.css";
 @import "./modules/math-inline.css";
-@import "./modules/typography.css";
 @import "./modules/blockquote.css";
 @import "./modules/inline-code.css";
 @import "./modules/code-block.css";
@@ -20,20 +19,26 @@
 @import "./modules/search.css";
 @import "./modules/task-list.css";
 @import "./modules/table.css";
+@import "./modules/typography.css";
 
 @source "../**/*.{ts,tsx}";
 
 @theme inline {
   --font-sans: var(--zt-font);
+  --font-mono: var(--zt-font-mono);
   --color-zt-bg: var(--zt-bg);
   --color-zt-surface: var(--zt-surface);
   --color-zt-elevated: var(--zt-elevated);
+  --color-zt-popover: var(--zt-popover);
+  --color-zt-hover: var(--zt-hover);
+  --color-zt-active: var(--zt-active);
   --color-zt-fg: var(--zt-fg);
   --color-zt-muted: var(--zt-muted);
   --color-zt-border: var(--zt-border);
+  --color-zt-border-strong: var(--zt-border-strong);
   --color-zt-primary: var(--zt-primary);
   --color-zt-secondary: var(--zt-secondary);
-  --color-zt-glow: var(--zt-glow);
+  --color-zt-accent: var(--zt-accent);
   --radius-zt: var(--zt-radius);
   --radius-zt-lg: var(--zt-radius-lg);
 
@@ -67,21 +72,21 @@
     --foreground: var(--zt-fg);
     --card: var(--zt-surface);
     --card-foreground: var(--zt-fg);
-    --popover: var(--zt-surface);
+    --popover: var(--zt-popover);
     --popover-foreground: var(--zt-fg);
     --primary: var(--zt-primary);
     --primary-foreground: var(--zt-primary-foreground);
     --secondary: var(--zt-secondary);
     --secondary-foreground: var(--zt-fg);
-    --muted: color-mix(in srgb, var(--zt-muted) 20%, var(--zt-surface));
+    --muted: var(--zt-elevated);
     --muted-foreground: var(--zt-muted);
-    --accent: color-mix(in srgb, var(--zt-primary) 14%, var(--zt-surface));
+    --accent: var(--zt-hover);
     --accent-foreground: var(--zt-fg);
     --destructive: var(--zt-destructive);
     --destructive-foreground: var(--zt-destructive-foreground);
     --border: var(--zt-border);
     --input: var(--zt-border);
-    --ring: color-mix(in srgb, var(--zt-primary) 45%, var(--zt-border));
+    --ring: color-mix(in srgb, var(--zt-accent) 45%, var(--zt-border));
     --radius: var(--zt-radius);
   }
 }
@@ -95,23 +100,23 @@
   .zt-md[data-readonly='true']::after {
     content: attr(data-readonly-label);
     position: absolute;
-    top: 10px;
-    right: 10px;
+    top: 12px;
+    right: 12px;
     z-index: 20;
-    padding: 4px 7px;
+    padding: 4px 8px;
     border: 1px solid var(--zt-border);
     border-radius: var(--zt-radius);
     background: var(--zt-elevated);
     color: var(--zt-muted);
     font-size: 11px;
-    font-weight: 650;
+    font-weight: 500;
     letter-spacing: 0.01em;
     line-height: 1;
     pointer-events: none;
   }
 
   .zt-md-header {
-    @apply relative border-b border-zt-border px-5 py-4 text-sm text-zt-muted;
+    @apply relative border-b border-zt-border px-6 py-3 text-xs text-zt-muted;
     background: var(--zt-surface);
     letter-spacing: 0.01em;
   }
@@ -159,8 +164,10 @@
   }
 
   .zt-md-editor {
-    @apply min-h-[160px] px-5 py-4 text-[15.5px] leading-[1.75] outline-none;
+    @apply min-h-[160px] text-[15px] leading-[1.75] outline-none;
     position: relative;
+    padding: var(--zt-editor-padding-y) var(--zt-editor-padding-x);
+    -webkit-font-smoothing: antialiased;
   }
 
   .zt-md-editor:focus-visible {
@@ -170,11 +177,11 @@
   .zt-md-editor .ProseMirror {
     outline: none;
     white-space: pre-wrap;
-    caret-color: var(--zt-primary);
+    caret-color: var(--zt-accent);
   }
 
   .zt-md-editor .ProseMirror ::selection {
-    background: color-mix(in srgb, var(--zt-primary) 24%, transparent);
+    background: color-mix(in srgb, var(--zt-accent) 20%, transparent);
   }
 
   .zt-md-editor .ProseMirror p {
@@ -211,7 +218,7 @@
   }
 
   .zt-md-editor .ProseMirror-selectednode {
-    outline: 1px solid color-mix(in srgb, var(--zt-primary) 55%, var(--zt-border)) !important;
+    outline: 1.5px solid color-mix(in srgb, var(--zt-accent) 55%, var(--zt-border)) !important;
   }
 
   .zt-md-editor li.ProseMirror-selectednode {
@@ -219,7 +226,7 @@
   }
 
   .zt-md-editor li.ProseMirror-selectednode:after {
-    border: 1px solid color-mix(in srgb, var(--zt-primary) 55%, var(--zt-border)) !important;
+    border: 1.5px solid color-mix(in srgb, var(--zt-accent) 55%, var(--zt-border)) !important;
     left: -31px;
     right: -1px;
     top: -1px;
@@ -246,7 +253,7 @@
   /* 统一编辑器内部滚动条样式，新增滚动容器默认自动继承。 */
   .zt-md * {
     scrollbar-width: thin;
-    scrollbar-color: color-mix(in srgb, var(--zt-muted) 42%, var(--zt-surface)) transparent;
+    scrollbar-color: var(--zt-border-strong) transparent;
   }
 
   .zt-md *::-webkit-scrollbar {
@@ -262,11 +269,11 @@
     border: 2px solid transparent;
     border-radius: 999px;
     background-clip: padding-box;
-    background-color: color-mix(in srgb, var(--zt-muted) 42%, var(--zt-surface));
+    background-color: var(--zt-border-strong);
   }
 
   .zt-md *:hover::-webkit-scrollbar-thumb {
-    background-color: color-mix(in srgb, var(--zt-muted) 68%, var(--zt-surface));
+    background-color: var(--zt-muted);
   }
 
   .zt-md-readonly {
@@ -290,8 +297,20 @@
       .zt-md-code-language-picker-trigger,
       .zt-md-code-language-picker-option
     ):focus-visible {
-    outline: 2px solid var(--zt-primary);
+    outline: 2px solid var(--zt-accent);
     outline-offset: 1px;
+  }
+}
+
+@media (max-width: 560px) {
+  @layer components {
+    .zt-md-editor {
+      padding: 16px;
+    }
+
+    .zt-md-header {
+      padding: 10px 16px;
+    }
   }
 }
 
@@ -328,4 +347,3 @@
     }
   }
 }
-

@@ -171,7 +171,7 @@ const createPlaygroundMarkdown = (imageUrl: string): string => {
     "",
     "## 编辑器结构视图",
     "",
-    `![灰蓝技术写作工作台结构示意](${imageUrl})`,
+    `![极简中性编辑器结构示意](${imageUrl})`,
     "",
     "> 输入 `/` 打开命令菜单，选中文本即可显示格式工具。",
   ].join("\n");

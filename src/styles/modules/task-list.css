@@ -1,14 +1,15 @@
 @layer components {
   .zt-md-editor ol,
   .zt-md-editor ul {
-    padding-inline-start: 16px;
+    padding-inline-start: 1.25rem;
   }
 
   .zt-md-editor li[data-item-type="task"] {
     position: relative;
     list-style: none;
-    margin-inline-start: -16px;
-    padding-left: 1.45rem;
+    margin-inline-start: -1.25rem;
+    padding-left: 1.5rem;
+    margin-block: 0.2em;
   }
 
   .zt-md-editor li[data-item-type="task"]::marker {
@@ -21,11 +22,12 @@
     top: calc(0.875em - 0.475rem);
     width: 0.95rem;
     height: 0.95rem;
-    border: 1px solid var(--zt-border);
-    border-radius: min(var(--zt-radius), 0.25rem);
+    border: 1.5px solid var(--zt-border-strong);
+    border-radius: 4px;
     background: var(--zt-surface);
     content: "";
     cursor: pointer;
+    transition: background-color 120ms ease, border-color 120ms ease;
   }
 
   .zt-md-editor li[data-item-type="task"][data-checked="true"]::before {
@@ -39,11 +41,15 @@
     top: calc(0.975em - 0.475rem);
     width: 0.26rem;
     height: 0.5rem;
-    border: solid var(--zt-surface);
+    border: solid var(--zt-primary-foreground);
     border-width: 0 2px 2px 0;
     content: "";
     pointer-events: none;
     transform: rotate(45deg);
+  }
+
+  .zt-md-editor li[data-item-type="task"][data-checked="true"] > p {
+    color: var(--zt-muted);
   }
 
   .zt-md-editor li[data-item-type="task"] > input[type="checkbox"] {
@@ -52,19 +58,20 @@
     width: 0.95rem;
     height: 0.95rem;
     margin: 0 0.42rem 0 0.04rem;
-    border: 1px solid var(--zt-border);
-    border-radius: min(var(--zt-radius), 0.25rem);
+    border: 1.5px solid var(--zt-border-strong);
+    border-radius: 4px;
     background: var(--zt-surface);
     display: inline-grid;
     place-content: center;
     vertical-align: text-bottom;
     cursor: pointer;
+    transition: background-color 120ms ease, border-color 120ms ease;
   }
 
   .zt-md-editor li[data-item-type="task"] > input[type="checkbox"]::before {
     width: 0.26rem;
     height: 0.5rem;
-    border: solid var(--zt-surface);
+    border: solid var(--zt-primary-foreground);
     border-width: 0 2px 2px 0;
     content: "";
     transform: rotate(45deg) scale(0);

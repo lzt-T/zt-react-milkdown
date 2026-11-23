@@ -2,14 +2,14 @@
   .zt-md-editor .zt-md-image {
     @apply relative block max-w-full;
     width: fit-content;
-    margin-block: 0.75rem;
-    margin-inline: auto;
+    margin: 0 auto;
     line-height: 0;
   }
 
   .zt-md-editor .zt-md-image[data-selected='true'] {
-    outline: 1px solid color-mix(in srgb, var(--zt-primary) 55%, var(--zt-border));
+    outline: 2px solid color-mix(in srgb, var(--zt-accent) 65%, var(--zt-border));
     outline-offset: 2px;
+    border-radius: var(--zt-radius);
   }
 
   .zt-md-editor .zt-md-image[data-loading='true'],
@@ -17,9 +17,9 @@
     width: min(100%, 320px);
     aspect-ratio: 3 / 2;
     overflow: hidden;
-    border: 1px solid color-mix(in srgb, var(--zt-border) 78%, transparent);
-    border-radius: calc(var(--zt-radius) + 2px);
-    background: color-mix(in srgb, var(--zt-muted) 10%, var(--zt-surface));
+    border: 1px solid var(--zt-border);
+    border-radius: var(--zt-radius-lg);
+    background: var(--zt-elevated);
   }
 
   .zt-md-editor .zt-md-image[data-loading='true'] {
@@ -39,7 +39,7 @@
     content: "";
     position: absolute;
     inset: 0;
-    background: color-mix(in srgb, var(--zt-primary) 8%, var(--zt-surface));
+    background: var(--zt-hover);
     animation: zt-md-image-placeholder-shimmer 1.2s ease-in-out infinite alternate;
   }
 
@@ -47,7 +47,7 @@
     @apply block max-w-full;
     height: auto;
     border: 1px solid var(--zt-border);
-    border-radius: var(--zt-radius);
+    border-radius: var(--zt-radius-lg);
     background: var(--zt-elevated);
   }
 
@@ -104,13 +104,22 @@
   }
 
   .zt-md-editor .zt-md-image-action-button {
-    @apply inline-flex size-7 items-center justify-center border border-zt-border bg-zt-surface text-zt-muted;
+    @apply inline-flex size-7 items-center justify-center border border-zt-border text-zt-muted;
     border-radius: var(--zt-radius);
+    background: var(--zt-popover);
+    box-shadow: var(--zt-shadow-sm);
     cursor: pointer;
+    transition: background-color 0.14s ease, border-color 0.14s ease, color 0.14s ease;
+  }
+
+  .zt-md-editor .zt-md-image-action-button:hover {
+    background: var(--zt-hover);
+    border-color: var(--zt-border-strong);
+    color: var(--zt-fg);
   }
 
   .zt-md-editor .zt-md-image-action-button-danger:hover {
-    background: color-mix(in srgb, var(--zt-destructive) 12%, var(--zt-surface));
+    background: color-mix(in srgb, var(--zt-destructive) 12%, var(--zt-popover));
     color: var(--zt-destructive);
     border-color: color-mix(in srgb, var(--zt-destructive) 35%, var(--zt-border));
   }
@@ -125,7 +134,7 @@
     height: 2.75rem;
     max-height: calc(100% - 1rem);
     min-height: 1.75rem;
-    background: var(--zt-primary);
+    background: var(--zt-accent);
     border-radius: 2px;
     cursor: ew-resize;
     pointer-events: none;

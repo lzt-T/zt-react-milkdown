@@ -6,8 +6,8 @@
   }
 
   .zt-md-editor .zt-md-math-inline[data-editing='true'] {
-    background: color-mix(in srgb, var(--zt-primary) 12%, var(--zt-surface));
-    box-shadow: 0 0 0 1px color-mix(in srgb, var(--zt-primary) 45%, var(--zt-border));
+    background: color-mix(in srgb, var(--zt-accent) 12%, var(--zt-surface));
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--zt-accent) 45%, var(--zt-border));
   }
 
   .zt-md-editor .zt-md-math-inline[data-editable='false'] {
@@ -25,6 +25,11 @@
 
   .zt-md-editor .zt-md-math-inline-preview {
     @apply max-w-full overflow-x-auto overflow-y-hidden;
+    padding-block: 0.12em;
+  }
+
+  .zt-md-editor .zt-md-math-inline .katex {
+    font-size: 1.08em;
   }
 
   .zt-md-editor .zt-md-math-inline-error {
@@ -37,7 +42,8 @@
   }
 
   .zt-md-editor .zt-md-math-inline-editor-input {
-    @apply h-6 min-w-[120px] max-w-[180px] border-0 bg-transparent font-mono text-sm leading-6 text-zt-fg outline-none;
+    @apply h-6 min-w-[120px] max-w-[180px] border-0 bg-transparent text-sm leading-6 text-zt-fg outline-none;
+    font-family: var(--zt-font-mono);
   }
 
   .zt-md-editor .zt-md-math-inline-editor-preview {

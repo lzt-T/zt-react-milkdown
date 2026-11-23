@@ -2,16 +2,17 @@
   .zt-md-editor .zt-md-code-block {
     position: relative;
     display: flow-root;
+    margin: 0;
   }
 
   .zt-md-editor .zt-md-code-block-actions {
     position: absolute;
-    top: calc(0.75rem + 8px);
+    top: 8px;
     right: 8px;
     z-index: 3;
     display: none;
     align-items: center;
-    gap: 3px;
+    gap: 4px;
   }
 
   .zt-md-editor .zt-md-code-block:hover .zt-md-code-block-actions,
@@ -35,34 +36,31 @@
     justify-content: center;
     width: 26px;
     height: 26px;
-    border: 1px solid color-mix(in srgb, var(--zt-border) 82%, var(--zt-fg));
+    border: 1px solid var(--zt-border);
     border-radius: var(--zt-radius);
-    background: color-mix(in srgb, var(--zt-surface) 96%, transparent);
-    color: var(--zt-fg);
-    transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+    background: var(--zt-popover);
+    color: var(--zt-muted);
+    box-shadow: var(--zt-shadow-sm);
+    transition: background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease;
     cursor: pointer;
   }
 
   .zt-md-editor .zt-md-code-block-action-button:hover {
-    background: color-mix(in srgb, var(--zt-primary) 15%, var(--zt-surface));
-    border-color: color-mix(in srgb, var(--zt-primary) 44%, var(--zt-border));
+    background: var(--zt-hover);
+    border-color: var(--zt-border-strong);
+    color: var(--zt-fg);
   }
 
-  .zt-md-editor .zt-md-code-block-action-button[data-copied='true'] {
-    background: color-mix(in srgb, var(--zt-primary) 18%, var(--zt-surface));
-    border-color: color-mix(in srgb, var(--zt-primary) 50%, var(--zt-border));
-    color: var(--zt-primary);
-  }
-
+  .zt-md-editor .zt-md-code-block-action-button[data-copied='true'],
   .zt-md-editor .zt-md-code-block-action-button[data-active='true'] {
-    background: color-mix(in srgb, var(--zt-primary) 18%, var(--zt-surface));
-    border-color: color-mix(in srgb, var(--zt-primary) 50%, var(--zt-border));
-    color: var(--zt-primary);
+    background: color-mix(in srgb, var(--zt-accent) 12%, var(--zt-popover));
+    border-color: color-mix(in srgb, var(--zt-accent) 42%, var(--zt-border));
+    color: var(--zt-accent);
   }
 
   .zt-md-editor .zt-md-code-block-action-button-danger:hover {
-    background: color-mix(in srgb, var(--zt-destructive) 18%, var(--zt-surface));
-    border-color: color-mix(in srgb, var(--zt-destructive) 44%, var(--zt-border));
+    background: color-mix(in srgb, var(--zt-destructive) 12%, var(--zt-popover));
+    border-color: color-mix(in srgb, var(--zt-destructive) 38%, var(--zt-border));
     color: var(--zt-destructive);
   }
 
@@ -73,10 +71,10 @@
   .zt-md-editor .zt-md-code-block-preview {
     position: absolute;
     inset: 0;
-    margin-block: 0.75rem;
+    margin-block: 0;
     overflow: hidden;
     border: 1px solid var(--zt-border);
-    border-radius: var(--zt-radius);
+    border-radius: var(--zt-radius-lg);
     background: var(--zt-bg);
   }
 
@@ -85,7 +83,7 @@
   }
 
   .zt-md-editor .zt-md-code-block[data-view-mode='preview'] {
-    height: calc(min(24rem, 60vh) + 1.5rem);
+    height: min(24rem, 60vh);
   }
 
   .zt-md-editor .zt-md-code-block[data-view-mode='preview'] > pre {
@@ -112,12 +110,14 @@
   }
 
   .zt-md-editor .ProseMirror pre {
-    @apply my-3 overflow-x-auto rounded-[var(--zt-radius)] border border-zt-border px-4 py-3;
+    @apply overflow-x-auto rounded-[var(--zt-radius-lg)] border border-zt-border;
+    margin: 0;
+    padding: 0.875rem 1rem;
     background: var(--zt-elevated);
     color: var(--zt-fg);
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
-    font-size: 0.92em;
-    line-height: 1.7;
+    font-family: var(--zt-font-mono);
+    font-size: 0.875em;
+    line-height: 1.65;
     tab-size: 4;
     white-space: pre;
   }
@@ -136,10 +136,11 @@
   .zt-md-editor .ProseMirror pre[data-language]:not([data-language=''])::before {
     content: attr(data-language);
     display: block;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.625rem;
     color: var(--zt-muted);
-    font-family: var(--zt-font);
-    font-size: 0.78em;
+    font-family: var(--zt-font-mono);
+    font-size: 11px;
+    letter-spacing: 0.02em;
     line-height: 1.2;
   }
 
@@ -147,50 +148,56 @@
   .zt-md-editor .ProseMirror pre .token.prolog,
   .zt-md-editor .ProseMirror pre .token.doctype,
   .zt-md-editor .ProseMirror pre .token.cdata {
-    color: color-mix(in srgb, var(--zt-muted) 82%, var(--zt-fg));
+    color: var(--zt-syntax-comment);
   }
 
   .zt-md-editor .ProseMirror pre .token.punctuation,
   .zt-md-editor .ProseMirror pre .token.operator {
-    color: color-mix(in srgb, var(--zt-fg) 72%, var(--zt-muted));
+    color: var(--zt-syntax-punctuation);
   }
 
   .zt-md-editor .ProseMirror pre .token.property,
-  .zt-md-editor .ProseMirror pre .token.tag,
   .zt-md-editor .ProseMirror pre .token.boolean,
   .zt-md-editor .ProseMirror pre .token.number,
   .zt-md-editor .ProseMirror pre .token.constant,
   .zt-md-editor .ProseMirror pre .token.symbol {
-    color: color-mix(in srgb, var(--zt-primary) 82%, var(--zt-fg));
+    color: var(--zt-syntax-number);
   }
 
   .zt-md-editor .ProseMirror pre .token.selector,
   .zt-md-editor .ProseMirror pre .token.attr-name,
+  .zt-md-editor .ProseMirror pre .token.tag,
+  .zt-md-editor .ProseMirror pre .token.builtin {
+    color: var(--zt-syntax-tag);
+  }
+
   .zt-md-editor .ProseMirror pre .token.string,
-  .zt-md-editor .ProseMirror pre .token.char,
-  .zt-md-editor .ProseMirror pre .token.builtin,
+  .zt-md-editor .ProseMirror pre .token.char {
+    color: var(--zt-syntax-string);
+  }
+
   .zt-md-editor .ProseMirror pre .token.inserted {
-    color: color-mix(in srgb, var(--zt-secondary) 80%, var(--zt-fg));
+    color: var(--zt-syntax-inserted);
   }
 
   .zt-md-editor .ProseMirror pre .token.atrule,
   .zt-md-editor .ProseMirror pre .token.attr-value,
   .zt-md-editor .ProseMirror pre .token.keyword {
-    color: color-mix(in srgb, var(--zt-primary) 72%, var(--zt-secondary));
+    color: var(--zt-syntax-keyword);
   }
 
   .zt-md-editor .ProseMirror pre .token.function,
   .zt-md-editor .ProseMirror pre .token.class-name {
-    color: color-mix(in srgb, var(--zt-fg) 80%, var(--zt-primary));
+    color: var(--zt-syntax-function);
   }
 
   .zt-md-editor .ProseMirror pre .token.regex,
   .zt-md-editor .ProseMirror pre .token.important,
   .zt-md-editor .ProseMirror pre .token.variable {
-    color: color-mix(in srgb, var(--zt-secondary) 64%, var(--zt-primary));
+    color: var(--zt-syntax-variable);
   }
 
   .zt-md-editor .ProseMirror pre .token.deleted {
-    color: var(--zt-destructive);
+    color: var(--zt-syntax-deleted);
   }
 }

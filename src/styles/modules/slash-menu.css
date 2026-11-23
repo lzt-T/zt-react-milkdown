@@ -4,13 +4,13 @@
     z-index: 1200;
     border: 1px solid var(--zt-border);
     border-radius: var(--zt-radius-lg);
-    background: var(--zt-surface);
+    background: var(--zt-popover);
     color: var(--zt-fg);
-    box-shadow: 0 12px 28px -16px color-mix(in srgb, black 28%, transparent);
-    min-width: 210px;
+    box-shadow: var(--zt-shadow-md);
+    min-width: 224px;
     max-height: 320px;
     overflow: auto;
-    padding: 8px;
+    padding: 6px;
     pointer-events: auto;
     will-change: top, left, transform;
   }
@@ -24,18 +24,20 @@
     align-items: center;
     gap: 8px;
     border-radius: var(--zt-radius);
-    padding: 8px 10px;
-    font-size: 14px;
+    padding: 7px 9px;
+    font-size: 13.5px;
     line-height: 1.4;
     cursor: pointer;
+    transition: background-color 110ms ease, color 110ms ease;
   }
 
   .slash-menu-item-icon {
     display: inline-flex;
-    width: 16px;
-    height: 16px;
-    flex: 0 0 16px;
+    width: 15px;
+    height: 15px;
+    flex: 0 0 15px;
     color: var(--zt-muted);
+    transition: color 110ms ease;
   }
 
   .slash-menu-item-label {
@@ -47,7 +49,7 @@
     flex: 0 0 auto;
     margin-left: auto;
     color: var(--zt-muted);
-    font-family: inherit;
+    font-family: var(--zt-font-mono);
     font-size: 11px;
     line-height: 1;
     white-space: nowrap;
@@ -55,7 +57,8 @@
 
   .slash-menu-item:hover,
   .slash-menu-item[data-selected='true'] {
-    background: color-mix(in srgb, var(--zt-primary) 12%, var(--zt-surface));
+    background: var(--zt-hover);
+    color: var(--zt-fg);
   }
 
   .slash-menu-item:hover .slash-menu-item-icon,
@@ -64,10 +67,18 @@
   }
 
   .slash-menu-group {
-    margin: 6px 6px 4px;
+    margin: 0;
+    padding: 6px 8px 4px;
     color: var(--zt-muted);
-    font-size: 12px;
+    font-size: 11px;
+    font-weight: 500;
     line-height: 1.2;
+  }
+
+  .slash-menu-group:not(:first-child) {
+    margin-top: 4px;
+    padding-top: 8px;
+    border-top: 1px solid var(--zt-border);
   }
 }
 

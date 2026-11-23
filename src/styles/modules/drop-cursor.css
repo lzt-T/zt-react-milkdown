@@ -1,6 +1,6 @@
 @layer components {
   .zt-md-editor .ProseMirror-dropcursor {
-    background-color: var(--zt-primary) !important;
+    background-color: var(--zt-accent) !important;
     border-radius: 1px;
   }
 }

@@ -58,7 +58,7 @@
     width: 1px;
     height: 1em;
     transform: translateY(-50%);
-    background-color: var(--zt-primary);
+    background-color: var(--zt-accent);
     animation: zt-md-gap-cursor-blink 1s steps(2, start) infinite;
   }
 
