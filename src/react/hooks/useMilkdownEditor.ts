@@ -1,6 +1,5 @@
 import { resolveEditorMessages } from '@/local/i18n';
 import { useEditor } from '@milkdown/react';
-import { debounce } from 'es-toolkit/function';
 import { useEffect, useRef, type MutableRefObject } from 'react';
 import type {
   EditorI18nMessages,
@@ -99,6 +98,10 @@ export const useMilkdownEditor = (options: UseMilkdownEditorOptions): void => {
   const runtimeRef = useRef<MilkdownEditorRuntime | null>(null);
   /** 当前已写入编辑器的 markdown。 */
   const currentMarkdownRef = useRef<string>(options.markdown);
+  /** 最新只读状态引用，避免因初始化期间切换只读导致状态过期。 */
+  const readOnlyRef = useRef<boolean>(options.readOnly);
+  /** 最新防抖时长引用。 */
+  const debounceMsRef = useRef<number>(options.debounceMs);
   /** markdown 变更回调引用。 */
   const onMarkdownChangeRef = useRef<(markdown: string) => void>(options.onMarkdownChange);
   /** 初始化失败回调引用。 */
@@ -109,10 +112,9 @@ export const useMilkdownEditor = (options: UseMilkdownEditorOptions): void => {
   const onSearchSnapshotChangeRef = useRef<
     ((snapshot: EditorSearchSnapshot) => void) | undefined
   >(options.onSearchSnapshotChange);
-  /** markdown 变化外发防抖器引用。 */
-  const debouncedEmitRef = useRef<ReturnType<typeof debounce<(markdown: string) => void>> | null>(
-    null
-  );
+
+  readOnlyRef.current = options.readOnly;
+  debounceMsRef.current = options.debounceMs;
 
   /** 当前 Milkdown React 实例信息。 */
   const editorInfo = useEditor(
@@ -126,13 +128,14 @@ export const useMilkdownEditor = (options: UseMilkdownEditorOptions): void => {
       }
       currentMarkdownRef.current = options.markdown;
 
-      /** 编辑器运行时。 */
+      /** 编辑器运行时（序列化防抖已在运行时内部前移）。 */
       const runtime = createMilkdownEditorRuntime({
         root,
         portalContainer: options.portalContainer,
         contentPortalContainer: options.contentPortalContainer,
         markdown: options.markdown,
-        readOnly: options.readOnly,
+        readOnly: readOnlyRef.current,
+        debounceMs: debounceMsRef.current,
         messages: options.messages,
         locale: options.locale,
         slashMenu: options.slashMenu,
@@ -140,7 +143,7 @@ export const useMilkdownEditor = (options: UseMilkdownEditorOptions): void => {
         shortcutMode: options.shortcutMode,
         onChange: (nextMarkdown) => {
           currentMarkdownRef.current = nextMarkdown;
-          debouncedEmitRef.current?.(nextMarkdown);
+          onMarkdownChangeRef.current(nextMarkdown);
         },
         onSearchSnapshotChange: (snapshot) => {
           onSearchSnapshotChangeRef.current?.(snapshot);
@@ -168,7 +171,6 @@ export const useMilkdownEditor = (options: UseMilkdownEditorOptions): void => {
     [
       options.portalContainer,
       options.contentPortalContainer,
-      options.readOnly,
       options.shortcutMode,
       options.focusEditorRef,
       options.searchControllerRef
@@ -192,23 +194,16 @@ export const useMilkdownEditor = (options: UseMilkdownEditorOptions): void => {
   }, [options.onSearchSnapshotChange]);
 
   useEffect(() => {
-    if (debouncedEmitRef.current) {
-      debouncedEmitRef.current.cancel();
+    if (!editorInfo.loading) {
+      runtimeRef.current?.setDebounceMs?.(options.debounceMs);
     }
+  }, [editorInfo.loading, options.debounceMs]);
 
-    // 防抖后再向外抛出 markdown，降低高频输入回调压力。
-    debouncedEmitRef.current = debounce(
-      (nextMarkdown: string) => {
-        onMarkdownChangeRef.current(nextMarkdown);
-      },
-      options.debounceMs
-    );
-
-    return () => {
-      debouncedEmitRef.current?.cancel();
-      debouncedEmitRef.current = null;
-    };
-  }, [options.debounceMs]);
+  useEffect(() => {
+    if (!editorInfo.loading) {
+      runtimeRef.current?.setReadOnly?.(options.readOnly);
+    }
+  }, [editorInfo.loading, options.readOnly]);
 
   useEffect(() => {
     return () => {
@@ -223,7 +218,6 @@ export const useMilkdownEditor = (options: UseMilkdownEditorOptions): void => {
   }, [
     options.portalContainer,
     options.contentPortalContainer,
-    options.readOnly,
     options.shortcutMode,
     options.focusEditorRef,
     options.searchControllerRef

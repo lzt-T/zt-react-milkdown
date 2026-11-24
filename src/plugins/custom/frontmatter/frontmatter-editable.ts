@@ -1,5 +1,6 @@
 import { resolveEditorMessages } from '@/local/i18n';
 import { observeEditorMessages } from '@/local/message-updates';
+import { renderStaticSvgIcon } from '@/lib/static-svg-icons';
 import {
   FRONTMATTER_NODE_NAME,
   normalizeFrontmatterFormat,
@@ -9,9 +10,6 @@ import type { EditorI18nMessages } from '@/types/editor';
 import type { Node as ProseNode } from '@milkdown/prose/model';
 import { TextSelection } from '@milkdown/prose/state';
 import type { EditorView, NodeView, NodeViewConstructor } from '@milkdown/prose/view';
-import { Check, ChevronDown, Copy, Trash2 } from 'lucide-react';
-import { createElement } from 'react';
-import { renderToStaticMarkup } from 'react-dom/server';
 
 // 复制成功态清理延迟（毫秒）。
 const COPY_FEEDBACK_DURATION = 1200;
@@ -24,27 +22,14 @@ const FRONTMATTER_LABEL_KEY_MAP: Readonly<
   toml: 'frontmatterTomlLabel'
 };
 
-/**
- * 基于 lucide-react 组件渲染 SVG 字符串。
- */
-const renderLucideIconMarkup = (icon: typeof Copy): string => {
-  return renderToStaticMarkup(
-    createElement(icon, {
-      size: 14,
-      strokeWidth: 2,
-      'aria-hidden': 'true'
-    })
-  );
-};
-
 // 折叠指示箭头图标。
-const chevronIconMarkup = renderLucideIconMarkup(ChevronDown);
+const chevronIconMarkup = renderStaticSvgIcon('ChevronDown', { size: 14, strokeWidth: 2 });
 // 复制按钮默认图标。
-const copyIconMarkup = renderLucideIconMarkup(Copy);
+const copyIconMarkup = renderStaticSvgIcon('Copy', { size: 14, strokeWidth: 2 });
 // 复制成功反馈图标。
-const checkIconMarkup = renderLucideIconMarkup(Check);
+const checkIconMarkup = renderStaticSvgIcon('Check', { size: 14, strokeWidth: 2 });
 // 删除按钮默认图标。
-const deleteIconMarkup = renderLucideIconMarkup(Trash2);
+const deleteIconMarkup = renderStaticSvgIcon('Trash2', { size: 14, strokeWidth: 2 });
 
 /**
  * 解析 NodeView 的节点位置。

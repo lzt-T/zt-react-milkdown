@@ -107,13 +107,18 @@
     padding: 4px 8px;
     border: 1px solid var(--zt-border);
     border-radius: var(--zt-radius);
-    background: var(--zt-elevated);
+    background: color-mix(in srgb, var(--zt-elevated) 88%, transparent);
+    backdrop-filter: blur(4px);
     color: var(--zt-muted);
     font-size: 11px;
     font-weight: 500;
     letter-spacing: 0.01em;
     line-height: 1;
     pointer-events: none;
+  }
+
+  .zt-md[data-readonly='true']:not([data-search-open='true']) .zt-md-editor {
+    padding-top: calc(var(--zt-editor-padding-y) + 16px);
   }
 
   .zt-md-header {
@@ -168,6 +173,7 @@
     @apply min-h-[160px] text-[15px] leading-[1.75] outline-none;
     position: relative;
     padding: var(--zt-editor-padding-y) var(--zt-editor-padding-x);
+    transition: padding-top 140ms ease-out;
     -webkit-font-smoothing: antialiased;
   }
 
@@ -251,29 +257,84 @@
     cursor: text;
   }
 
-  /* 统一编辑器内部滚动条样式，新增滚动容器默认自动继承。 */
-  .zt-md * {
+  /* 收敛滚动条样式至实际可滚动容器，避免通配选择器在大文档下增加样式匹配开销。 */
+  .zt-md :is(
+      .zt-md-editor,
+      pre,
+      .tableWrapper,
+      .slash-menu,
+      .zt-md-code-language-picker-options,
+      .zt-md-selection-transform-popover,
+      .zt-md-math-block-preview,
+      .zt-md-math-inline-preview,
+      .zt-md-math-block-textarea,
+      .zt-md-image-upload-body
+    ) {
     scrollbar-width: thin;
     scrollbar-color: var(--zt-border-strong) transparent;
   }
 
-  .zt-md *::-webkit-scrollbar {
+  .zt-md :is(
+      .zt-md-editor,
+      pre,
+      .tableWrapper,
+      .slash-menu,
+      .zt-md-code-language-picker-options,
+      .zt-md-selection-transform-popover,
+      .zt-md-math-block-preview,
+      .zt-md-math-inline-preview,
+      .zt-md-math-block-textarea,
+      .zt-md-image-upload-body
+    )::-webkit-scrollbar {
     width: 8px;
     height: 8px;
   }
 
-  .zt-md *::-webkit-scrollbar-track {
+  .zt-md :is(
+      .zt-md-editor,
+      pre,
+      .tableWrapper,
+      .slash-menu,
+      .zt-md-code-language-picker-options,
+      .zt-md-selection-transform-popover,
+      .zt-md-math-block-preview,
+      .zt-md-math-inline-preview,
+      .zt-md-math-block-textarea,
+      .zt-md-image-upload-body
+    )::-webkit-scrollbar-track {
     background: transparent;
   }
 
-  .zt-md *::-webkit-scrollbar-thumb {
+  .zt-md :is(
+      .zt-md-editor,
+      pre,
+      .tableWrapper,
+      .slash-menu,
+      .zt-md-code-language-picker-options,
+      .zt-md-selection-transform-popover,
+      .zt-md-math-block-preview,
+      .zt-md-math-inline-preview,
+      .zt-md-math-block-textarea,
+      .zt-md-image-upload-body
+    )::-webkit-scrollbar-thumb {
     border: 2px solid transparent;
     border-radius: 999px;
     background-clip: padding-box;
     background-color: var(--zt-border-strong);
   }
 
-  .zt-md *:hover::-webkit-scrollbar-thumb {
+  .zt-md :is(
+      .zt-md-editor,
+      pre,
+      .tableWrapper,
+      .slash-menu,
+      .zt-md-code-language-picker-options,
+      .zt-md-selection-transform-popover,
+      .zt-md-math-block-preview,
+      .zt-md-math-inline-preview,
+      .zt-md-math-block-textarea,
+      .zt-md-image-upload-body
+    ):hover::-webkit-scrollbar-thumb {
     background-color: var(--zt-muted);
   }
 

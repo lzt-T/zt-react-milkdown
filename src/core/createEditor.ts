@@ -8,25 +8,28 @@ import type {
   SlashMenuConfig
 } from '@/types/editor';
 import type { Node as ProseNode } from '@milkdown/prose/model';
-import { TextSelection } from '@milkdown/prose/state';
+import { Plugin, PluginKey, TextSelection } from '@milkdown/prose/state';
+import type { EditorView } from '@milkdown/prose/view';
 import {
   defaultValueCtx,
   Editor,
   editorViewCtx,
   editorViewOptionsCtx,
   nodeViewCtx,
-  rootCtx
+  rootCtx,
+  serializerCtx
 } from '@milkdown/core';
 import { clipboard } from '@milkdown/plugin-clipboard';
 import { history } from '@milkdown/plugin-history';
 import { indent, indentConfig } from '@milkdown/plugin-indent';
-import { listener, listenerCtx } from '@milkdown/plugin-listener';
+import { listener } from '@milkdown/plugin-listener';
 import { commonmark } from '@milkdown/preset-commonmark';
 import { gfm } from '@milkdown/preset-gfm';
 import { prismConfig } from '@milkdown/plugin-prism';
 import { configureCodeBlockHighlighter } from '@/plugins/custom/code-block/code-block-highlighter';
 import { codeBlockPrismPlugin } from '@/plugins/custom/code-block/code-block-prism-refresh';
-import { replaceAll } from '@milkdown/utils';
+import { $prose, replaceAll } from '@milkdown/utils';
+import { debounce } from 'es-toolkit/function';
 import { createReplaceAllExecutor } from './commands';
 import { resolvePresetPlugins } from '../plugins/preset-common';
 import {
@@ -88,6 +91,14 @@ import {
   configureBlockTransformShortcuts
 } from '@/plugins/custom/block-transform';
 
+// 编辑器只读态原地切换事务元数据键。
+const READONLY_CHANGE_META = 'ZT_MD_READONLY_CHANGE';
+// Markdown 同步插件键。
+const MARKDOWN_SYNC_PLUGIN_KEY = new PluginKey('ZT_MD_MARKDOWN_SYNC');
+// 需要同步 data-editable 的自定义节点选择器。
+const EDITABLE_NODE_VIEW_SELECTOR =
+  '[data-type="code_block"], [data-type="image"], [data-type="math_block"], [data-type="math_inline"], [data-type="frontmatter"]';
+
 /**
  * 定义 Milkdown 原生编辑器实例类型。
  */
@@ -109,6 +120,10 @@ export interface FocusEditorCoordinates {
 export interface MilkdownEditorRuntime {
   /** 同步语言和完整文案，保留编辑器及编辑状态。 */
   updateLocalization: (locale: EditorLocale, messages: EditorI18nMessages) => void;
+  /** 原地切换只读状态，保留撤销历史、选区与滚动位置。 */
+  setReadOnly?: (readOnly: boolean) => void;
+  /** 动态更新内容变更防抖时长。 */
+  setDebounceMs?: (debounceMs: number) => void;
   /** Milkdown 原生编辑器实例。 */
   editor: NativeMilkdownEditor;
   /** 注册需要在 create 后延迟启用的插件。 */
@@ -135,6 +150,8 @@ export interface CreateMilkdownEditorRuntimeOptions {
   markdown: string;
   /** 是否只读。 */
   readOnly: boolean;
+  /** 序列化防抖时长（毫秒），默认 0 表示变更后立即序列化。 */
+  debounceMs?: number;
   /** 编辑器文案。 */
   messages?: EditorI18nMessages;
   /** 编辑器语言。 */
@@ -219,11 +236,105 @@ const blockReadonlyLinkClick = (event: MouseEvent, readOnly: boolean): boolean =
 };
 
 /**
+ * 原地切换只读状态时，同步已有自定义节点视图的交互属性。
+ */
+const syncNodeViewsEditableState = (view: EditorView, readOnly: boolean): void => {
+  const editableValue = readOnly ? 'false' : 'true';
+  const nodeViewRoots = view.dom.querySelectorAll<HTMLElement>(EDITABLE_NODE_VIEW_SELECTOR);
+  nodeViewRoots.forEach((element) => {
+    element.dataset.editable = editableValue;
+
+    if (element.dataset.type === 'code_block') {
+      const actionsContainer = element.querySelector<HTMLElement>(':scope > .zt-md-code-block-actions');
+      if (actionsContainer) {
+        const previewButton = actionsContainer.querySelector<HTMLButtonElement>('.zt-md-code-block-action-button');
+        const hasPreview = previewButton ? !previewButton.hidden : false;
+        actionsContainer.dataset.visible = !readOnly || hasPreview ? 'true' : 'false';
+      }
+      return;
+    }
+
+    if (readOnly && element.dataset.type === 'math_block') {
+      element.classList.remove('zt-md-math-block-editing');
+      const sourceContainer = element.querySelector<HTMLElement>('.zt-md-math-block-source');
+      if (sourceContainer) {
+        sourceContainer.hidden = true;
+      }
+    }
+  });
+};
+
+/**
  * 创建面向 React 生命周期的 Milkdown 编辑器运行时。
  */
 export const createMilkdownEditorRuntime = (
   options: CreateMilkdownEditorRuntimeOptions
 ): MilkdownEditorRuntime => {
+  /** 运行时只读状态，支持原地切换而不销毁编辑器。 */
+  let currentReadOnly = options.readOnly;
+  /** 内容序列化防抖时长（毫秒）。 */
+  let currentDebounceMs = Math.max(0, options.debounceMs ?? 0);
+  /** 标记是否正在应用外部传入的 setMarkdown，避免反向回抛 onChange。 */
+  let isApplyingExternalMarkdown = false;
+  /** 外部 setMarkdown 目标值缓存。 */
+  let externalMarkdownTarget: string | null = null;
+  /** 最近一次对外发出的 Markdown 内容。 */
+  let lastEmittedMarkdown: string | null = null;
+  /** 最近一次已完成序列化的文档快照。 */
+  let lastSerializedDoc: ProseNode | null = null;
+  /** 当前 ProseMirror 视图引用。 */
+  let activeView: EditorView | null = null;
+  /** 当前 Markdown 序列化器。 */
+  let activeSerializer: ((doc: ProseNode) => string) | null = null;
+  /** 防抖序列化调度器。 */
+  let debouncedSerialize: ReturnType<typeof debounce<() => void>> | null = null;
+
+  /**
+   * 立即执行一次序列化并在文本变更时通知外部。
+   */
+  const flushMarkdownChange = (view: EditorView): void => {
+    if (view.state.doc === lastSerializedDoc) {
+      return;
+    }
+
+    if (!activeSerializer) {
+      // 懒获取 serializerCtx，确保仅在 SerializerReady 之后读取真实序列化器。
+      activeSerializer = editor.action((actionCtx: any) => actionCtx.get(serializerCtx)) as
+        | ((doc: ProseNode) => string)
+        | null;
+    }
+
+    if (!activeSerializer) {
+      return;
+    }
+
+    lastSerializedDoc = view.state.doc;
+    const nextMarkdown = activeSerializer(view.state.doc);
+    if (nextMarkdown === lastEmittedMarkdown) {
+      return;
+    }
+
+    lastEmittedMarkdown = nextMarkdown;
+    options.onChange(nextMarkdown);
+  };
+
+  /**
+   * 按最新防抖时长重建序列化防抖器。
+   */
+  const rebuildSerializeDebouncer = (): void => {
+    debouncedSerialize?.cancel();
+    debouncedSerialize =
+      currentDebounceMs > 0
+        ? debounce(() => {
+            if (activeView) {
+              flushMarkdownChange(activeView);
+            }
+          }, currentDebounceMs)
+        : null;
+  };
+
+  rebuildSerializeDebouncer();
+
   /** 编辑器文案。 */
   const messages = { ...(options.messages ?? resolveEditorMessages(options.locale)) };
   /** 表格聚焦操作插件实例。 */
@@ -242,6 +353,44 @@ export const createMilkdownEditorRuntime = (
   const imagePastePlugin = createImagePastePlugin(options.imageUpload, messages);
   /** 编辑器搜索插件实例列表。 */
   const editorSearchPlugins = createEditorSearchPlugins(options.onSearchSnapshotChange);
+  /** 将序列化动作后移至防抖窗口之后，避免每次击键同步序列化整篇长文档。 */
+  const markdownSyncPlugin = $prose(() => {
+    return new Plugin({
+      key: MARKDOWN_SYNC_PLUGIN_KEY,
+      view: (initialView) => {
+        activeView = initialView;
+        lastSerializedDoc = initialView.state.doc;
+
+        return {
+          update: (view, previousState) => {
+            activeView = view;
+            if (isApplyingExternalMarkdown) {
+              lastSerializedDoc = view.state.doc;
+              lastEmittedMarkdown = externalMarkdownTarget;
+              debouncedSerialize?.cancel();
+              return;
+            }
+
+            if (previousState.doc === view.state.doc) {
+              return;
+            }
+
+            if (currentDebounceMs <= 0 || !debouncedSerialize) {
+              flushMarkdownChange(view);
+              return;
+            }
+
+            debouncedSerialize();
+          },
+          destroy: () => {
+            debouncedSerialize?.cancel();
+            activeSerializer = null;
+            activeView = null;
+          }
+        };
+      }
+    });
+  });
 
   /** 默认插件集合。 */
   const slashSetup = createSlashMenuPlugin(
@@ -320,22 +469,22 @@ export const createMilkdownEditorRuntime = (
     ctx.set(rootCtx, options.root);
     ctx.set(defaultValueCtx, options.markdown);
     ctx.set(editorViewOptionsCtx, {
-      editable: () => !options.readOnly,
+      editable: () => !currentReadOnly,
       handleKeyDown: handleEditorShortcutKeyDown,
       handleDOMEvents: {
         mousedown: (_view: unknown, event: Event) => {
           return event instanceof MouseEvent
-            ? blockReadonlyLinkClick(event, options.readOnly)
+            ? blockReadonlyLinkClick(event, currentReadOnly)
             : false;
         },
         click: (_view: unknown, event: Event) => {
           return event instanceof MouseEvent
-            ? blockReadonlyLinkClick(event, options.readOnly)
+            ? blockReadonlyLinkClick(event, currentReadOnly)
             : false;
         }
       },
       handleClick: (_view: unknown, _position: number, event: MouseEvent) => {
-        return handleEditorLinkClick(event, options.readOnly);
+        return handleEditorLinkClick(event, currentReadOnly);
       },
       handleClickOn: (
         _view: unknown,
@@ -345,12 +494,12 @@ export const createMilkdownEditorRuntime = (
         event: MouseEvent,
         direct: boolean
       ) => {
-        if (handleEditorLinkClick(event, options.readOnly)) {
+        if (handleEditorLinkClick(event, currentReadOnly)) {
           return true;
         }
 
         // 仅拦截直接点击到的只读图片节点，避免进入选中态。
-        if (options.readOnly && direct && isImageNode(node)) {
+        if (currentReadOnly && direct && isImageNode(node)) {
           event.preventDefault();
           return true;
         }
@@ -369,12 +518,6 @@ export const createMilkdownEditorRuntime = (
       [FRONTMATTER_NODE_NAME, createFrontmatterEditableNodeView(messages)]
     ]);
 
-    /** 监听器管理器。 */
-    const listenerManager = ctx.get(listenerCtx);
-    listenerManager.markdownUpdated((_ctx: unknown, markdown: string) => {
-      options.onChange(markdown);
-    });
-
     if (slashSetup.config) {
       slashSetup.config(ctx);
     }
@@ -383,6 +526,7 @@ export const createMilkdownEditorRuntime = (
   bootstrapPlugins.forEach((descriptor) => {
     editor.use(descriptor.plugin as any);
   });
+  editor.use(markdownSyncPlugin as any);
 
   /**
    * 在当前 Milkdown EditorView 中执行搜索动作。
@@ -489,11 +633,45 @@ export const createMilkdownEditorRuntime = (
       updateEditorMessages(messages, nextMessages);
       slashSetup.updateLocale?.(locale);
     },
+    /** 原地切换只读状态。 */
+    setReadOnly: (nextReadOnly): void => {
+      if (currentReadOnly === nextReadOnly) {
+        return;
+      }
+
+      currentReadOnly = nextReadOnly;
+      editor.action((ctx: any) => {
+        const view = ctx.get(editorViewCtx) as EditorView;
+        view.setProps({
+          editable: () => !currentReadOnly
+        });
+        syncNodeViewsEditableState(view, currentReadOnly);
+        view.dispatch(view.state.tr.setMeta(READONLY_CHANGE_META, currentReadOnly));
+      });
+    },
+    /** 动态更新序列化防抖时长。 */
+    setDebounceMs: (nextDebounceMs): void => {
+      const normalizedDebounceMs = Math.max(0, nextDebounceMs);
+      if (currentDebounceMs === normalizedDebounceMs) {
+        return;
+      }
+
+      currentDebounceMs = normalizedDebounceMs;
+      rebuildSerializeDebouncer();
+    },
     installRuntimePlugins,
     focusEditor,
     searchController,
     setMarkdown: (markdown: string): void => {
-      runReplaceAll(markdown);
+      debouncedSerialize?.cancel();
+      externalMarkdownTarget = markdown;
+      isApplyingExternalMarkdown = true;
+      try {
+        runReplaceAll(markdown);
+      } finally {
+        isApplyingExternalMarkdown = false;
+        externalMarkdownTarget = null;
+      }
     }
   };
 };

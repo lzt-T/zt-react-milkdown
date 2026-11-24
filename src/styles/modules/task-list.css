@@ -88,4 +88,10 @@
   .zt-md-editor li[data-item-type="task"] > input[type="checkbox"]:checked::before {
     transform: rotate(45deg) scale(1);
   }
+
+  .zt-md-editor.zt-md-readonly li[data-item-type="task"]::before,
+  .zt-md-editor.zt-md-readonly li[data-item-type="task"] > input[type="checkbox"],
+  .zt-md-editor.zt-md-readonly li[data-item-type="task"] > input[type="checkbox"]:checked {
+    cursor: default;
+  }
 }

@@ -1,7 +1,5 @@
 import { observeEditorMessages } from '@/local/message-updates';
-import { createElement } from 'react';
-import { renderToStaticMarkup } from 'react-dom/server';
-import { ImageOff, Trash2 } from 'lucide-react';
+import { renderStaticSvgIcon } from '@/lib/static-svg-icons';
 import type { Node as ProseNode } from '@milkdown/prose/model';
 import type { EditorView, NodeView, NodeViewConstructor } from '@milkdown/prose/view';
 import type { EditorI18nMessages } from '../../../types/editor';
@@ -54,24 +52,11 @@ interface ImageResizeState {
   widthPercent: number;
 }
 
-/**
- * 基于 lucide-react 组件渲染 SVG 字符串。
- */
-const renderLucideIconMarkup = (icon: typeof Trash2): string => {
-  return renderToStaticMarkup(
-    createElement(icon, {
-      size: 14,
-      strokeWidth: 2,
-      'aria-hidden': 'true'
-    })
-  );
-};
-
 // 删除按钮图标。
-const deleteIconMarkup = renderLucideIconMarkup(Trash2);
+const deleteIconMarkup = renderStaticSvgIcon('Trash2', { size: 14, strokeWidth: 2 });
 
 // 图片加载失败图标。
-const imageLoadErrorIconMarkup = renderLucideIconMarkup(ImageOff);
+const imageLoadErrorIconMarkup = renderStaticSvgIcon('ImageOff', { size: 14, strokeWidth: 2 });
 
 /**
  * 解析 NodeView 的节点位置。
@@ -161,6 +146,8 @@ class ImageEditableNodeView implements NodeView {
 
     // 图片元素。
     this.imageElement = document.createElement('img');
+    this.imageElement.loading = 'lazy';
+    this.imageElement.decoding = 'async';
     this.imageElement.addEventListener('load', this.handleImageLoad);
     this.imageElement.addEventListener('error', this.handleImageError);
 

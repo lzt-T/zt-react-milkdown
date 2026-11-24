@@ -308,6 +308,21 @@ export const createSlashMenuPlugin = (
       }
     };
 
+    // 菜单鼠标移动时同步悬停高亮索引，避免鼠标悬停与键盘高亮分离。
+    menuView.menu.addEventListener('mousemove', (event) => {
+      if (!menuInteractable) {
+        return;
+      }
+
+      const target = event.target as HTMLElement | null;
+      const matchedItem = target?.closest('.slash-menu-item') as HTMLElement | null;
+      const hoveredIndex = Number(matchedItem?.dataset.index ?? -1);
+      if (hoveredIndex >= 0 && hoveredIndex < visibleItems.length && hoveredIndex !== activeIndex) {
+        activeIndex = hoveredIndex;
+        menuView.renderIfNeeded(visibleItems, activeIndex);
+      }
+    });
+
     // 菜单点击事件。
     menuView.menu.addEventListener('mousedown', (event) => {
       event.preventDefault();
@@ -376,4 +391,3 @@ export const createSlashMenuPlugin = (
     return { plugins: [], config: null };
   }
 };
-

@@ -1,8 +1,6 @@
 import { observeEditorMessages } from '@/local/message-updates';
+import { renderStaticSvgIcon } from '@/lib/static-svg-icons';
 import katex from 'katex';
-import { createElement } from 'react';
-import { renderToStaticMarkup } from 'react-dom/server';
-import { Check, Copy, Trash2 } from 'lucide-react';
 import type { Node as ProseNode } from '@milkdown/prose/model';
 import { TextSelection } from '@milkdown/prose/state';
 import type { EditorView, NodeView, NodeViewConstructor } from '@milkdown/prose/view';
@@ -22,22 +20,12 @@ const DRAG_DISTANCE_THRESHOLD = 5;
  * 复制成功态清理延迟（毫秒）。
  */
 const COPY_FEEDBACK_DURATION = 1200;
-/**
- * 基于 lucide-react 组件渲染 SVG 字符串。
- */
-const renderLucideIconMarkup = (icon: typeof Copy): string => {
-  return renderToStaticMarkup(
-    createElement(icon, {
-      size: 14,
-      strokeWidth: 2,
-      'aria-hidden': 'true'
-    })
-  );
-};
 // 复制按钮默认图标。
-const copyIconMarkup = renderLucideIconMarkup(Copy);
+const copyIconMarkup = renderStaticSvgIcon('Copy', { size: 14, strokeWidth: 2 });
 // 复制成功反馈图标。
-const checkIconMarkup = renderLucideIconMarkup(Check);
+const checkIconMarkup = renderStaticSvgIcon('Check', { size: 14, strokeWidth: 2 });
+// 删除按钮默认图标。
+const deleteIconMarkup = renderStaticSvgIcon('Trash2', { size: 14, strokeWidth: 2 });
 
 /**
  * 解析 NodeView 的节点位置。
@@ -164,7 +152,7 @@ class MathBlockEditableNodeView implements NodeView {
     this.deleteButton.type = 'button';
     this.deleteButton.className = 'zt-md-math-block-action-button zt-md-math-block-action-button-danger';
     this.deleteButton.setAttribute('aria-label', this.messages.mathBlockDeleteAriaLabel);
-    this.deleteButton.innerHTML = renderLucideIconMarkup(Trash2);
+    this.deleteButton.innerHTML = deleteIconMarkup;
 
     // 渲染错误提示节点。
     this.errorContainer = document.createElement('div');

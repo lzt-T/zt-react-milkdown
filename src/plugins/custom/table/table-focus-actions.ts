@@ -1,8 +1,7 @@
 import { observeEditorMessages } from '@/local/message-updates';
+import { renderStaticSvgIcon } from '@/lib/static-svg-icons';
 import { createElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import { renderToStaticMarkup } from 'react-dom/server';
-import { AlignCenter, AlignLeft, AlignRight, Trash2 } from 'lucide-react';
 import { Plugin, PluginKey, TextSelection } from '@milkdown/prose/state';
 import type { EditorView } from '@milkdown/prose/view';
 import { $prose } from '@milkdown/utils';
@@ -35,27 +34,14 @@ const OVERLAY_BOUNDARY_INSET = 8;
 // 表格列默认对齐方式。
 const DEFAULT_TABLE_ALIGNMENT: TableCellAlignment = 'left';
 
-/**
- * 基于 lucide-react 组件渲染 SVG 字符串。
- */
-const renderLucideIconMarkup = (iconComponent: typeof Trash2): string => {
-  return renderToStaticMarkup(
-    createElement(iconComponent, {
-      size: 15,
-      strokeWidth: 2,
-      'aria-hidden': 'true'
-    })
-  );
-};
-
 // 删除按钮图标。
-const deleteIconMarkup = renderLucideIconMarkup(Trash2);
+const deleteIconMarkup = renderStaticSvgIcon('Trash2', { size: 15, strokeWidth: 2 });
 // 左对齐按钮图标。
-const alignLeftIconMarkup = renderLucideIconMarkup(AlignLeft);
+const alignLeftIconMarkup = renderStaticSvgIcon('AlignLeft', { size: 15, strokeWidth: 2 });
 // 居中按钮图标。
-const alignCenterIconMarkup = renderLucideIconMarkup(AlignCenter);
+const alignCenterIconMarkup = renderStaticSvgIcon('AlignCenter', { size: 15, strokeWidth: 2 });
 // 右对齐按钮图标。
-const alignRightIconMarkup = renderLucideIconMarkup(AlignRight);
+const alignRightIconMarkup = renderStaticSvgIcon('AlignRight', { size: 15, strokeWidth: 2 });
 
 /**
  * 判断当前编辑器是否可编辑。
@@ -133,6 +119,12 @@ class TableFocusActionsView {
   private readonly editorWrapper: HTMLElement | null;
   // 编辑器内部浮层 Portal 容器。
   private readonly portalContainer: HTMLElement;
+  // 当前胶囊是否已挂载显示。
+  private isAttached = false;
+  // 文案更新版本号，用于语言切换后触发更多菜单重渲染。
+  private messageVersion = 0;
+  // 上一次更多菜单渲染状态签名，用于跳过无效重渲染。
+  private lastMoreActionsKey = '';
   // 当前聚焦表格起始位置。
   private currentTableStart: number | null = null;
   // 当前聚焦表格节点大小。
@@ -191,15 +183,16 @@ class TableFocusActionsView {
     this.alignLeftButton.addEventListener('click', this.handleAlignLeftClick);
     this.alignCenterButton.addEventListener('click', this.handleAlignCenterClick);
     this.alignRightButton.addEventListener('click', this.handleAlignRightClick);
-    this.repositionScheduler.bindGlobal();
-    this.repositionScheduler.bindWrapper(this.editorWrapper);
     this.update(view);
     this.stopObservingMessages = observeEditorMessages(messages, () => {
+      this.messageVersion += 1;
       this.deleteButton.setAttribute('aria-label', messages.tableDeleteAriaLabel);
       this.alignLeftButton.setAttribute('aria-label', messages.tableAlignLeftAriaLabel);
       this.alignCenterButton.setAttribute('aria-label', messages.tableAlignCenterAriaLabel);
       this.alignRightButton.setAttribute('aria-label', messages.tableAlignRightAriaLabel);
-      this.update(this.view);
+      if (this.isAttached) {
+        this.update(this.view);
+      }
     });
   }
 
@@ -410,9 +403,15 @@ class TableFocusActionsView {
   };
 
   /**
-   * 渲染更多操作菜单。
+   * 渲染更多操作菜单（操作权限与文案未变化时跳过 React 重渲染）。
    */
   private renderMoreActions(canInsertRowAbove: boolean, canInsertColumn: boolean, canDeleteRow: boolean, canDeleteColumn: boolean): void {
+    const nextKey = `${this.messageVersion}:${canInsertRowAbove}:${canInsertColumn}:${canDeleteRow}:${canDeleteColumn}`;
+    if (this.lastMoreActionsKey === nextKey) {
+      return;
+    }
+    this.lastMoreActionsKey = nextKey;
+
     this.moreActionsRoot.render(
       createElement(TableMoreActions, {
         messages: this.messages,
@@ -486,7 +485,7 @@ class TableFocusActionsView {
       spaceAbove >= size.height + OVERLAY_OFFSET_Y + OVERLAY_BOUNDARY_INSET || spaceAbove >= spaceBelow
         ? 'top'
         : 'bottom';
-    const currentAnchor = toContentAnchor(anchorRect, this.editorWrapper);
+    const currentAnchor = toContentAnchor(anchorRect, this.editorWrapper, wrapperRect);
 
     // 操作胶囊在编辑器 Portal 内的定位坐标。
     const portalPosition = toPortalPosition(
@@ -499,7 +498,8 @@ class TableFocusActionsView {
         offsetY: OVERLAY_OFFSET_Y,
         boundaryInset: OVERLAY_BOUNDARY_INSET
       },
-      this.portalContainer
+      this.portalContainer,
+      wrapperRect
     );
     this.actionsContainer.style.left = `${portalPosition.left}px`;
     this.actionsContainer.style.top = `${portalPosition.top}px`;
@@ -533,6 +533,13 @@ class TableFocusActionsView {
       return;
     }
 
+    const wasAttached = this.isAttached;
+    if (!this.isAttached) {
+      this.isAttached = true;
+      this.repositionScheduler.bindGlobal();
+      this.repositionScheduler.bindWrapper(this.editorWrapper);
+    }
+
     if (this.actionsContainer.parentElement !== this.portalContainer) {
       this.portalContainer.append(this.actionsContainer);
     }
@@ -556,15 +563,27 @@ class TableFocusActionsView {
     this.currentTableStart = focusedTable.tableStart;
     this.currentTableNodeSize = focusedTable.tableNodeSize;
     this.hasPositionContext = true;
-    this.updateOverlayPosition();
-    this.repositionScheduler.schedule();
+
+    if (!wasAttached) {
+      this.updateOverlayPosition();
+    } else {
+      this.repositionScheduler.schedule();
+    }
   }
 
   /**
-   * 卸载按钮与容器状态。
+   * 卸载按钮与容器状态，并解绑滚动监听。
    */
   private detach(): void {
+    if (!this.isAttached) {
+      return;
+    }
+
+    this.isAttached = false;
+    this.repositionScheduler.unbindGlobal();
+    this.repositionScheduler.bindWrapper(null);
     this.unbindTableWrapperScroll();
+    this.lastMoreActionsKey = '';
     this.moreActionsRoot.render(null);
     this.actionsContainer.remove();
     this.currentAnchorElement = null;

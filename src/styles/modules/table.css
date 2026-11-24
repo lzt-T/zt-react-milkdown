@@ -5,9 +5,9 @@
   }
 
   .zt-md-editor .ProseMirror table {
-    width: 100%;
+    width: max-content;
+    min-width: 100%;
     border-collapse: collapse;
-    table-layout: fixed;
     margin: 0;
     font-size: 0.933em;
     line-height: 1.55;
@@ -15,9 +15,12 @@
 
   .zt-md-editor .ProseMirror th,
   .zt-md-editor .ProseMirror td {
+    min-width: 96px;
+    max-width: 360px;
     border: 1px solid var(--zt-border);
     padding: 0.5rem 0.75rem;
     vertical-align: top;
+    overflow-wrap: break-word;
   }
 
   .zt-md-editor .ProseMirror th {
@@ -82,13 +85,18 @@
   cursor: pointer;
   transition:
     background-color 110ms ease,
-    color 110ms ease;
+    color 110ms ease,
+    transform 80ms ease;
 }
 
 .zt-md-table-action-button:hover,
 .zt-md-table-action-button[aria-expanded='true'] {
   background: var(--zt-hover);
   color: var(--zt-fg);
+}
+
+.zt-md-table-action-button:not(:disabled):active {
+  transform: translateY(1px);
 }
 
 .zt-md-table-action-button:disabled {

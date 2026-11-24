@@ -45,6 +45,29 @@ const CODE_BLOCK_LANGUAGE_PICKER_FALLBACK_HEIGHT = 26;
 const CODE_BLOCK_LANGUAGE_PICKER_PANEL_WIDTH = 224;
 // 语言面板首帧定位高度兜底。
 const CODE_BLOCK_LANGUAGE_PICKER_PANEL_HEIGHT = 220;
+// 无搜索词时优先置顶展示的常用语言顺序列表。
+const POPULAR_CODE_LANGUAGES: readonly string[] = [
+  'javascript',
+  'typescript',
+  'tsx',
+  'jsx',
+  'html',
+  'css',
+  'json',
+  'bash',
+  'python',
+  'go',
+  'java',
+  'sql',
+  'yaml',
+  'markdown',
+  'rust',
+  'cpp',
+  'c',
+  'csharp',
+  'php',
+  'docker'
+];
 
 /**
  * 可选语言项。
@@ -67,9 +90,9 @@ interface FocusedCodeBlock {
 }
 
 /**
- * 解析语言下拉项列表。
+ * 解析语言下拉项列表（纯文本与常用语言置顶，其余按字母序排列）。
  */
-const resolveLanguageOptions = (messages: EditorI18nMessages): CodeLanguageOption[] => {
+const resolveLanguageOptions = (plainTextLabel: string): CodeLanguageOption[] => {
   // refractor 支持的语言值集合。
   const supportedLanguages = refractor.listLanguages();
   // 语言去重集合。
@@ -78,15 +101,23 @@ const resolveLanguageOptions = (messages: EditorI18nMessages): CodeLanguageOptio
       .map((language) => normalizeCodeBlockLanguage(language))
       .filter((language) => language !== PLAIN_TEXT_LANGUAGE_VALUE)
   );
-  // 排序后的语言集合。
-  const sortedLanguages = [...languageSet].sort((left, right) => left.localeCompare(right));
+  // 置顶的常用语言列表。
+  const popularOptions: CodeLanguageOption[] = [];
+  for (const popularLanguage of POPULAR_CODE_LANGUAGES) {
+    if (languageSet.delete(popularLanguage)) {
+      popularOptions.push({ value: popularLanguage, label: popularLanguage });
+    }
+  }
+  // 其余语言按字母序排列。
+  const remainingLanguages = [...languageSet].sort((left, right) => left.localeCompare(right));
 
   return [
     {
       value: PLAIN_TEXT_LANGUAGE_VALUE,
-      label: messages.codeBlockLanguagePlainText
+      label: plainTextLabel
     },
-    ...sortedLanguages.map((language) => ({
+    ...popularOptions,
+    ...remainingLanguages.map((language) => ({
       value: language,
       label: language
     }))
@@ -181,19 +212,30 @@ const CodeBlockLanguagePicker = (props: CodeBlockLanguagePickerProps): ReactElem
     ? props.messages.codeBlockLanguagePlainText
     : normalizedCurrentLanguage;
   // 语言选项列表。
-  const languageOptions = useMemo(() => resolveLanguageOptions(props.messages), [props.messages]);
-  // 过滤后的语言列表。
+  const languageOptions = useMemo(
+    () => resolveLanguageOptions(props.messages.codeBlockLanguagePlainText),
+    [props.messages.codeBlockLanguagePlainText]
+  );
+  // 过滤后的语言列表（优先前缀匹配，其次子串匹配）。
   const filteredOptions = useMemo(() => {
     const normalizedKeyword = keyword.trim().toLowerCase();
     if (!normalizedKeyword) {
       return languageOptions;
     }
 
-    return languageOptions.filter((option) => {
+    const prefixMatches: CodeLanguageOption[] = [];
+    const substringMatches: CodeLanguageOption[] = [];
+    for (const option of languageOptions) {
       const optionLabel = option.label.toLowerCase();
       const optionValue = option.value.toLowerCase();
-      return optionLabel.includes(normalizedKeyword) || optionValue.includes(normalizedKeyword);
-    });
+      if (optionValue.startsWith(normalizedKeyword) || optionLabel.startsWith(normalizedKeyword)) {
+        prefixMatches.push(option);
+      } else if (optionValue.includes(normalizedKeyword) || optionLabel.includes(normalizedKeyword)) {
+        substringMatches.push(option);
+      }
+    }
+
+    return [...prefixMatches, ...substringMatches];
   }, [keyword, languageOptions]);
   // 语言面板浮层定位。
   const panel = useFloatingPortalPanel({
@@ -408,6 +450,8 @@ const CodeBlockLanguagePicker = (props: CodeBlockLanguagePickerProps): ReactElem
                 {
                   key: option.value || '__plain_text__',
                   type: 'button',
+                  role: 'option',
+                  'aria-selected': option.value === normalizedCurrentLanguage ? 'true' : 'false',
                   className: 'zt-md-code-language-picker-option',
                   'data-active': optionIndex === activeOptionIndex ? 'true' : 'false',
                   'data-selected': option.value === normalizedCurrentLanguage ? 'true' : 'false',
@@ -431,9 +475,9 @@ const CodeBlockLanguagePicker = (props: CodeBlockLanguagePickerProps): ReactElem
               },
               '-'
             )
-        )
       )
-    );
+    )
+  );
 };
 
 /**
@@ -454,6 +498,8 @@ class CodeBlockLanguagePickerView {
   private readonly host: HTMLSpanElement;
   // React 挂载根节点。
   private readonly hostRoot: Root;
+  // 当前是否已挂载显示。
+  private isAttached = false;
   // 当前绑定代码块位置。
   private currentCodeBlockPosition: number | null = null;
   // 当前绑定 pre 元素。
@@ -494,8 +540,6 @@ class CodeBlockLanguagePickerView {
     this.host = document.createElement('span');
     this.host.className = 'zt-md-code-language-picker-host';
     this.hostRoot = createRoot(this.host);
-    this.repositionScheduler.bindGlobal();
-    this.repositionScheduler.bindWrapper(this.editorWrapper);
     this.update(view);
     this.stopObservingMessages = observeEditorMessages(messages, () => {
       // 清除渲染缓存，使同一代码语言也能刷新文案。
@@ -580,9 +624,16 @@ class CodeBlockLanguagePickerView {
   }
 
   /**
-   * 卸载当前选择器。
+   * 卸载当前选择器，并解绑非聚焦态下的滚动监听。
    */
   private detach(): void {
+    if (!this.isAttached) {
+      return;
+    }
+
+    this.isAttached = false;
+    this.repositionScheduler.unbindGlobal();
+    this.repositionScheduler.bindWrapper(null);
     this.syncFocusedActionsContainer(null);
     this.hostRoot.render(null);
     delete this.host.dataset.mounted;
@@ -601,8 +652,9 @@ class CodeBlockLanguagePickerView {
       return;
     }
 
+    const wrapperRect = this.editorWrapper.getBoundingClientRect();
     const preRect = this.currentPreElement.getBoundingClientRect();
-    const anchor = toContentAnchor(preRect, this.editorWrapper);
+    const anchor = toContentAnchor(preRect, this.editorWrapper, wrapperRect);
     // 代码块右边界内容坐标。
     const codeBlockRightInContent = anchor.anchorRightInContent ?? anchor.anchorLeftInContent + preRect.width;
     // 选择器可用宽度不超过代码块与编辑器可视区域。
@@ -630,7 +682,8 @@ class CodeBlockLanguagePickerView {
         offsetY: 0,
         boundaryInset: 2
       },
-      this.portalContainer
+      this.portalContainer,
+      wrapperRect
     );
 
     this.host.style.left = `${portalPosition.left}px`;
@@ -665,6 +718,13 @@ class CodeBlockLanguagePickerView {
     ) ?? null;
     this.syncFocusedActionsContainer(actionsContainer);
 
+    const wasAttached = this.isAttached;
+    if (!this.isAttached) {
+      this.isAttached = true;
+      this.repositionScheduler.bindGlobal();
+      this.repositionScheduler.bindWrapper(this.editorWrapper);
+    }
+
     if (this.host.parentElement !== this.portalContainer) {
       this.portalContainer.append(this.host);
     }
@@ -678,13 +738,16 @@ class CodeBlockLanguagePickerView {
     this.currentCodeBlockPosition = focusedCodeBlock.position;
     this.currentPreElement = preElement;
     this.hasPositionContext = true;
-    this.updateOverlayPosition();
     if (!shouldSkipRender) {
       this.render(currentLanguage);
     }
 
-    // 下一帧兜底校正可能的异步布局变化。
-    this.repositionScheduler.schedule();
+    if (!wasAttached) {
+      this.updateOverlayPosition();
+    } else {
+      // 已挂载状态下合并至下一帧执行重定位，避免同帧双次测量。
+      this.repositionScheduler.schedule();
+    }
   }
 
   /**
@@ -712,4 +775,3 @@ export const createCodeBlockLanguagePickerPlugin = (
     });
   });
 };
-

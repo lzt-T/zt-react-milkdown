@@ -1,5 +1,6 @@
 import {
   useCallback,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -10,6 +11,7 @@ import {
 } from 'react';
 import { Milkdown, MilkdownProvider } from '@milkdown/react';
 import clsx from 'clsx';
+import { debounce } from 'es-toolkit/function';
 import type { FocusEditorCoordinates } from '../../core/createEditor';
 import type {
   EditorSearchBooleanOption,
@@ -24,6 +26,8 @@ import { useMilkdownEditor } from '../hooks/useMilkdownEditor';
 import { resolveEditorMessages } from '../../local/i18n';
 // 默认防抖时长（毫秒）。
 const DEFAULT_DEBOUNCE_MS = 160;
+// 搜索关键词输入防抖时长（毫秒）。
+const SEARCH_INPUT_DEBOUNCE_MS = 120;
 
 // 默认编辑器搜索参数。
 const DEFAULT_SEARCH_OPTIONS: EditorSearchOptions = {
@@ -132,6 +136,28 @@ export const MilkdownEditor = (props: MilkdownEditorProps): JSX.Element => {
   const searchControllerRef = useRef<EditorSearchController | null>(null);
   /** 搜索输入框引用。 */
   const searchInputRef = useRef<HTMLInputElement | null>(null);
+  /** 最新搜索面板展开态引用，避免 handleInitReady 随搜索输入重建。 */
+  const isSearchOpenRef = useRef<boolean>(isSearchOpen);
+  /** 最新搜索参数引用。 */
+  const searchOptionsRef = useRef<EditorSearchOptions>(searchOptions);
+  isSearchOpenRef.current = isSearchOpen;
+  searchOptionsRef.current = searchOptions;
+
+  /** 搜索关键词防抖执行器。 */
+  const debouncedSearchUpdate = useMemo(
+    () =>
+      debounce((nextOptions: EditorSearchOptions) => {
+        searchControllerRef.current?.updateQuery(nextOptions);
+      }, SEARCH_INPUT_DEBOUNCE_MS),
+    []
+  );
+
+  useEffect(() => {
+    return () => {
+      debouncedSearchUpdate.cancel();
+    };
+  }, [debouncedSearchUpdate]);
+
   /** 当前主题。 */
   const theme = props.theme ?? 'light';
   /** 当前只读状态。 */
@@ -155,16 +181,20 @@ export const MilkdownEditor = (props: MilkdownEditorProps): JSX.Element => {
     [props.locale, props.messages, props.placeholder]
   );
   /** 编辑器容器样式变量。 */
-  const editorStyle = {
-    '--zt-gap-placeholder-content': toCssContentString(messages.placeholder),
-    ...(props.maxHeight !== undefined
-      ? {
-          // 传入 maxHeight 时限制编辑区最大高度并在内部滚动。
-          maxHeight: props.maxHeight,
-          overflowY: 'auto'
-        }
-      : {})
-  } as CSSProperties & Record<'--zt-gap-placeholder-content', string>;
+  const editorStyle = useMemo(
+    () =>
+      ({
+        '--zt-gap-placeholder-content': toCssContentString(messages.placeholder),
+        ...(props.maxHeight !== undefined
+          ? {
+              // 传入 maxHeight 时限制编辑区最大高度并在内部滚动。
+              maxHeight: props.maxHeight,
+              overflowY: 'auto'
+            }
+          : {})
+      }) as CSSProperties & Record<'--zt-gap-placeholder-content', string>,
+    [messages.placeholder, props.maxHeight]
+  );
   /** 稳定的 markdown 变更处理器，避免触发编辑器重建。 */
   const handleMarkdownChange = useCallback(
     (nextMarkdown: string): void => {
@@ -175,10 +205,10 @@ export const MilkdownEditor = (props: MilkdownEditorProps): JSX.Element => {
   /** 稳定的初始化成功回调。 */
   const handleInitReady = useCallback((): void => {
     setInitErrorMessage('');
-    if (isSearchOpen) {
-      searchControllerRef.current?.updateQuery(searchOptions);
+    if (isSearchOpenRef.current) {
+      searchControllerRef.current?.updateQuery(searchOptionsRef.current);
     }
-  }, [isSearchOpen, searchOptions]);
+  }, []);
   /** 稳定的初始化失败回调。 */
   const handleInitError = useCallback((error: unknown): void => {
     /** 失败时展示的错误文案。 */
@@ -239,6 +269,7 @@ export const MilkdownEditor = (props: MilkdownEditorProps): JSX.Element => {
    * 打开当前编辑器实例的搜索面板。
    */
   const openSearchPanel = (): void => {
+    debouncedSearchUpdate.cancel();
     setIsSearchOpen(true);
     searchControllerRef.current?.updateQuery(searchOptions);
     requestAnimationFrame(focusSearchInput);
@@ -248,6 +279,7 @@ export const MilkdownEditor = (props: MilkdownEditorProps): JSX.Element => {
    * 关闭搜索面板并将焦点返回当前匹配。
    */
   const closeSearchPanel = (): void => {
+    debouncedSearchUpdate.cancel();
     // 关闭前可用的搜索控制器。
     const searchController = searchControllerRef.current;
     searchController?.clear();
@@ -263,15 +295,18 @@ export const MilkdownEditor = (props: MilkdownEditorProps): JSX.Element => {
    * 应用下一组搜索参数。
    */
   const applySearchOptions = (nextOptions: EditorSearchOptions): void => {
+    debouncedSearchUpdate.cancel();
     setSearchOptions(nextOptions);
     searchControllerRef.current?.updateQuery(nextOptions);
   };
 
   /**
-   * 更新搜索文本。
+   * 更新搜索文本（输入框即时回显，大文档全文检索按 120ms 防抖执行）。
    */
   const handleSearchChange = (value: string): void => {
-    applySearchOptions({ ...searchOptions, search: value });
+    const nextOptions = { ...searchOptions, search: value };
+    setSearchOptions(nextOptions);
+    debouncedSearchUpdate(nextOptions);
   };
 
   /**
@@ -299,6 +334,7 @@ export const MilkdownEditor = (props: MilkdownEditorProps): JSX.Element => {
    * 定位上一项搜索结果。
    */
   const handleFindPrevious = (): void => {
+    debouncedSearchUpdate.flush();
     searchControllerRef.current?.findPrevious();
   };
 
@@ -306,6 +342,7 @@ export const MilkdownEditor = (props: MilkdownEditorProps): JSX.Element => {
    * 定位下一项搜索结果。
    */
   const handleFindNext = (): void => {
+    debouncedSearchUpdate.flush();
     searchControllerRef.current?.findNext();
   };
 
@@ -313,6 +350,7 @@ export const MilkdownEditor = (props: MilkdownEditorProps): JSX.Element => {
    * 替换当前搜索结果。
    */
   const handleReplaceCurrent = (): void => {
+    debouncedSearchUpdate.flush();
     searchControllerRef.current?.replaceCurrent();
   };
 
@@ -320,15 +358,16 @@ export const MilkdownEditor = (props: MilkdownEditorProps): JSX.Element => {
    * 替换全部搜索结果。
    */
   const handleReplaceAll = (): void => {
+    debouncedSearchUpdate.flush();
     searchControllerRef.current?.replaceAll();
   };
 
   /**
    * 同步编辑器搜索结果快照。
    */
-  const handleSearchSnapshotChange = (snapshot: EditorSearchSnapshot): void => {
+  const handleSearchSnapshotChange = useCallback((snapshot: EditorSearchSnapshot): void => {
     setSearchSnapshot(snapshot);
-  };
+  }, []);
 
   /**
    * 处理当前编辑器实例内的搜索快捷键。
@@ -379,6 +418,7 @@ export const MilkdownEditor = (props: MilkdownEditorProps): JSX.Element => {
       data-readonly={readOnly ? 'true' : 'false'}
       data-search-open={isSearchOpen ? 'true' : 'false'}
       data-search-replace-expanded={!readOnly && isReplaceExpanded ? 'true' : 'false'}
+      data-search-invalid={isSearchOpen && searchSnapshot.isInvalidExpression ? 'true' : 'false'}
       data-readonly-label={readOnlyLabel}
       onKeyDownCapture={handleEditorKeyDown}
     >

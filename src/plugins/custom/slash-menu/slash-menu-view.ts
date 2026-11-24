@@ -1,27 +1,5 @@
 import type { EditorShortcutMode, SlashMenuCommand, SlashMenuItem } from '@/types/editor';
-import { createElement } from 'react';
-import { createRoot, type Root } from 'react-dom/client';
-import {
-  Circle,
-  Code,
-  Heading1,
-  Heading2,
-  Heading3,
-  Heading4,
-  Heading5,
-  Heading6,
-  Image,
-  List,
-  ListOrdered,
-  ListTodo,
-  SquareFunction,
-  SquareCode,
-  Sigma,
-  Table,
-  TextQuote,
-  Type,
-  type LucideIcon
-} from 'lucide-react';
+import { renderStaticSvgIcon, resolveStaticSvgIconName } from '@/lib/static-svg-icons';
 import { resolveSlashMenuShortcutLabels } from '@/plugins/custom/block-transform';
 import {
   createOverlayRepositionScheduler,
@@ -33,34 +11,6 @@ import {
  * slash 菜单展开方向。
  */
 type SlashMenuPlacement = OverlayPlacement;
-
-/**
- * slash 菜单支持的 lucide 图标映射表。
- */
-const SLASH_MENU_ICON_MAP: Record<string, LucideIcon> = {
-  Type,
-  Heading1,
-  Heading2,
-  Heading3,
-  Heading4,
-  Heading5,
-  Heading6,
-  Image,
-  List,
-  ListOrdered,
-  ListTodo,
-  Code,
-  SquareFunction,
-  SquareCode,
-  TextQuote,
-  Sigma,
-  Table
-};
-
-/**
- * 兜底图标组件。
- */
-const FALLBACK_SLASH_MENU_ICON: LucideIcon = Circle;
 
 /**
  * slash 菜单定位上下文（第一段：内容坐标计算所需输入）。
@@ -103,23 +53,28 @@ export interface SlashMenuViewController {
 }
 
 /**
- * 刷新菜单内容与选中态。
+ * 同步单个菜单项节点的高亮及无障碍选中状态。
+ */
+const applyMenuItemSelectedState = (itemNode: HTMLDivElement, selected: boolean): void => {
+  const value = selected ? 'true' : 'false';
+  itemNode.dataset.selected = value;
+  itemNode.setAttribute('aria-selected', value);
+};
+
+/**
+ * 刷新菜单列表 DOM，并缓存菜单项节点引用以支持 O(1) 高亮切换。
  */
 const renderMenuItems = (
   menu: HTMLDivElement,
   items: SlashMenuItem[],
   activeIndex: number,
-  iconRoots: Root[],
   shortcutLabels: Readonly<Record<SlashMenuCommand, string>>
-): void => {
-  // 清理上次图标渲染 root，避免重复挂载。
-  iconRoots.splice(0).forEach((iconRoot) => {
-    iconRoot.unmount();
-  });
-
+): HTMLDivElement[] => {
   menu.innerHTML = '';
+  const itemNodes: HTMLDivElement[] = [];
   // 当前渲染分组名。
   let currentGroup = '';
+
   items.forEach((item, index) => {
     if (item.group !== currentGroup) {
       // 分组标题节点。
@@ -133,19 +88,17 @@ const renderMenuItems = (
     // 菜单项节点。
     const itemNode = document.createElement('div');
     itemNode.className = 'slash-menu-item';
+    itemNode.setAttribute('role', 'option');
     itemNode.dataset.command = item.command;
-    itemNode.dataset.selected = index === activeIndex ? 'true' : 'false';
+    itemNode.dataset.index = String(index);
+    applyMenuItemSelectedState(itemNode, index === activeIndex);
 
     // 菜单项图标容器。
     const iconNode = document.createElement('span');
     iconNode.className = 'slash-menu-item-icon';
-    // 当前菜单项图标组件。
-    const iconComponent = item.icon ? (SLASH_MENU_ICON_MAP[item.icon] ?? FALLBACK_SLASH_MENU_ICON) : null;
-    if (iconComponent) {
-      // 当前菜单项图标渲染 root。
-      const iconRoot = createRoot(iconNode);
-      iconRoot.render(createElement(iconComponent, { size: 16, strokeWidth: 2 }));
-      iconRoots.push(iconRoot);
+    if (item.icon) {
+      const iconName = resolveStaticSvgIconName(item.icon, 'Circle');
+      iconNode.innerHTML = renderStaticSvgIcon(iconName, { size: 16, strokeWidth: 2 });
     }
 
     // 菜单项文案容器。
@@ -168,7 +121,10 @@ const renderMenuItems = (
       itemNode.appendChild(shortcutNode);
     }
     menu.appendChild(itemNode);
+    itemNodes.push(itemNode);
   });
+
+  return itemNodes;
 };
 
 /**
@@ -181,19 +137,22 @@ export const createSlashMenuViewController = (
   // 菜单容器节点。
   const menu = document.createElement('div');
   menu.className = 'slash-menu';
+  menu.setAttribute('role', 'listbox');
   menu.style.display = 'none';
   portalContainer.appendChild(menu);
 
   // 当前是否展示菜单。
   let menuVisible = false;
-  // 上次渲染签名。
-  let lastRenderSignature = '';
+  // 上次渲染的列表内容签名。
+  let lastItemsSignature = '';
+  // 上次渲染的高亮索引。
+  let lastActiveIndex = -1;
+  // 缓存的菜单项节点列表，用于局部更新选中态。
+  let renderedItemNodes: HTMLDivElement[] = [];
   // 是否需要在下一次显示时进行双次定位更新。
   let shouldRepositionOnNextShow = false;
   // 当前定位上下文（由插件 update 驱动更新）。
   let positionContext: SlashMenuPositionContext | null = null;
-  // 当前已挂载图标 root 集合。
-  const iconRoots: Root[] = [];
   // 当前平台 slash 菜单快捷键文案。
   const shortcutLabels = resolveSlashMenuShortcutLabels(shortcutMode);
 
@@ -269,7 +228,9 @@ export const createSlashMenuViewController = (
       repositionScheduler.unbindGlobal();
       repositionScheduler.bindWrapper(null);
       resetMenuPositionStyles();
-      lastRenderSignature = '';
+      lastItemsSignature = '';
+      lastActiveIndex = -1;
+      renderedItemNodes = [];
       shouldRepositionOnNextShow = true;
       return;
     }
@@ -288,19 +249,29 @@ export const createSlashMenuViewController = (
   };
 
   /**
-   * 仅在渲染输入变化时重绘菜单。
+   * 仅在列表内容变化时重绘菜单，高亮变化时仅局部切换属性。
    */
   const renderIfNeeded = (items: SlashMenuItem[], activeIndex: number): void => {
     // 当前可见命令签名。
-    const commandsSignature = JSON.stringify(items.map((item) => [item.command, item.label, item.group, item.icon]));
-    // 当前菜单渲染签名。
-    const renderSignature = `${commandsSignature}::${activeIndex}`;
-    if (lastRenderSignature === renderSignature) {
+    const itemsSignature = JSON.stringify(items.map((item) => [item.command, item.label, item.group, item.icon]));
+    if (lastItemsSignature !== itemsSignature) {
+      renderedItemNodes = renderMenuItems(menu, items, activeIndex, shortcutLabels);
+      lastItemsSignature = itemsSignature;
+      lastActiveIndex = activeIndex;
       return;
     }
 
-    renderMenuItems(menu, items, activeIndex, iconRoots, shortcutLabels);
-    lastRenderSignature = renderSignature;
+    if (lastActiveIndex === activeIndex) {
+      return;
+    }
+
+    if (lastActiveIndex >= 0 && renderedItemNodes[lastActiveIndex]) {
+      applyMenuItemSelectedState(renderedItemNodes[lastActiveIndex], false);
+    }
+    if (activeIndex >= 0 && renderedItemNodes[activeIndex]) {
+      applyMenuItemSelectedState(renderedItemNodes[activeIndex], true);
+    }
+    lastActiveIndex = activeIndex;
   };
 
   /**
@@ -308,7 +279,7 @@ export const createSlashMenuViewController = (
    */
   const scrollActiveItemIntoView = (onAfterScroll?: () => void): void => {
     // 当前高亮菜单项节点。
-    const activeItemNode = menu.querySelector('.slash-menu-item[data-selected="true"]') as HTMLElement | null;
+    const activeItemNode = renderedItemNodes[lastActiveIndex] ?? null;
     if (!activeItemNode) {
       return;
     }
@@ -334,10 +305,8 @@ export const createSlashMenuViewController = (
    * 销毁控制器：移除监听并删除菜单节点。
    */
   const destroy = (): void => {
-    iconRoots.splice(0).forEach((iconRoot) => {
-      iconRoot.unmount();
-    });
     repositionScheduler.destroy();
+    renderedItemNodes = [];
     menu.remove();
   };
 
@@ -352,4 +321,3 @@ export const createSlashMenuViewController = (
     destroy
   };
 };
-

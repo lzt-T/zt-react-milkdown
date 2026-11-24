@@ -1,7 +1,5 @@
 import { observeEditorMessages } from '@/local/message-updates';
-import { createElement } from 'react';
-import { renderToStaticMarkup } from 'react-dom/server';
-import { Check, Code2, Copy, Eye, Trash2 } from 'lucide-react';
+import { renderStaticSvgIcon } from '@/lib/static-svg-icons';
 import type { Node as ProseNode } from '@milkdown/prose/model';
 import { TextSelection } from '@milkdown/prose/state';
 import type { EditorView, NodeView, NodeViewConstructor } from '@milkdown/prose/view';
@@ -35,29 +33,16 @@ const CODE_BLOCK_PREVIEW_BASE_CONTENT_SECURITY_POLICY = [
   "base-uri 'none'"
 ];
 
-/**
- * 基于 lucide-react 组件渲染 SVG 字符串。
- */
-const renderLucideIconMarkup = (icon: typeof Copy): string => {
-  return renderToStaticMarkup(
-    createElement(icon, {
-      size: 14,
-      strokeWidth: 2,
-      'aria-hidden': 'true'
-    })
-  );
-};
-
 // 复制按钮默认图标。
-const copyIconMarkup = renderLucideIconMarkup(Copy);
+const copyIconMarkup = renderStaticSvgIcon('Copy', { size: 14, strokeWidth: 2 });
 // 复制成功反馈图标。
-const checkIconMarkup = renderLucideIconMarkup(Check);
+const checkIconMarkup = renderStaticSvgIcon('Check', { size: 14, strokeWidth: 2 });
 // 删除按钮默认图标。
-const deleteIconMarkup = renderLucideIconMarkup(Trash2);
+const deleteIconMarkup = renderStaticSvgIcon('Trash2', { size: 14, strokeWidth: 2 });
 // 预览按钮默认图标。
-const previewIconMarkup = renderLucideIconMarkup(Eye);
+const previewIconMarkup = renderStaticSvgIcon('Eye', { size: 14, strokeWidth: 2 });
 // 查看源码按钮图标。
-const sourceIconMarkup = renderLucideIconMarkup(Code2);
+const sourceIconMarkup = renderStaticSvgIcon('Code2', { size: 14, strokeWidth: 2 });
 
 /**
  * 创建隔离的代码块预览文档。

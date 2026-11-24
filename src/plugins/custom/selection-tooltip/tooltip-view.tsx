@@ -1,9 +1,9 @@
+import { renderStaticSvgIcon } from '@/lib/static-svg-icons';
 import type { MarkType } from '@milkdown/prose/model';
 import { TextSelection } from '@milkdown/prose/state';
 import type { EditorView } from '@milkdown/prose/view';
 import { Check, ChevronDown, Link2, Trash2 } from 'lucide-react';
 import { Fragment, createElement, useEffect, useRef, useState, type MouseEvent as ReactMouseEvent, type ReactElement } from 'react';
-import { createRoot, type Root } from 'react-dom/client';
 import { normalizeSafeUrl } from '../../../utils/security';
 import { runBlockTransformCommand, resolveCurrentBlockTransformCommand } from '../block-transform';
 import { FloatingPortalPanel, useFloatingPortalPanel } from '../floating-portal-panel';
@@ -28,8 +28,7 @@ const createSelectionTooltipButton = (
   item: SelectionTooltipItem,
   markType: MarkType,
   getCurrentView: () => EditorView | null,
-  toggleLinkPopover: (view: EditorView) => void,
-  iconRoots: Root[]
+  toggleLinkPopover: (view: EditorView) => void
 ): HTMLButtonElement => {
   // 菜单按钮节点。
   const button = document.createElement('button');
@@ -41,15 +40,10 @@ const createSelectionTooltipButton = (
   // 按钮图标容器节点。
   const iconNode = document.createElement('span');
   iconNode.className = 'zt-md-selection-tooltip-button-icon';
-  // 图标渲染根节点。
-  const iconRoot = createRoot(iconNode);
-  iconRoot.render(
-    createElement(item.icon, {
-      size: SELECTION_TOOLTIP_ICON_SIZE,
-      strokeWidth: SELECTION_TOOLTIP_ICON_STROKE_WIDTH
-    })
-  );
-  iconRoots.push(iconRoot);
+  iconNode.innerHTML = renderStaticSvgIcon(item.iconName, {
+    size: SELECTION_TOOLTIP_ICON_SIZE,
+    strokeWidth: SELECTION_TOOLTIP_ICON_STROKE_WIDTH
+  });
   button.append(iconNode);
   button.addEventListener('mousedown', (event) => {
     event.preventDefault();
@@ -80,8 +74,7 @@ export const createSelectionTooltipElement = (
   items: SelectionTooltipItem[],
   getCurrentView: () => EditorView | null,
   toggleLinkPopover: (view: EditorView) => void,
-  blockTransformControlHost: HTMLElement,
-  iconRoots: Root[]
+  blockTransformControlHost: HTMLElement
 ): HTMLDivElement => {
   // 菜单容器节点。
   const tooltip = document.createElement('div');
@@ -99,7 +92,7 @@ export const createSelectionTooltipElement = (
       return;
     }
 
-    tooltip.append(createSelectionTooltipButton(item, markType, getCurrentView, toggleLinkPopover, iconRoots));
+    tooltip.append(createSelectionTooltipButton(item, markType, getCurrentView, toggleLinkPopover));
   });
 
   return tooltip;

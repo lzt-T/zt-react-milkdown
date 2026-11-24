@@ -122,6 +122,9 @@ export const useFloatingPortalPanel = ({
   const panelElementRef = useRef<HTMLDivElement | null>(null);
   // 最新展开状态。
   const openRef = useRef(open);
+  // 最新外部点击回调引用，避免父组件重渲染导致全局监听抖动。
+  const onOutsideRef = useRef(onOutside);
+  onOutsideRef.current = onOutside;
 
   /**
    * 按触发器与面板实时尺寸刷新定位。
@@ -137,7 +140,7 @@ export const useFloatingPortalPanel = ({
 
     // 触发按钮视口矩形。
     const anchorRect = trigger.getBoundingClientRect();
-    // 编辑器滚动容器视口矩形。
+    // 编辑器滚动容器视口矩形（单次测量复用，减少强制回流）。
     const wrapperRect = editorWrapper.getBoundingClientRect();
     // 面板真实宽度。
     const overlayWidth = panel.offsetWidth || fallbackWidth;
@@ -149,7 +152,7 @@ export const useFloatingPortalPanel = ({
     const portalPosition = toPortalPosition(
       {
         wrapper: editorWrapper,
-        anchor: toContentAnchor(anchorRect, editorWrapper),
+        anchor: toContentAnchor(anchorRect, editorWrapper, wrapperRect),
         overlaySize: {
           width: overlayWidth,
           height: overlayHeight
@@ -159,7 +162,8 @@ export const useFloatingPortalPanel = ({
         offsetY,
         boundaryInset
       },
-      portalContainer
+      portalContainer,
+      wrapperRect
     );
 
     panel.style.position = 'absolute';
@@ -243,14 +247,14 @@ export const useFloatingPortalPanel = ({
         return;
       }
 
-      onOutside();
+      onOutsideRef.current();
     };
 
     document.addEventListener('mousedown', handleDocumentMouseDown);
     return () => {
       document.removeEventListener('mousedown', handleDocumentMouseDown);
     };
-  }, [onOutside, open]);
+  }, [open]);
 
   return {
     open,

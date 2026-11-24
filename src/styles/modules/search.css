@@ -177,8 +177,16 @@
     padding-top: 4.5rem;
   }
 
+  .zt-md[data-search-open='true'][data-search-invalid='true'] .zt-md-editor {
+    padding-top: 5.75rem;
+  }
+
   .zt-md[data-search-open='true'][data-search-replace-expanded='true'] .zt-md-editor {
     padding-top: 7rem;
+  }
+
+  .zt-md[data-search-open='true'][data-search-replace-expanded='true'][data-search-invalid='true'] .zt-md-editor {
+    padding-top: 8.25rem;
   }
 
   .zt-md[data-search-open='true'][data-readonly='true']::after {
@@ -245,8 +253,16 @@
       padding-top: 10.5rem;
     }
 
+    .zt-md[data-search-open='true'][data-search-invalid='true'] .zt-md-editor {
+      padding-top: 11.75rem;
+    }
+
     .zt-md[data-search-open='true'][data-search-replace-expanded='true'] .zt-md-editor {
       padding-top: 16.5rem;
+    }
+
+    .zt-md[data-search-open='true'][data-search-replace-expanded='true'][data-search-invalid='true'] .zt-md-editor {
+      padding-top: 17.75rem;
     }
   }
 }

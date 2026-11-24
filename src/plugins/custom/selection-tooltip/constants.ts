@@ -1,4 +1,4 @@
-import { Bold, Code2, Heading1, Heading2, Heading3, Heading4, Heading5, Heading6, Italic, Link2, List, ListChecks, ListOrdered, Strikethrough, TextQuote, Type, type LucideIcon } from 'lucide-react';
+import { Code2, Heading1, Heading2, Heading3, Heading4, Heading5, Heading6, List, ListChecks, ListOrdered, TextQuote, Type, type LucideIcon } from 'lucide-react';
 import type {
   BlockTransformCommand,
   EditorI18nMessages,
@@ -13,21 +13,21 @@ export const SELECTION_TOOLTIP_ID = 'zt-md-selection-tooltip';
 // 构建当前语言下的选区菜单项配置。
 export const resolveSelectionTooltipItems = (messages: EditorI18nMessages): SelectionTooltipItem[] => {
   return [
-    { command: 'strong', icon: Bold, title: messages.selectionTooltipStrongTitle, markNames: ['strong'] },
-    { command: 'em', icon: Italic, title: messages.selectionTooltipEmTitle, markNames: ['em', 'emphasis'] },
+    { command: 'strong', iconName: 'Bold', title: messages.selectionTooltipStrongTitle, markNames: ['strong'] },
+    { command: 'em', iconName: 'Italic', title: messages.selectionTooltipEmTitle, markNames: ['em', 'emphasis'] },
     {
       command: 'strike',
-      icon: Strikethrough,
+      iconName: 'Strikethrough',
       title: messages.selectionTooltipStrikeTitle,
       markNames: ['strike_through', 'strikeThrough']
     },
     {
       command: 'inlineCode',
-      icon: Code2,
+      iconName: 'Code2',
       title: messages.selectionTooltipInlineCodeTitle,
       markNames: ['inlineCode', 'code_inline']
     },
-    { command: 'link', icon: Link2, title: messages.selectionTooltipLinkTitle, markNames: ['link'] }
+    { command: 'link', iconName: 'Code2', title: messages.selectionTooltipLinkTitle, markNames: ['link'] }
   ];
 };
 

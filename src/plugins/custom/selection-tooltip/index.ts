@@ -4,7 +4,7 @@ import { Plugin, PluginKey, type PluginView } from '@milkdown/prose/state';
 import type { EditorView } from '@milkdown/prose/view';
 import { $prose } from '@milkdown/utils';
 import { createElement } from 'react';
-import { createRoot, type Root } from 'react-dom/client';
+import { createRoot } from 'react-dom/client';
 import type {
   BlockTransformCommand,
   EditorI18nMessages,
@@ -28,6 +28,21 @@ import {
 } from './tooltip-view';
 
 /**
+ * 判断当前选区起点是否位于表格内部。
+ */
+const isSelectionInTable = (view: EditorView): boolean => {
+  const { $from } = view.state.selection;
+  for (let depth = $from.depth; depth > 0; depth -= 1) {
+    const nodeName = $from.node(depth).type.name;
+    if (nodeName === 'table' || nodeName === 'table_cell' || nodeName === 'table_header') {
+      return true;
+    }
+  }
+
+  return false;
+};
+
+/**
  * 创建选区 tooltip 插件视图。
  */
 const createSelectionTooltipPluginView = (
@@ -48,8 +63,10 @@ const createSelectionTooltipPluginView = (
   let isBlockTransformPopoverOpen = false;
   // 插件视图是否已销毁。
   let isDestroyed = false;
-  // 图标渲染根节点集合。
-  const iconRoots: Root[] = [];
+  // 文案更新版本号，确保语言切换后必刷新 React 控件。
+  let messageVersion = 0;
+  // 上一次块级转换控件渲染签名，用于跳过无效重渲染。
+  let lastBlockTransformSignature = '';
   // 块级转换按钮 React 挂载容器。
   const blockTransformControlHost = document.createElement('span');
   // 块级转换按钮 React 根节点。
@@ -99,7 +116,7 @@ const createSelectionTooltipPluginView = (
   };
 
   /**
-   * 渲染块级转换控件。
+   * 渲染块级转换控件（无状态变化时跳过 React 重渲染）。
    */
   const renderBlockTransformControl = (): void => {
     // 当前激活的块级命令集合。
@@ -108,6 +125,12 @@ const createSelectionTooltipPluginView = (
       : new Set<BlockTransformCommand>(['paragraph']);
     // 当前激活的块级命令。
     const activeCommand = currentView ? resolveCurrentBlockTransformCommand(currentView) : 'paragraph';
+    const nextSignature = `${messageVersion}:${activeCommand}:${isBlockTransformPopoverOpen}:${Array.from(activeCommands).sort().join(',')}`;
+    if (lastBlockTransformSignature === nextSignature) {
+      return;
+    }
+    lastBlockTransformSignature = nextSignature;
+
     // 当前激活命令菜单项。
     const activeItem = blockTransformItems.find((item) => item.command === activeCommand) ?? blockTransformItems[0];
     blockTransformControlRoot.render(
@@ -154,8 +177,7 @@ const createSelectionTooltipPluginView = (
     items,
     () => currentView,
     toggleLinkPopover,
-    blockTransformControlHost,
-    iconRoots
+    blockTransformControlHost
   );
   renderBlockTransformControl();
   if (resolveMarkType(view, ['link'])) {
@@ -258,6 +280,7 @@ const createSelectionTooltipPluginView = (
 
   // 文案更新只刷新现有按钮及 React 根，保留 Popover 输入状态。
   const stopObservingMessages = observeEditorMessages(messages, () => {
+    messageVersion += 1;
     items = resolveSelectionTooltipItems(messages);
     blockTransformItems = resolveSelectionBlockTransformItems(messages, shortcutMode);
     items.forEach((item) => {
@@ -279,17 +302,26 @@ const createSelectionTooltipPluginView = (
         setLinkPopoverOpen(false);
         setBlockTransformPopoverOpen(false);
       }
-      updateSelectionTooltipActiveState(tooltip, currentView, items);
-      renderBlockTransformControl();
-      if (linkTriggerButton) {
-        // 链接 mark 类型。
-        const linkType = resolveMarkType(currentView, ['link']);
-        linkTriggerButton.dataset.active = linkType && isMarkActive(currentView.state, linkType) ? 'true' : 'false';
-      }
+      // 隐藏态前置剪枝：直接跳过工具栏按钮遍历和 React 协调。
       if (!shouldShowSelectionTooltip(currentView)) {
         provider.hide();
         unmountSelectionTooltip();
         return;
+      }
+
+      const inTable = isSelectionInTable(currentView);
+      blockTransformControlHost.hidden = inTable;
+      if (inTable) {
+        setBlockTransformPopoverOpen(false);
+      } else {
+        renderBlockTransformControl();
+      }
+
+      updateSelectionTooltipActiveState(tooltip, currentView, items);
+      if (linkTriggerButton) {
+        // 链接 mark 类型。
+        const linkType = resolveMarkType(currentView, ['link']);
+        linkTriggerButton.dataset.active = linkType && isMarkActive(currentView.state, linkType) ? 'true' : 'false';
       }
 
       mountSelectionTooltip();
@@ -303,9 +335,6 @@ const createSelectionTooltipPluginView = (
       document.removeEventListener('mousedown', handleDocumentMouseDown, true);
       blockTransformControlRoot.unmount();
       linkControlRoot.unmount();
-      iconRoots.splice(0).forEach((iconRoot) => {
-        iconRoot.unmount();
-      });
       provider.destroy();
       tooltip.remove();
     }

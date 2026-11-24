@@ -1,5 +1,6 @@
 import type { MarkType } from '@milkdown/prose/model';
 import type { EditorView } from '@milkdown/prose/view';
+import type { StaticSvgIconName } from '@/lib/static-svg-icons';
 import type { Bold } from 'lucide-react';
 import type { BlockTransformCommand, EditorI18nMessages } from '../../../types/editor';
 
@@ -24,8 +25,8 @@ export type BlockTransformIcon = typeof Bold;
 export interface SelectionTooltipItem {
   /** 命令键名。 */
   command: SelectionTooltipCommand;
-  /** 按钮图标组件。 */
-  icon: SelectionTooltipIcon;
+  /** 静态 SVG 图标名。 */
+  iconName: StaticSvgIconName;
   /** 无障碍标题。 */
   title: string;
   /** schema mark 候选名。 */

@@ -185,6 +185,10 @@
 
 @media (max-width: 560px) {
   @layer components {
+    .zt-md-editor:not(.zt-md-readonly) .ProseMirror-focused .zt-md-heading-focused::before {
+      display: none;
+    }
+
     .zt-md-editor .ProseMirror h1 {
       font-size: 1.55em;
     }

@@ -93,8 +93,12 @@ export const resolvePlacement = (
 /**
  * 将锚点矩形换算为编辑器内容坐标中的稳定锚点。
  */
-export const toContentAnchor = (anchorRect: DOMRect, wrapper: HTMLElement): OverlayContentAnchor => {
-  const wrapperRect = wrapper.getBoundingClientRect();
+export const toContentAnchor = (
+  anchorRect: DOMRect,
+  wrapper: HTMLElement,
+  cachedWrapperRect?: DOMRect
+): OverlayContentAnchor => {
+  const wrapperRect = cachedWrapperRect ?? wrapper.getBoundingClientRect();
 
   return {
     anchorTopInContent: anchorRect.top - wrapperRect.top + wrapper.scrollTop,
@@ -125,9 +129,12 @@ const resolveOverlayLeftInContent = (config: OverlayPositionConfig): number => {
 /**
  * 将内容坐标换算为视口 fixed 坐标。
  */
-export const toViewportPosition = (config: OverlayPositionConfig): OverlayViewportPosition => {
+export const toViewportPosition = (
+  config: OverlayPositionConfig,
+  cachedWrapperRect?: DOMRect
+): OverlayViewportPosition => {
   const { wrapper, anchor, overlaySize, placement, offsetY, boundaryInset } = config;
-  const wrapperRect = wrapper.getBoundingClientRect();
+  const wrapperRect = cachedWrapperRect ?? wrapper.getBoundingClientRect();
   const minLeft = wrapper.scrollLeft + boundaryInset;
   const maxLeft = wrapper.scrollLeft + wrapper.clientWidth - overlaySize.width - boundaryInset;
   const rawLeft = resolveOverlayLeftInContent(config);
@@ -149,9 +156,13 @@ export const toViewportPosition = (config: OverlayPositionConfig): OverlayViewpo
 /**
  * 将内容坐标换算为编辑器 Portal 内 absolute 坐标。
  */
-export const toPortalPosition = (config: OverlayPositionConfig, portalContainer: HTMLElement): OverlayPortalPosition => {
+export const toPortalPosition = (
+  config: OverlayPositionConfig,
+  portalContainer: HTMLElement,
+  cachedWrapperRect?: DOMRect
+): OverlayPortalPosition => {
   // 原有视口坐标。
-  const viewportPosition = toViewportPosition(config);
+  const viewportPosition = toViewportPosition(config, cachedWrapperRect);
   // Portal 容器视口矩形。
   const portalRect = portalContainer.getBoundingClientRect();
 

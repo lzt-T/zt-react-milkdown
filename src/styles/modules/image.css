@@ -51,7 +51,15 @@
     background: var(--zt-elevated);
   }
 
-  .zt-md-editor .zt-md-image[data-loading='true'] img,
+  .zt-md-editor .zt-md-image[data-loading='true'] img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    pointer-events: none;
+  }
+
   .zt-md-editor .zt-md-image[data-load-error='true'] img {
     display: none;
   }

@@ -92,25 +92,48 @@ const collectSearchResults = (state: EditorState, query: SearchQuery): SearchRes
 };
 
 /**
- * 根据编辑器状态生成搜索结果快照。
+ * 在按起始位置升序排列的匹配列表中二分查找当前选区索引。
  */
-const createSearchSnapshot = (state: EditorState): EditorSearchSnapshot => {
-  // 当前搜索插件状态。
-  const searchState = getSearchState(state);
-  if (!searchState) {
-    return EMPTY_SEARCH_SNAPSHOT;
+const findCurrentMatchIndex = (
+  results: readonly SearchResult[],
+  selectionFrom: number,
+  selectionTo: number
+): number => {
+  let low = 0;
+  let high = results.length - 1;
+
+  while (low <= high) {
+    const mid = (low + high) >> 1;
+    const match = results[mid];
+    if (match.from === selectionFrom) {
+      return match.to === selectionTo ? mid : -1;
+    }
+    if (match.from < selectionFrom) {
+      low = mid + 1;
+    } else {
+      high = mid - 1;
+    }
   }
 
-  // 当前搜索查询。
-  const query = searchState.query;
+  return -1;
+};
+
+/**
+ * 根据编辑器状态与已有匹配结果生成搜索结果快照。
+ */
+const createSearchSnapshot = (
+  state: EditorState,
+  results: readonly SearchResult[],
+  query: SearchQuery
+): EditorSearchSnapshot => {
   // 当前查询是否为无效正则表达式。
   const isInvalidExpression = query.regexp && query.search.length > 0 && !query.valid;
-  // 当前文档匹配结果。
-  const results = collectSearchResults(state, query);
   // 当前选区对应的匹配索引。
-  const currentIndex = results.findIndex((result) => {
-    return result.from === state.selection.from && result.to === state.selection.to;
-  });
+  const currentIndex = findCurrentMatchIndex(
+    results,
+    state.selection.from,
+    state.selection.to
+  );
 
   return {
     current: currentIndex < 0 ? 0 : currentIndex + 1,
@@ -222,6 +245,12 @@ const revealCurrentSearchMatch = (view: EditorView): void => {
 class EditorSearchSnapshotView {
   // 最近一次已输出的搜索快照。
   private snapshot: EditorSearchSnapshot = EMPTY_SEARCH_SNAPSHOT;
+  // 上一次计算匹配结果的文档引用。
+  private cachedDoc: EditorState['doc'] | null = null;
+  // 上一次计算匹配结果的查询对象。
+  private cachedQuery: SearchQuery | null = null;
+  // 上一次计算出的全部匹配结果缓存。
+  private cachedResults: SearchResult[] = [];
 
   /**
    * 创建搜索快照监听视图。
@@ -241,18 +270,49 @@ class EditorSearchSnapshotView {
   }
 
   /**
-   * 销毁时重置外部搜索状态。
+   * 销毁时重置外部搜索状态与匹配缓存。
    */
   destroy(): void {
+    this.cachedDoc = null;
+    this.cachedQuery = null;
+    this.cachedResults = [];
     this.onSnapshotChange(EMPTY_SEARCH_SNAPSHOT);
+  }
+
+  /**
+   * 按文档与查询条件复用或重建匹配列表。
+   */
+  private resolveSearchResults(state: EditorState, query: SearchQuery): SearchResult[] {
+    if (this.cachedDoc === state.doc && this.cachedQuery && this.cachedQuery.eq(query)) {
+      return this.cachedResults;
+    }
+
+    const nextResults = collectSearchResults(state, query);
+    this.cachedDoc = state.doc;
+    this.cachedQuery = query;
+    this.cachedResults = nextResults;
+    return nextResults;
   }
 
   /**
    * 在快照发生变化时通知外部。
    */
   private emitSnapshot(state: EditorState): void {
+    const searchState = getSearchState(state);
+    if (!searchState) {
+      this.cachedDoc = null;
+      this.cachedQuery = null;
+      this.cachedResults = [];
+      if (!isSameSearchSnapshot(this.snapshot, EMPTY_SEARCH_SNAPSHOT)) {
+        this.snapshot = EMPTY_SEARCH_SNAPSHOT;
+        this.onSnapshotChange(EMPTY_SEARCH_SNAPSHOT);
+      }
+      return;
+    }
+
+    const results = this.resolveSearchResults(state, searchState.query);
     // 最新搜索快照。
-    const nextSnapshot = createSearchSnapshot(state);
+    const nextSnapshot = createSearchSnapshot(state, results, searchState.query);
     if (isSameSearchSnapshot(this.snapshot, nextSnapshot)) {
       return;
     }

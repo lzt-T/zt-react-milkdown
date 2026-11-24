@@ -2,16 +2,36 @@ import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import dts from 'vite-plugin-dts';
+import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-/** 判断依赖是否应作为 peer 保留在消费端。 */
-const isExternalPeerDependency = (id: string): boolean =>
-  id === 'react' ||
-  id.startsWith('react/') ||
-  id === 'react-dom' ||
-  id.startsWith('react-dom/') ||
-  id === '@milkdown/kit' ||
-  id.startsWith('@milkdown/kit/');
+// 读取 package.json 声明的运行时与对等依赖，交由消费端打包器统一去重。
+const packageJson = JSON.parse(readFileSync(resolve(__dirname, 'package.json'), 'utf8')) as {
+  dependencies?: Record<string, string>;
+  peerDependencies?: Record<string, string>;
+};
+
+// 需要作为外部依赖保留的包名集合。
+const EXTERNAL_PACKAGE_NAMES = Array.from(
+  new Set([
+    'react',
+    'react-dom',
+    '@milkdown/kit',
+    ...Object.keys(packageJson.peerDependencies ?? {}),
+    ...Object.keys(packageJson.dependencies ?? {})
+  ])
+);
+
+/** 判断依赖是否应作为外部依赖保留在消费端。 */
+const isExternalDependency = (id: string): boolean => {
+  if (id.startsWith('.') || id.startsWith('/') || id.startsWith('@/') || id.startsWith('\0')) {
+    return false;
+  }
+
+  return EXTERNAL_PACKAGE_NAMES.some(
+    (packageName) => id === packageName || id.startsWith(`${packageName}/`)
+  );
+};
 
 /**
  * 创建 Vite 的库构建配置。
@@ -43,6 +63,8 @@ export default defineConfig({
     })
   ],
   build: {
+    // 禁止将 KaTeX 等字体文件 Base64 内联进 CSS，改为独立按需加载资产。
+    assetsInlineLimit: 0,
     lib: {
       entry: resolve(__dirname, 'src/index.ts'),
       name: 'ZtReactMilkdown',
@@ -50,7 +72,7 @@ export default defineConfig({
       fileName: (format) => (format === 'es' ? 'index.mjs' : 'index.cjs')
     },
     rollupOptions: {
-      external: isExternalPeerDependency,
+      external: isExternalDependency,
       output: {
         globals: {
           react: 'React',

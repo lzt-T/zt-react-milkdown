@@ -54,13 +54,17 @@
     line-height: 1.25;
     box-shadow: var(--zt-shadow-sm);
     cursor: pointer;
-    transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
+    transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease, transform 80ms ease;
   }
 
   .zt-md-code-language-picker-trigger:hover {
     background: var(--zt-hover);
     border-color: var(--zt-border-strong);
     color: var(--zt-fg);
+  }
+
+  .zt-md-code-language-picker-trigger:active {
+    transform: translateY(1px);
   }
 
   .zt-md-code-language-picker-trigger-label {
@@ -160,20 +164,24 @@
     transition: background-color 120ms ease, color 120ms ease;
   }
 
-  .zt-md-code-language-picker-option:hover,
   .zt-md-code-language-picker-option[data-selected='true'] {
-    background: var(--zt-hover);
-    color: var(--zt-fg);
-  }
-
-  .zt-md-code-language-picker-option[data-active='true'] {
-    background: var(--zt-hover);
-    color: var(--zt-fg);
+    color: var(--zt-accent);
     font-weight: 500;
   }
 
-  .zt-md-code-language-picker-option-check {
+  .zt-md-code-language-picker-option:hover,
+  .zt-md-code-language-picker-option[data-active='true'] {
+    background: var(--zt-hover);
     color: var(--zt-fg);
+  }
+
+  .zt-md-code-language-picker-option[data-selected='true']:hover,
+  .zt-md-code-language-picker-option[data-selected='true'][data-active='true'] {
+    color: var(--zt-accent);
+  }
+
+  .zt-md-code-language-picker-option-check {
+    color: var(--zt-accent);
     flex-shrink: 0;
   }
 
