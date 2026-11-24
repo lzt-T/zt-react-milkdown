@@ -9,7 +9,14 @@ const BLOCK_BOUNDARY_DIRECTION_UP = -1;
 // 向下离开特殊内容块的方向值。
 const BLOCK_BOUNDARY_DIRECTION_DOWN = 1;
 // 支持边界导航的特殊内容块节点名。
-const SPECIAL_BLOCK_NODE_NAMES = new Set(['math_block', 'code_block', 'table', 'image', 'hr']);
+const SPECIAL_BLOCK_NODE_NAMES = new Set([
+  'math_block',
+  'code_block',
+  'frontmatter',
+  'table',
+  'image',
+  'hr'
+]);
 
 /** 特殊内容块边界导航方向。 */
 type BlockBoundaryDirection =
@@ -123,6 +130,11 @@ const moveSelectionFromBlockBoundary = (
   direction: BlockBoundaryDirection
 ): boolean => {
   if (!SPECIAL_BLOCK_NODE_NAMES.has(blockNode.type.name)) {
+    return false;
+  }
+
+  // Frontmatter 必须保持在文档首行，禁止向上导航并在其上方插入段落。
+  if (blockNode.type.name === 'frontmatter' && direction === BLOCK_BOUNDARY_DIRECTION_UP) {
     return false;
   }
 

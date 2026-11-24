@@ -1,0 +1,156 @@
+@layer components {
+  .zt-md-editor .zt-md-frontmatter {
+    margin: 0;
+    overflow: hidden;
+    border: 1px solid var(--zt-border);
+    border-radius: var(--zt-radius-lg);
+    background: var(--zt-elevated);
+    transition: border-color 150ms ease, background-color 150ms ease;
+  }
+
+  .zt-md-editor .zt-md-frontmatter:focus-within {
+    border-color: var(--zt-border-strong);
+  }
+
+  .zt-md-editor .zt-md-frontmatter-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-height: 32px;
+    padding: 4px 8px 4px 10px;
+    border-bottom: 1px solid var(--zt-border);
+    color: var(--zt-muted);
+    font-size: 12px;
+    line-height: 1.2;
+    user-select: none;
+  }
+
+  .zt-md-editor .zt-md-frontmatter[data-collapsed='true'] .zt-md-frontmatter-header {
+    border-bottom-color: transparent;
+  }
+
+  .zt-md-editor .zt-md-frontmatter-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 6px;
+    border: 0;
+    border-radius: var(--zt-radius);
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    cursor: pointer;
+    transition: background-color 140ms ease, color 140ms ease;
+  }
+
+  .zt-md-editor .zt-md-frontmatter-toggle:hover {
+    background: var(--zt-hover);
+    color: var(--zt-fg);
+  }
+
+  .zt-md-editor .zt-md-frontmatter-chevron {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 160ms ease;
+  }
+
+  .zt-md-editor .zt-md-frontmatter[data-collapsed='true'] .zt-md-frontmatter-chevron {
+    transform: rotate(-90deg);
+  }
+
+  .zt-md-editor .zt-md-frontmatter-title {
+    font-family: var(--zt-font-mono);
+    font-size: 11px;
+  }
+
+  .zt-md-editor .zt-md-frontmatter-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    opacity: 0.72;
+    transition: opacity 140ms ease;
+  }
+
+  .zt-md-editor .zt-md-frontmatter:hover .zt-md-frontmatter-actions,
+  .zt-md-editor .zt-md-frontmatter:focus-within .zt-md-frontmatter-actions {
+    opacity: 1;
+  }
+
+  .zt-md-editor .zt-md-frontmatter[data-editable='false'] .zt-md-frontmatter-editable-action {
+    display: none;
+  }
+
+  .zt-md-editor .zt-md-frontmatter-action-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border: 1px solid transparent;
+    border-radius: var(--zt-radius);
+    background: transparent;
+    color: var(--zt-muted);
+    cursor: pointer;
+    transition: background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease;
+  }
+
+  .zt-md-editor .zt-md-frontmatter-action-button:hover {
+    background: var(--zt-hover);
+    border-color: var(--zt-border);
+    color: var(--zt-fg);
+  }
+
+  .zt-md-editor .zt-md-frontmatter-action-button[data-copied='true'] {
+    background: color-mix(in srgb, var(--zt-accent) 12%, var(--zt-popover));
+    border-color: color-mix(in srgb, var(--zt-accent) 42%, var(--zt-border));
+    color: var(--zt-accent);
+  }
+
+  .zt-md-editor .zt-md-frontmatter-action-button-danger:hover {
+    background: color-mix(in srgb, var(--zt-destructive) 12%, var(--zt-popover));
+    border-color: color-mix(in srgb, var(--zt-destructive) 38%, var(--zt-border));
+    color: var(--zt-destructive);
+  }
+
+  .zt-md-editor .zt-md-frontmatter-action-button svg,
+  .zt-md-editor .zt-md-frontmatter-chevron svg {
+    pointer-events: none;
+  }
+
+  .zt-md-editor .ProseMirror .zt-md-frontmatter-body {
+    margin: 0;
+    padding: 0.75rem 1rem;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--zt-fg);
+    font-family: var(--zt-font-mono);
+    font-size: 0.85em;
+    line-height: 1.65;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  .zt-md-editor .ProseMirror .zt-md-frontmatter-body[hidden] {
+    display: none;
+  }
+
+  .zt-md-editor .ProseMirror > .zt-md-frontmatter + :is(
+      p,
+      ul,
+      ol,
+      blockquote,
+      pre,
+      .zt-md-code-block,
+      table,
+      .tableWrapper,
+      .zt-md-math-block,
+      .zt-md-image
+    ) {
+    margin-top: 1rem;
+  }
+}

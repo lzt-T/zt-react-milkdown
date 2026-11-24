@@ -86,5 +86,11 @@ export const zhCNMessages: EditorI18nMessages = {
   codeBlockCopyAriaLabel: '复制代码块',
   codeBlockPreviewAriaLabel: '预览代码块',
   codeBlockSourceAriaLabel: '查看代码块源码',
-  codeBlockDeleteAriaLabel: '删除代码块'
+  codeBlockDeleteAriaLabel: '删除代码块',
+  frontmatterYamlLabel: 'YAML 元数据',
+  frontmatterTomlLabel: 'TOML 元数据',
+  frontmatterCollapseAriaLabel: '折叠元数据',
+  frontmatterExpandAriaLabel: '展开元数据',
+  frontmatterCopyAriaLabel: '复制元数据',
+  frontmatterDeleteAriaLabel: '删除元数据'
 };

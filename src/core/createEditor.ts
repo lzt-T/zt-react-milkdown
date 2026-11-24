@@ -59,6 +59,11 @@ import {
   createCodeBlockEditableNodeView,
   createCodeBlockLanguagePickerPlugin
 } from '@/plugins/custom/code-block';
+import {
+  createFrontmatterEditableNodeView,
+  frontmatter,
+  FRONTMATTER_NODE_NAME
+} from '@/plugins/custom/frontmatter';
 import { createSelectionTooltipPlugin } from '../plugins/custom/selection-tooltip';
 import {
   createEditorShortcutKeyDownHandler,
@@ -262,6 +267,7 @@ export const createMilkdownEditorRuntime = (
   const presetPluginExports: PresetPluginExports = {
     listener,
     commonmark,
+    frontmatter,
     taskListTransformKeymap,
     inlineCodeBoundaryNavigation: inlineCodeBoundaryNavigationPlugin,
     gfm,
@@ -359,7 +365,8 @@ export const createMilkdownEditorRuntime = (
       ['image', createImageEditableNodeView(messages)],
       ['math_block', createMathBlockEditableNodeView(messages)],
       ['math_inline', createMathInlineEditableNodeView(messages)],
-      ['code_block', createCodeBlockEditableNodeView(messages)]
+      ['code_block', createCodeBlockEditableNodeView(messages)],
+      [FRONTMATTER_NODE_NAME, createFrontmatterEditableNodeView(messages)]
     ]);
 
     /** 监听器管理器。 */

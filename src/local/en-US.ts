@@ -86,5 +86,11 @@ export const enUSMessages: EditorI18nMessages = {
   codeBlockCopyAriaLabel: 'Copy code block',
   codeBlockPreviewAriaLabel: 'Preview code block',
   codeBlockSourceAriaLabel: 'View code block source',
-  codeBlockDeleteAriaLabel: 'Delete code block'
+  codeBlockDeleteAriaLabel: 'Delete code block',
+  frontmatterYamlLabel: 'YAML Frontmatter',
+  frontmatterTomlLabel: 'TOML Frontmatter',
+  frontmatterCollapseAriaLabel: 'Collapse frontmatter',
+  frontmatterExpandAriaLabel: 'Expand frontmatter',
+  frontmatterCopyAriaLabel: 'Copy frontmatter',
+  frontmatterDeleteAriaLabel: 'Delete frontmatter'
 };

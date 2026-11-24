@@ -15,6 +15,7 @@
 @import "./modules/blockquote.css";
 @import "./modules/inline-code.css";
 @import "./modules/code-block.css";
+@import "./modules/frontmatter.css";
 @import "./modules/code-block-language-picker.css";
 @import "./modules/search.css";
 @import "./modules/task-list.css";
@@ -286,6 +287,8 @@
 
   .zt-md :is(
       .zt-md-code-block-action-button,
+      .zt-md-frontmatter-toggle,
+      .zt-md-frontmatter-action-button,
       .zt-md-image-action-button,
       .zt-md-math-block-action-button,
       .zt-md-selection-tooltip-button,
@@ -318,6 +321,8 @@
   @layer components {
     .zt-md :is(
         .zt-md-code-block-action-button,
+        .zt-md-frontmatter-toggle,
+        .zt-md-frontmatter-action-button,
         .zt-md-image-action-button,
         .zt-md-math-block-action-button,
         .zt-md-selection-tooltip-button,

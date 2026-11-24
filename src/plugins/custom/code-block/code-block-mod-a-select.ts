@@ -3,8 +3,8 @@ import { Plugin, PluginKey, TextSelection } from '@milkdown/prose/state';
 import type { EditorView } from '@milkdown/prose/view';
 import { $prose } from '@milkdown/utils';
 
-// 代码块节点类型名。
-const CODE_BLOCK_NODE_NAME = 'code_block';
+// Mod-A 仅全选当前块内容的节点类型集合。
+const SCOPED_MOD_A_NODE_NAMES = new Set(['code_block', 'frontmatter']);
 // 仅处理 A 按键。
 const KEY_A = 'a';
 // 代码块内 Mod-A 处理插件 key。
@@ -34,7 +34,7 @@ const resolveCodeBlockRange = (
   for (let depth = resolvedPosition.depth; depth >= 0; depth -= 1) {
     // 当前深度节点。
     const currentNode = resolvedPosition.node(depth);
-    if (currentNode.type.name !== CODE_BLOCK_NODE_NAME) {
+    if (!SCOPED_MOD_A_NODE_NAMES.has(currentNode.type.name)) {
       continue;
     }
 

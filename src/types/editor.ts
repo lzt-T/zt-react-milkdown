@@ -180,6 +180,18 @@ export interface EditorI18nMessages {
   codeBlockSourceAriaLabel: string;
   /** 代码块删除按钮无障碍标签。 */
   codeBlockDeleteAriaLabel: string;
+  /** YAML Frontmatter 标题文案。 */
+  frontmatterYamlLabel: string;
+  /** TOML Frontmatter 标题文案。 */
+  frontmatterTomlLabel: string;
+  /** Frontmatter 折叠按钮无障碍标签。 */
+  frontmatterCollapseAriaLabel: string;
+  /** Frontmatter 展开按钮无障碍标签。 */
+  frontmatterExpandAriaLabel: string;
+  /** Frontmatter 复制按钮无障碍标签。 */
+  frontmatterCopyAriaLabel: string;
+  /** Frontmatter 删除按钮无障碍标签。 */
+  frontmatterDeleteAriaLabel: string;
 }
 
 /**

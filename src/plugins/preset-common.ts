@@ -8,6 +8,8 @@ export interface PresetPluginExports {
   listener: unknown;
   /** commonmark 插件实例。 */
   commonmark: unknown;
+  /** frontmatter 插件实例（可为单个插件或插件数组）。 */
+  frontmatter: unknown | unknown[];
   /** 任务列表块转换快捷键实例。 */
   taskListTransformKeymap: unknown | unknown[];
   /** 行内代码右边界导航插件实例。 */
@@ -106,6 +108,7 @@ export const resolvePresetPlugins = (
 
   appendPluginDescriptors(descriptors, 'listener', pluginExports.listener);
   appendPluginDescriptors(descriptors, 'commonmark', pluginExports.commonmark);
+  appendPluginDescriptors(descriptors, 'frontmatter', pluginExports.frontmatter);
   appendPluginDescriptors(descriptors, 'task-list-transform-keymap', pluginExports.taskListTransformKeymap);
   appendPluginDescriptors(
     descriptors,
