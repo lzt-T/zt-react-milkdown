@@ -1,6 +1,6 @@
 {
   "name": "zt-react-milkdown",
-  "version": "0.1.36",
+  "version": "0.1.37",
   "description": "A React Markdown editor package powered by Milkdown.",
   "license": "MIT",
   "type": "module",
