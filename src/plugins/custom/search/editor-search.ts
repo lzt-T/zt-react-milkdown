@@ -263,9 +263,13 @@ class EditorSearchSnapshotView {
   }
 
   /**
-   * 响应 ProseMirror 状态更新。
+   * 响应 ProseMirror 状态更新（组字期间跳过全文匹配扫描）。
    */
   update(view: EditorView): void {
+    if (view.composing) {
+      return;
+    }
+
     this.emitSnapshot(view.state);
   }
 

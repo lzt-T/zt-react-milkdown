@@ -8,7 +8,7 @@ import type {
   SlashMenuConfig
 } from '@/types/editor';
 import type { Node as ProseNode } from '@milkdown/prose/model';
-import { Plugin, PluginKey, TextSelection } from '@milkdown/prose/state';
+import { TextSelection } from '@milkdown/prose/state';
 import type { EditorView } from '@milkdown/prose/view';
 import {
   defaultValueCtx,
@@ -22,14 +22,19 @@ import {
 import { clipboard } from '@milkdown/plugin-clipboard';
 import { history } from '@milkdown/plugin-history';
 import { indent, indentConfig } from '@milkdown/plugin-indent';
-import { commonmark } from '@milkdown/preset-commonmark';
+import {
+  commonmark,
+  syncHeadingIdPlugin,
+  syncListOrderPlugin
+} from '@milkdown/preset-commonmark';
 import { gfm } from '@milkdown/preset-gfm';
 import { prismConfig } from '@milkdown/plugin-prism';
 import { configureCodeBlockHighlighter } from '@/plugins/custom/code-block/code-block-highlighter';
 import { codeBlockPrismPlugin } from '@/plugins/custom/code-block/code-block-prism-refresh';
-import { $prose, replaceAll } from '@milkdown/utils';
-import { debounce } from 'es-toolkit/function';
-import { createReplaceAllExecutor } from './commands';
+import { replaceAll } from '@milkdown/utils';
+import { createReplaceAllExecutor } from '@/core/commands';
+import { imeCompositionIsolationPlugin } from '@/core/ime-composition-isolation';
+import { createMarkdownSyncController } from '@/core/markdown-sync';
 import { resolvePresetPlugins } from '../plugins/preset-common';
 import {
   blockBoundaryNavigationPlugin,
@@ -53,8 +58,9 @@ import {
 import { blockquoteBackspaceLiftPlugin } from '../plugins/custom/blockquote';
 import {
   headingBackspaceEmptyParagraphPlugin,
-  headingFocusIndicatorPlugin
-} from '../plugins/custom/heading';
+  headingFocusIndicatorPlugin,
+  syncHeadingIdIncrementalPlugin
+} from '@/plugins/custom/heading';
 import {
   codeBlockModASelectPlugin,
   configureCodeBlockLanguageSchema,
@@ -72,7 +78,7 @@ import {
   createSlashMenuPlugin
 } from '../plugins/custom/slash-menu';
 import { createTableFocusActionsPlugin, tableArrowEntryPlugin } from '../plugins/custom/table';
-import { taskListToggle } from '../plugins/custom/list';
+import { syncListOrderIncrementalPlugin, taskListToggle } from '@/plugins/custom/list';
 import { tabSpaceIndentPlugin } from '../plugins/custom/indent';
 import { inlineCodeBoundaryNavigationPlugin } from '../plugins/custom/inline-code-boundary-navigation';
 import {
@@ -96,13 +102,9 @@ import {
 
 // 编辑器只读态原地切换事务元数据键。
 const READONLY_CHANGE_META = 'ZT_MD_READONLY_CHANGE';
-// Markdown 同步插件键。
-const MARKDOWN_SYNC_PLUGIN_KEY = new PluginKey('ZT_MD_MARKDOWN_SYNC');
 // 需要同步 data-editable 的自定义节点选择器。
 const EDITABLE_NODE_VIEW_SELECTOR =
   '[data-type="code_block"], [data-type="image"], [data-type="math_block"], [data-type="math_inline"], [data-type="frontmatter"]';
-// IME 组字结束后延迟兜底同步时长（毫秒），等待浏览器完成选词事务落库。
-const COMPOSITION_END_SYNC_DELAY_MS = 30;
 
 /**
  * 定义 Milkdown 原生编辑器实例类型。
@@ -277,101 +279,15 @@ export const createMilkdownEditorRuntime = (
 ): MilkdownEditorRuntime => {
   /** 运行时只读状态，支持原地切换而不销毁编辑器。 */
   let currentReadOnly = options.readOnly;
-  /** 内容序列化防抖时长（毫秒）。 */
-  let currentDebounceMs = Math.max(0, options.debounceMs ?? 0);
-  /** 标记是否正在应用外部传入的 setMarkdown，避免反向回抛 onChange。 */
-  let isApplyingExternalMarkdown = false;
-  /** 外部 setMarkdown 目标值缓存。 */
-  let externalMarkdownTarget: string | null = null;
-  /** 最近一次对外发出的 Markdown 内容。 */
-  let lastEmittedMarkdown: string | null = null;
-  /** 最近一次已完成序列化的文档快照。 */
-  let lastSerializedDoc: ProseNode | null = null;
-  /** 当前 ProseMirror 视图引用。 */
-  let activeView: EditorView | null = null;
-  /** 当前 Markdown 序列化器。 */
-  let activeSerializer: ((doc: ProseNode) => string) | null = null;
-  /** 防抖序列化调度器。 */
-  let debouncedSerialize: ReturnType<typeof debounce<() => void>> | null = null;
-  /** 记录组字期间延后的文档同步需求，确保组字结束后补齐同步。 */
-  let hasPendingCompositionSync = false;
-  /** compositionend 兜底定时器。 */
-  let compositionEndTimer: ReturnType<typeof setTimeout> | null = null;
-
-  /**
-   * 清理挂起的组字结束兜底定时器。
-   */
-  const clearCompositionEndTimer = (): void => {
-    if (compositionEndTimer !== null) {
-      clearTimeout(compositionEndTimer);
-      compositionEndTimer = null;
-    }
-  };
-
-  /**
-   * 立即执行一次序列化并在文本变更时通知外部。
-   */
-  const flushMarkdownChange = (view: EditorView): void => {
-    if (view.composing) {
-      hasPendingCompositionSync = true;
-      return;
-    }
-
-    hasPendingCompositionSync = false;
-    if (view.state.doc === lastSerializedDoc) {
-      return;
-    }
-
-    if (!activeSerializer) {
-      // 懒获取 serializerCtx，确保仅在 SerializerReady 之后读取真实序列化器。
-      activeSerializer = editor.action((actionCtx: any) => actionCtx.get(serializerCtx)) as
+  /** Markdown 异步序列化同步控制器（含大文档自适应防抖与空闲调度）。 */
+  const markdownSync = createMarkdownSyncController({
+    debounceMs: options.debounceMs ?? 0,
+    getSerializer: () =>
+      editor.action((actionCtx: any) => actionCtx.get(serializerCtx)) as
         | ((doc: ProseNode) => string)
-        | null;
-    }
-
-    if (!activeSerializer) {
-      return;
-    }
-
-    // 先完成序列化再记录文档快照，避免异常中断时永久跳过后续变更同步。
-    const nextMarkdown = activeSerializer(view.state.doc);
-    lastSerializedDoc = view.state.doc;
-    if (nextMarkdown === lastEmittedMarkdown) {
-      return;
-    }
-
-    lastEmittedMarkdown = nextMarkdown;
-    options.onChange(nextMarkdown);
-  };
-
-  /**
-   * 按防抖策略调度一次 Markdown 序列化同步。
-   */
-  const scheduleMarkdownSync = (view: EditorView): void => {
-    if (currentDebounceMs <= 0 || !debouncedSerialize) {
-      flushMarkdownChange(view);
-      return;
-    }
-
-    debouncedSerialize();
-  };
-
-  /**
-   * 按最新防抖时长重建序列化防抖器。
-   */
-  const rebuildSerializeDebouncer = (): void => {
-    debouncedSerialize?.cancel();
-    debouncedSerialize =
-      currentDebounceMs > 0
-        ? debounce(() => {
-            if (activeView) {
-              flushMarkdownChange(activeView);
-            }
-          }, currentDebounceMs)
-        : null;
-  };
-
-  rebuildSerializeDebouncer();
+        | null,
+    onChange: options.onChange
+  });
 
   /** 编辑器文案。 */
   const messages = { ...(options.messages ?? resolveEditorMessages(options.locale)) };
@@ -391,93 +307,12 @@ export const createMilkdownEditorRuntime = (
   const imagePastePlugin = createImagePastePlugin(options.imageUpload, messages);
   /** 编辑器搜索插件实例列表。 */
   const editorSearchPlugins = createEditorSearchPlugins(options.onSearchSnapshotChange);
-  /** 将序列化动作后移至防抖窗口之后，避免每次击键同步序列化整篇长文档。 */
-  const markdownSyncPlugin = $prose(() => {
-    return new Plugin({
-      key: MARKDOWN_SYNC_PLUGIN_KEY,
-      props: {
-        handleDOMEvents: {
-          compositionstart: () => {
-            clearCompositionEndTimer();
-            // 开始下一轮拼音输入时取消尚未落库的防抖序列化，避免在组字中途卡顿。
-            debouncedSerialize?.cancel();
-            return false;
-          },
-          compositionend: () => {
-            clearCompositionEndTimer();
-            compositionEndTimer = setTimeout(() => {
-              compositionEndTimer = null;
-              if (
-                activeView &&
-                !activeView.composing &&
-                !isApplyingExternalMarkdown &&
-                (hasPendingCompositionSync || activeView.state.doc !== lastSerializedDoc)
-              ) {
-                hasPendingCompositionSync = false;
-                scheduleMarkdownSync(activeView);
-              }
-            }, COMPOSITION_END_SYNC_DELAY_MS);
-            return false;
-          },
-          blur: (view) => {
-            if (view.composing || isApplyingExternalMarkdown) {
-              return false;
-            }
-
-            clearCompositionEndTimer();
-            debouncedSerialize?.cancel();
-            flushMarkdownChange(view);
-            return false;
-          }
-        }
-      },
-      view: (initialView) => {
-        activeView = initialView;
-        lastSerializedDoc = initialView.state.doc;
-
-        return {
-          update: (view, previousState) => {
-            activeView = view;
-            if (isApplyingExternalMarkdown) {
-              lastSerializedDoc = view.state.doc;
-              lastEmittedMarkdown = externalMarkdownTarget;
-              hasPendingCompositionSync = false;
-              clearCompositionEndTimer();
-              debouncedSerialize?.cancel();
-              return;
-            }
-
-            if (view.composing) {
-              if (previousState.doc !== view.state.doc || view.state.doc !== lastSerializedDoc) {
-                hasPendingCompositionSync = true;
-              }
-              clearCompositionEndTimer();
-              debouncedSerialize?.cancel();
-              return;
-            }
-
-            const docChanged = previousState.doc !== view.state.doc;
-            const shouldSyncAfterComposition =
-              hasPendingCompositionSync && view.state.doc !== lastSerializedDoc;
-            if (!docChanged && !shouldSyncAfterComposition) {
-              return;
-            }
-
-            hasPendingCompositionSync = false;
-            clearCompositionEndTimer();
-            scheduleMarkdownSync(view);
-          },
-          destroy: () => {
-            clearCompositionEndTimer();
-            hasPendingCompositionSync = false;
-            debouncedSerialize?.cancel();
-            activeSerializer = null;
-            activeView = null;
-          }
-        };
-      }
-    });
-  });
+  /** 替换全量扫描的标题 ID 与列表序号插件为增量实现。 */
+  const optimizedCommonmark = [
+    ...commonmark.filter((plugin) => plugin !== syncHeadingIdPlugin && plugin !== syncListOrderPlugin),
+    syncHeadingIdIncrementalPlugin,
+    syncListOrderIncrementalPlugin
+  ];
 
   /** 默认插件集合。 */
   const slashSetup = createSlashMenuPlugin(
@@ -501,7 +336,7 @@ export const createMilkdownEditorRuntime = (
   const taskListTransformKeymap = createTaskListTransformKeymap(options.shortcutMode);
   /** 预设插件导出集合。 */
   const presetPluginExports: PresetPluginExports = {
-    commonmark,
+    commonmark: optimizedCommonmark,
     frontmatter,
     taskListTransformKeymap,
     inlineCodeBoundaryNavigation: inlineCodeBoundaryNavigationPlugin,
@@ -558,6 +393,11 @@ export const createMilkdownEditorRuntime = (
     ctx.set(defaultValueCtx, options.markdown);
     ctx.set(editorViewOptionsCtx, {
       editable: () => !currentReadOnly,
+      attributes: {
+        // 大文档场景关闭浏览器原生拼写检查，减少长文档输入与滚动时的拼写重排开销。
+        spellcheck: 'false'
+      },
+      handleScrollToSelection: (view: EditorView) => view.composing,
       handleKeyDown: handleEditorShortcutKeyDown,
       handleDOMEvents: {
         mousedown: (_view: unknown, event: Event) => {
@@ -614,7 +454,8 @@ export const createMilkdownEditorRuntime = (
   bootstrapPlugins.forEach((descriptor) => {
     editor.use(descriptor.plugin as any);
   });
-  editor.use(markdownSyncPlugin as any);
+  editor.use(markdownSync.plugin as any);
+  editor.use(imeCompositionIsolationPlugin as any);
 
   /**
    * 在当前 Milkdown EditorView 中执行搜索动作。
@@ -738,30 +579,14 @@ export const createMilkdownEditorRuntime = (
       });
     },
     /** 动态更新序列化防抖时长。 */
-    setDebounceMs: (nextDebounceMs): void => {
-      const normalizedDebounceMs = Math.max(0, nextDebounceMs);
-      if (currentDebounceMs === normalizedDebounceMs) {
-        return;
-      }
-
-      currentDebounceMs = normalizedDebounceMs;
-      rebuildSerializeDebouncer();
-    },
+    setDebounceMs: markdownSync.setDebounceMs,
     installRuntimePlugins,
     focusEditor,
     searchController,
     setMarkdown: (markdown: string): void => {
-      clearCompositionEndTimer();
-      hasPendingCompositionSync = false;
-      debouncedSerialize?.cancel();
-      externalMarkdownTarget = markdown;
-      isApplyingExternalMarkdown = true;
-      try {
+      markdownSync.runWithExternalMarkdown(markdown, () => {
         runReplaceAll(markdown);
-      } finally {
-        isApplyingExternalMarkdown = false;
-        externalMarkdownTarget = null;
-      }
+      });
     }
   };
 };

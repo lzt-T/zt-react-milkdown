@@ -386,6 +386,8 @@ const handleInlineCodeBlur = (view: EditorView): boolean => {
 class InlineCodeBoundaryNavigationPluginView {
   /** 编辑器根 DOM。 */
   private readonly editorDom: HTMLElement;
+  /** 缓存上一次边界激活态，避免每次状态更新重复操作 DOM 类名。 */
+  private isBoundaryActive = false;
 
   /**
    * 初始化插件视图并同步当前退出状态。
@@ -396,14 +398,21 @@ class InlineCodeBoundaryNavigationPluginView {
   }
 
   /**
-   * 根据插件状态控制原生 caret 可见性。
+   * 根据插件状态控制原生 caret 可见性（组字期间跳过测量与类名写入）。
    */
   update(view: EditorView): void {
+    if (view.composing) {
+      return;
+    }
+
     // 当前行内代码边界视觉状态。
     const visualState = inlineCodeBoundaryNavigationPluginKey.getState(view.state);
     // 当前是否处于行内代码边界视觉状态。
     const isBoundaryActive = visualState != null;
-    this.editorDom.classList.toggle(INLINE_CODE_BOUNDARY_ACTIVE_CLASS_NAME, isBoundaryActive);
+    if (isBoundaryActive !== this.isBoundaryActive) {
+      this.isBoundaryActive = isBoundaryActive;
+      this.editorDom.classList.toggle(INLINE_CODE_BOUNDARY_ACTIVE_CLASS_NAME, isBoundaryActive);
+    }
     alignInlineCodeOutsideIndicator(view, visualState);
   }
 

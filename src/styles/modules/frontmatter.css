@@ -1,4 +1,9 @@
 @layer components {
+  .zt-md-editor .ProseMirror > .zt-md-frontmatter {
+    content-visibility: auto;
+    contain-intrinsic-block-size: auto 120px;
+  }
+
   .zt-md-editor .zt-md-frontmatter {
     margin: 0;
     overflow: hidden;

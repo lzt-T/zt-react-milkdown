@@ -1,4 +1,9 @@
 @layer components {
+  .zt-md-editor .ProseMirror > .zt-md-code-block {
+    content-visibility: auto;
+    contain-intrinsic-block-size: auto 160px;
+  }
+
   .zt-md-editor .zt-md-code-block {
     position: relative;
     display: flow-root;

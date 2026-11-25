@@ -143,6 +143,26 @@ const hasCodeBlockAncestor = (doc: ProseNode, pos: number): boolean => {
 };
 
 /**
+ * 计算本次事务在旧文档坐标系中最早发生变更的起点，用于判断是否位于所有代码块之后。
+ */
+const resolveMinOldChangeStart = (transaction: Transaction): number => {
+  let minOldStart = Number.POSITIVE_INFINITY;
+
+  for (let stepIndex = 0; stepIndex < transaction.steps.length; stepIndex += 1) {
+    const stepMap = transaction.mapping.maps[stepIndex];
+    const oldMapping = stepIndex > 0 ? transaction.mapping.slice(0, stepIndex).invert() : null;
+    stepMap.forEach((oldStart) => {
+      const mappedOldStart = oldMapping ? oldMapping.map(oldStart, -1) : oldStart;
+      if (mappedOldStart < minOldStart) {
+        minOldStart = mappedOldStart;
+      }
+    });
+  }
+
+  return minOldStart;
+};
+
+/**
  * 基于事务步长区间判断本次文档变更是否触及任何代码块，普通正文编辑直接 O(1)/O(blocks) 跳过全文遍历。
  */
 const doesTransactionTouchCodeBlocks = (
@@ -243,20 +263,24 @@ export const codeBlockPrismPlugin: MilkdownPlugin = $prose((ctx) => {
       },
       apply: (transaction, pluginState, _oldState, newState) => {
         if (!transaction.docChanged) {
-          return {
-            decorations: pluginState.decorations.map(transaction.mapping, transaction.doc),
-            blocks: pluginState.blocks
-          };
+          return pluginState;
         }
 
         if (!doesTransactionTouchCodeBlocks(transaction, pluginState.blocks, newState.doc)) {
-          const mappedBlocks =
-            pluginState.blocks.length === 0
-              ? pluginState.blocks
-              : pluginState.blocks.map((block) => ({
-                  pos: transaction.mapping.map(block.pos, 1),
-                  node: block.node
-                }));
+          if (pluginState.blocks.length === 0) {
+            return pluginState;
+          }
+
+          const lastBlock = pluginState.blocks[pluginState.blocks.length - 1];
+          const lastBlockEnd = lastBlock.pos + lastBlock.node.nodeSize;
+          if (resolveMinOldChangeStart(transaction) > lastBlockEnd) {
+            return pluginState;
+          }
+
+          const mappedBlocks = pluginState.blocks.map((block) => ({
+            pos: transaction.mapping.map(block.pos, 1),
+            node: block.node
+          }));
           return {
             decorations: pluginState.decorations.map(transaction.mapping, transaction.doc),
             blocks: mappedBlocks

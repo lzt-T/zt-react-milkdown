@@ -1,4 +1,9 @@
 @layer components {
+  .zt-md-editor .ProseMirror > .tableWrapper {
+    content-visibility: auto;
+    contain-intrinsic-block-size: auto 180px;
+  }
+
   .zt-md-editor .ProseMirror .tableWrapper {
     margin: 0;
     overflow-x: auto;

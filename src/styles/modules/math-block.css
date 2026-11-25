@@ -1,4 +1,9 @@
 @layer components {
+  .zt-md-editor .ProseMirror > .zt-md-math-block:not(.zt-md-math-block-editing):not(.ProseMirror-selectednode) {
+    content-visibility: auto;
+    contain-intrinsic-block-size: auto 96px;
+  }
+
   .zt-md-editor .zt-md-math-block {
     @apply relative overflow-hidden border border-zt-border bg-zt-elevated;
     margin: 0;

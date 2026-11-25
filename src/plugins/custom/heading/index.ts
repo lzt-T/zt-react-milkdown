@@ -2,3 +2,5 @@
 export * from './heading-backspace-empty-paragraph';
 /** 标题聚焦层级提示插件导出。 */
 export * from './heading-focus-indicator';
+/** 增量标题 ID 同步插件导出。 */
+export * from './sync-heading-id';

@@ -1,0 +1,18 @@
+@layer components {
+  /* 为直接块级子节点建立编辑态继承边界，避免组合输入切换隔离类时触发整棵文档子树样式重算。 */
+  .zt-md-editor .ProseMirror[contenteditable='true'] > :not([contenteditable='false']) {
+    -webkit-user-modify: read-write;
+  }
+
+  /* 组合输入期间将根编辑边界收缩至当前直接块节点，规避 Chromium IME 按文档前缀扫描 DOM。 */
+  .zt-md-editor .ProseMirror[contenteditable='true'].zt-md-ime-isolating {
+    -webkit-user-modify: read-only;
+  }
+
+  /* 组字隔离期间焦点会临时落到当前直接块节点，隐藏浏览器原生焦点框，避免输入时段落出现黑框。 */
+  .zt-md-editor
+    .ProseMirror[contenteditable='true']
+    > :not([contenteditable='false']):not(.ProseMirror-selectednode):is(:focus, :focus-visible) {
+    outline: none;
+  }
+}

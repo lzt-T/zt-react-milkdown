@@ -1,4 +1,12 @@
 @layer components {
+  .zt-md-editor .ProseMirror > :is(p, blockquote, h1, h2, h3, h4, h5, h6) {
+    contain: layout style;
+  }
+
+  .zt-md-editor .ProseMirror > :is(ul, ol) {
+    contain: layout;
+  }
+
   .zt-md-editor .ProseMirror h1,
   .zt-md-editor .ProseMirror h2,
   .zt-md-editor .ProseMirror h3,

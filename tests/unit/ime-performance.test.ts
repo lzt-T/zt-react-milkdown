@@ -1,4 +1,5 @@
 import { createMilkdownEditorRuntime, type MilkdownEditorRuntime } from '@/core/createEditor';
+import { IME_ISOLATION_CLASS_NAME } from '@/core/ime-composition-isolation';
 import { refractor } from '@/plugins/custom/code-block/code-block-highlighter';
 import { resolveEditorMessages } from '@/local/i18n';
 import { editorViewCtx } from '@milkdown/core';
@@ -195,5 +196,274 @@ describe('ime-performance', () => {
       view.dispatch(view.state.tr.insertText('let x = 1;\n', codeBlockStart + 1));
     });
     expect(highlightSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('关闭浏览器原生 spellcheck 并在 IME 组字期间跳过同步滚动测量', async () => {
+    const { view } = await mountRuntime('测试段落', 160);
+
+    expect(view.dom.getAttribute('spellcheck')).toBe('false');
+    expect(view.props.handleScrollToSelection?.(view)).toBe(false);
+
+    setComposingState(view, true);
+    expect(view.props.handleScrollToSelection?.(view)).toBe(true);
+
+    setComposingState(view, false);
+    expect(view.props.handleScrollToSelection?.(view)).toBe(false);
+  });
+
+  it('包含标题、有序列表和代码块的文档末尾编辑时跳过全文 descendants 遍历并保持 Prism 状态引用', async () => {
+    const markdown = [
+      '# 章节一',
+      '',
+      '1. 列表项一',
+      '2. 列表项二',
+      '',
+      '```ts',
+      'const value = 1;',
+      '```',
+      '',
+      '末尾段落'
+    ].join('\n');
+    const { view } = await mountRuntime(markdown, 160);
+
+    const prismPlugin = view.state.plugins.find((plugin) =>
+      String((plugin as { key?: string }).key ?? '').startsWith('MILKDOWN_PRISM')
+    );
+    expect(prismPlugin).toBeTruthy();
+    const initialPrismState = prismPlugin?.getState(view.state);
+
+    const descendantsSpy = vi.spyOn(Object.getPrototypeOf(view.state.doc), 'descendants');
+
+    // 在文档末尾普通段落插入文本，标题、列表和代码块均应走增量快路径。
+    await act(async () => {
+      view.dispatch(view.state.tr.insertText('追加内容', view.state.doc.content.size - 1));
+    });
+
+    expect(descendantsSpy).not.toHaveBeenCalled();
+    expect(prismPlugin?.getState(view.state)).toBe(initialPrismState);
+  });
+
+  it('修改标题文本时保持标题 ID 更新与重名去重，插入列表项时保持序号递增', async () => {
+    const markdown = ['# 重复标题', '', '# 初始标题', '', '1. 第一项', '2. 第二项'].join('\n');
+    const { view } = await mountRuntime(markdown, 160);
+
+    let secondHeadingPos = -1;
+    let secondHeadingSize = 0;
+    let headingCount = 0;
+    view.state.doc.forEach((node, offset) => {
+      if (node.type.name === 'heading') {
+        headingCount += 1;
+        if (headingCount === 2) {
+          secondHeadingPos = offset;
+          secondHeadingSize = node.content.size;
+        }
+      }
+    });
+    expect(secondHeadingPos).toBeGreaterThanOrEqual(0);
+
+    // 将第二个标题改写为与第一个标题相同文本，应生成 -#2 去重后缀。
+    await act(async () => {
+      view.dispatch(
+        view.state.tr.insertText(
+          '重复标题',
+          secondHeadingPos + 1,
+          secondHeadingPos + 1 + secondHeadingSize
+        )
+      );
+    });
+
+    const updatedSecondHeading = view.state.doc.nodeAt(secondHeadingPos);
+    expect(updatedSecondHeading?.attrs.id).toBe('重复标题-#2');
+
+    // 在有序列表开头插入一个新列表项，后续列表项序号应同步递增。
+    let orderedListPos = -1;
+    view.state.doc.forEach((node, offset) => {
+      if (node.type.name === 'ordered_list' && orderedListPos < 0) {
+        orderedListPos = offset;
+      }
+    });
+    expect(orderedListPos).toBeGreaterThanOrEqual(0);
+
+    const orderedListNode = view.state.doc.nodeAt(orderedListPos);
+    expect(orderedListNode).toBeTruthy();
+    const firstListItem = orderedListNode!.child(0);
+    const listItemType = view.state.schema.nodes.list_item;
+    const paragraphType = view.state.schema.nodes.paragraph;
+    const insertedItem = listItemType.create(
+      { ...firstListItem.attrs, label: '1.' },
+      paragraphType.create(null, view.state.schema.text('新增前置项'))
+    );
+
+    await act(async () => {
+      view.dispatch(view.state.tr.insert(orderedListPos + 1, insertedItem));
+    });
+
+    const syncedOrderedList = view.state.doc.nodeAt(orderedListPos);
+    expect(syncedOrderedList?.child(0).attrs.label).toBe('1.');
+    expect(syncedOrderedList?.child(1).attrs.label).toBe('2.');
+    expect(syncedOrderedList?.child(2).attrs.label).toBe('3.');
+  });
+
+  it('大文档下自动放宽序列化防抖，并在 IME Process 按键时取消挂起同步、失焦时立即同步', async () => {
+    const largeParagraph = '中文技术文档长内容测试片段，用于验证大文档自适应防抖策略。'.repeat(350);
+    const { view, onChange } = await mountRuntime(largeParagraph, 160);
+    expect(view.state.doc.content.size).toBeGreaterThan(8000);
+
+    vi.useFakeTimers();
+
+    // 写入少量变更，大文档下 160ms 窗口不应触发同步。
+    await act(async () => {
+      view.dispatch(view.state.tr.insertText('新增', view.state.doc.content.size - 1));
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(300);
+    });
+    expect(onChange).not.toHaveBeenCalled();
+
+    // 在防抖到期前收到 Windows IME 预按键（Process / 229），应取消挂起的序列化任务。
+    await act(async () => {
+      fireEvent.keyDown(view.dom, { key: 'Process', keyCode: 229 });
+      vi.advanceTimersByTime(1000);
+    });
+    expect(onChange).not.toHaveBeenCalled();
+
+    // 再次触发非组字变更并等待大文档防抖及空闲调度窗口后，应完成一次同步。
+    await act(async () => {
+      view.dispatch(view.state.tr.insertText('再改', view.state.doc.content.size - 1));
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(900);
+    });
+    expect(onChange).toHaveBeenCalledTimes(1);
+
+    // 失焦时无论文档大小仍应立即同步最新内容。
+    await act(async () => {
+      view.dispatch(view.state.tr.insertText('收尾', view.state.doc.content.size - 1));
+    });
+    expect(onChange).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      fireEvent.blur(view.dom);
+    });
+    expect(onChange).toHaveBeenCalledTimes(2);
+    expect(onChange.mock.calls[1]?.[0]).toContain('收尾');
+  });
+
+  it('大文档单块空闲预隔离在大/小文档、IME 组字、快捷键及内外部失焦下表现正确', async () => {
+    const setCollapsedCaret = (targetNode: Node | null | undefined, offset = 0): void => {
+      expect(targetNode).toBeTruthy();
+      const range = document.createRange();
+      range.setStart(targetNode!, offset);
+      range.collapse(true);
+      const selection = window.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+    };
+
+    // 1. 小文档不触发空闲预隔离。
+    const { view: smallView } = await mountRuntime('第一段\n\n第二段', 160);
+    vi.useFakeTimers();
+    const activeElementSpy = vi.spyOn(document, 'activeElement', 'get');
+    activeElementSpy.mockReturnValue(smallView.dom);
+    setCollapsedCaret(smallView.dom.firstElementChild?.firstChild, 0);
+
+    fireEvent.focus(smallView.dom);
+    fireEvent.mouseUp(smallView.dom);
+    fireEvent.keyUp(smallView.dom, { key: 'a' });
+    await act(async () => {
+      vi.advanceTimersByTime(300);
+    });
+    expect(smallView.dom.classList.contains(IME_ISOLATION_CLASS_NAME)).toBe(false);
+
+    // 2. 大文档（>= 30 块）单块折叠光标触发 mouseup 后自动进入预隔离，且 IME 组字与 Shift 不退出隔离。
+    const largeMarkdown = Array.from({ length: 35 }, (_, index) => `第 ${index + 1} 段正文内容`).join('\n\n');
+    const { runtime, view } = await mountRuntime(largeMarkdown, 160);
+    expect(view.dom.childElementCount).toBeGreaterThanOrEqual(30);
+    activeElementSpy.mockReturnValue(view.dom);
+
+    const lastParagraph = view.dom.lastElementChild;
+    setCollapsedCaret(lastParagraph?.firstChild, 0);
+    fireEvent.mouseUp(view.dom);
+    await act(async () => {
+      vi.advanceTimersByTime(20);
+    });
+    expect(view.dom.classList.contains(IME_ISOLATION_CLASS_NAME)).toBe(true);
+
+    // 组字按键（Process/229）、compositionstart/end 及裸 Shift 均保持隔离态不断开。
+    fireEvent.keyDown(view.dom, { key: 'Process', keyCode: 229 });
+    setComposingState(view, true);
+    expect(view.dom.classList.contains(IME_ISOLATION_CLASS_NAME)).toBe(true);
+    setComposingState(view, false);
+    expect(view.dom.classList.contains(IME_ISOLATION_CLASS_NAME)).toBe(true);
+    fireEvent.keyDown(view.dom, { key: 'Shift' });
+    expect(view.dom.classList.contains(IME_ISOLATION_CLASS_NAME)).toBe(true);
+
+    // 3. 非 IME 按键与指针按下即时退出，并在松手后恢复预隔离；跨块选区与只读态不启用隔离。
+    fireEvent.keyDown(view.dom, { key: 'Enter' });
+    expect(view.dom.classList.contains(IME_ISOLATION_CLASS_NAME)).toBe(false);
+    fireEvent.keyUp(view.dom, { key: 'Enter' });
+    await act(async () => {
+      vi.advanceTimersByTime(20);
+    });
+    expect(view.dom.classList.contains(IME_ISOLATION_CLASS_NAME)).toBe(true);
+
+    fireEvent.keyDown(view.dom, { key: 'Backspace' });
+    expect(view.dom.classList.contains(IME_ISOLATION_CLASS_NAME)).toBe(false);
+    fireEvent.keyUp(view.dom, { key: 'Backspace' });
+    await act(async () => {
+      vi.advanceTimersByTime(20);
+    });
+    expect(view.dom.classList.contains(IME_ISOLATION_CLASS_NAME)).toBe(true);
+
+    fireEvent.keyDown(view.dom, { key: 'Escape' });
+    expect(view.dom.classList.contains(IME_ISOLATION_CLASS_NAME)).toBe(false);
+    fireEvent.keyUp(view.dom, { key: 'Escape' });
+    await act(async () => {
+      vi.advanceTimersByTime(20);
+    });
+    expect(view.dom.classList.contains(IME_ISOLATION_CLASS_NAME)).toBe(true);
+
+    fireEvent.pointerDown(view.dom);
+    expect(view.dom.classList.contains(IME_ISOLATION_CLASS_NAME)).toBe(false);
+    fireEvent.mouseUp(view.dom);
+    await act(async () => {
+      vi.advanceTimersByTime(20);
+    });
+    expect(view.dom.classList.contains(IME_ISOLATION_CLASS_NAME)).toBe(true);
+
+    // 4. 内部 blur（relatedTarget 仍在 view.dom 内）保持隔离；外部 blur（含子块失焦）彻底退出。
+    fireEvent.blur(view.dom, { relatedTarget: view.dom.firstElementChild });
+    expect(view.dom.classList.contains(IME_ISOLATION_CLASS_NAME)).toBe(true);
+
+    fireEvent.blur(lastParagraph!, { relatedTarget: null });
+    expect(view.dom.classList.contains(IME_ISOLATION_CLASS_NAME)).toBe(false);
+
+    // 跨块非折叠选区不进入隔离。
+    const firstText = view.dom.children[0]?.firstChild;
+    const secondText = view.dom.children[1]?.firstChild;
+    expect(firstText).toBeTruthy();
+    expect(secondText).toBeTruthy();
+    const crossRange = document.createRange();
+    crossRange.setStart(firstText!, 0);
+    crossRange.setEnd(secondText!, 1);
+    const selection = window.getSelection();
+    selection?.removeAllRanges();
+    selection?.addRange(crossRange);
+
+    fireEvent.mouseUp(view.dom);
+    await act(async () => {
+      vi.advanceTimersByTime(20);
+    });
+    expect(view.dom.classList.contains(IME_ISOLATION_CLASS_NAME)).toBe(false);
+
+    // 切回单块折叠选区后处于只读态时，同样不应进入隔离。
+    setCollapsedCaret(firstText, 0);
+    act(() => {
+      runtime.setReadOnly?.(true);
+    });
+    fireEvent.mouseUp(view.dom);
+    await act(async () => {
+      vi.advanceTimersByTime(20);
+    });
+    expect(view.dom.classList.contains(IME_ISOLATION_CLASS_NAME)).toBe(false);
   });
 });
