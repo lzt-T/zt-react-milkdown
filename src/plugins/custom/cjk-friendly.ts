@@ -3,8 +3,9 @@ import type { MilkdownPlugin } from '@milkdown/ctx';
 import type { RemarkPluginRaw } from '@milkdown/transformer';
 import { $remark } from '@milkdown/utils';
 import type { ConstructName, Handle, Options as ToMarkdownOptions } from 'mdast-util-to-markdown';
-import remarkCjkFriendly from 'remark-cjk-friendly';
-import remarkCjkFriendlyGfmStrikethrough from 'remark-cjk-friendly-gfm-strikethrough';
+// 仅启用 parseOnly 扩展：强调序列化已由 configureInlineEmphasisSerialization 接管，避免双向包覆写 containerPhrasing 后在空表格单元格等 children 为 undefined 的节点上抛错。
+import remarkCjkFriendly from 'remark-cjk-friendly/parseOnly';
+import remarkCjkFriendlyGfmStrikethrough from 'remark-cjk-friendly-gfm-strikethrough/parseOnly';
 
 /**
  * 匹配段落行首与行尾的水平空白，将其移出强调定界符外侧以避免序列化出无效语法。

@@ -333,8 +333,9 @@ export const createMilkdownEditorRuntime = (
       return;
     }
 
-    lastSerializedDoc = view.state.doc;
+    // 先完成序列化再记录文档快照，避免异常中断时永久跳过后续变更同步。
     const nextMarkdown = activeSerializer(view.state.doc);
+    lastSerializedDoc = view.state.doc;
     if (nextMarkdown === lastEmittedMarkdown) {
       return;
     }

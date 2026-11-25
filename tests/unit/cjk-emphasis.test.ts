@@ -157,4 +157,32 @@ describe('cjk-emphasis', () => {
     expect(serialized.trim()).toBe('前   后');
     expect(serialized).not.toContain('**');
   });
+
+  it('包含空单元格与 CJK 强调的表格编辑后可正常序列化并触发 onChange', async () => {
+    const sourceMarkdown = [
+      '正文段落',
+      '',
+      '| 列1 | 列2 |',
+      '| --- | --- |',
+      '| **中文（内容）**文本 |  |',
+      '|  | ~~（已废弃）~~说明 |'
+    ].join('\n');
+
+    const { view, onChange } = await mountRuntime(sourceMarkdown);
+
+    expect(collectMarkedTexts(view, 'strong')).toEqual(['中文（内容）']);
+    expect(collectMarkedTexts(view, 'strike_through')).toEqual(['（已废弃）']);
+
+    // 在首段末尾插入中文文本，模拟富文本编辑触发序列化同步。
+    const firstParagraphEnd = 1 + view.state.doc.firstChild!.content.size;
+    await act(async () => {
+      view.dispatch(view.state.tr.insertText('新增中文', firstParagraphEnd));
+    });
+
+    expect(onChange).toHaveBeenCalled();
+    const serialized = onChange.mock.calls.at(-1)?.[0] as string;
+    expect(serialized).toContain('正文段落新增中文');
+    expect(serialized).toContain('**中文（内容）**文本');
+    expect(serialized).toContain('~~（已废弃）~~说明');
+  });
 });
