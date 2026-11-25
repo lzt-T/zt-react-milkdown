@@ -133,7 +133,7 @@ export const createSlashMenuPlugin = (
      * 处理菜单可见态下的键盘导航。
      */
     const handleVisibleMenuKeyDown = (event: KeyboardEvent): boolean => {
-      if (!NAVIGATION_KEYS.has(event.key) || !menuInteractable) {
+      if (event.isComposing || !NAVIGATION_KEYS.has(event.key) || !menuInteractable) {
         return false;
       }
       if (event.key === 'ArrowDown') {
@@ -357,6 +357,10 @@ export const createSlashMenuPlugin = (
         view: () => ({
           update: (view: any) => {
             currentView = view;
+            // 组字期间跳过文本扫描与 coordsAtPos 布局测量，避免卡顿。
+            if (view?.composing) {
+              return;
+            }
             syncMenuState(view);
           },
           destroy: () => {

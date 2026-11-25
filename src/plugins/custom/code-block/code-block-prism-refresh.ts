@@ -1,7 +1,7 @@
 import type { MilkdownPlugin } from '@milkdown/ctx';
 import { prismConfig } from '@milkdown/plugin-prism';
 import type { Node as ProseNode } from '@milkdown/prose/model';
-import { Plugin, PluginKey } from '@milkdown/prose/state';
+import { Plugin, PluginKey, type Transaction } from '@milkdown/prose/state';
 import { Decoration, DecorationSet } from '@milkdown/prose/view';
 import { $prose } from '@milkdown/utils';
 import type { Refractor, RefractorElement, Text } from 'refractor/core';
@@ -128,6 +128,97 @@ const areCodeBlockNodesUnchanged = (
 };
 
 /**
+ * 判断指定文档位置是否位于代码块节点内部。
+ */
+const hasCodeBlockAncestor = (doc: ProseNode, pos: number): boolean => {
+  const clampedPos = Math.max(0, Math.min(doc.content.size, pos));
+  const resolved = doc.resolve(clampedPos);
+  for (let depth = resolved.depth; depth >= 0; depth -= 1) {
+    if (resolved.node(depth).type.name === CODE_BLOCK_NODE_NAME) {
+      return true;
+    }
+  }
+
+  return false;
+};
+
+/**
+ * 基于事务步长区间判断本次文档变更是否触及任何代码块，普通正文编辑直接 O(1)/O(blocks) 跳过全文遍历。
+ */
+const doesTransactionTouchCodeBlocks = (
+  transaction: Transaction,
+  previousBlocks: readonly CodeBlockSnapshot[],
+  newDoc: ProseNode
+): boolean => {
+  for (let stepIndex = 0; stepIndex < transaction.steps.length; stepIndex += 1) {
+    const step = transaction.steps[stepIndex];
+    const stepMap = transaction.mapping.maps[stepIndex];
+    const ranges: Array<[number, number, number, number]> = [];
+    stepMap.forEach((oldStart, oldEnd, newStart, newEnd) => {
+      ranges.push([oldStart, oldEnd, newStart, newEnd]);
+    });
+
+    if (ranges.length === 0) {
+      // 纯 Mark 变更不会影响代码块纯文本或节点属性；AttrStep 等空区间变更则保守触发增量检查。
+      if ('mark' in step) {
+        continue;
+      }
+      return true;
+    }
+
+    const oldMapping = stepIndex > 0 ? transaction.mapping.slice(0, stepIndex).invert() : null;
+    const newMapping =
+      stepIndex + 1 < transaction.mapping.maps.length
+        ? transaction.mapping.slice(stepIndex + 1)
+        : null;
+
+    for (const [oldStart, oldEnd, newStart, newEnd] of ranges) {
+      const oldFrom = oldMapping ? oldMapping.map(oldStart, -1) : oldStart;
+      const oldTo = oldMapping ? oldMapping.map(oldEnd, 1) : oldEnd;
+
+      for (const block of previousBlocks) {
+        if (block.pos > oldTo) {
+          break;
+        }
+        if (oldFrom <= block.pos + block.node.nodeSize && oldTo >= block.pos) {
+          return true;
+        }
+      }
+
+      const newFrom = Math.max(
+        0,
+        Math.min(newDoc.content.size, newMapping ? newMapping.map(newStart, -1) : newStart)
+      );
+      const newTo = Math.max(
+        newFrom,
+        Math.min(newDoc.content.size, newMapping ? newMapping.map(newEnd, 1) : newEnd)
+      );
+
+      if (newFrom === newTo) {
+        if (hasCodeBlockAncestor(newDoc, newFrom)) {
+          return true;
+        }
+        continue;
+      }
+
+      let touched = false;
+      newDoc.nodesBetween(newFrom, newTo, (node) => {
+        if (node.type.name === CODE_BLOCK_NODE_NAME) {
+          touched = true;
+          return false;
+        }
+        return !touched;
+      });
+      if (touched) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+};
+
+/**
  * 增量更新代码块语法高亮插件，仅重算发生变更的单个代码块。
  */
 export const codeBlockPrismPlugin: MilkdownPlugin = $prose((ctx) => {
@@ -155,6 +246,20 @@ export const codeBlockPrismPlugin: MilkdownPlugin = $prose((ctx) => {
           return {
             decorations: pluginState.decorations.map(transaction.mapping, transaction.doc),
             blocks: pluginState.blocks
+          };
+        }
+
+        if (!doesTransactionTouchCodeBlocks(transaction, pluginState.blocks, newState.doc)) {
+          const mappedBlocks =
+            pluginState.blocks.length === 0
+              ? pluginState.blocks
+              : pluginState.blocks.map((block) => ({
+                  pos: transaction.mapping.map(block.pos, 1),
+                  node: block.node
+                }));
+          return {
+            decorations: pluginState.decorations.map(transaction.mapping, transaction.doc),
+            blocks: mappedBlocks
           };
         }
 

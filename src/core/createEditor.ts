@@ -22,7 +22,6 @@ import {
 import { clipboard } from '@milkdown/plugin-clipboard';
 import { history } from '@milkdown/plugin-history';
 import { indent, indentConfig } from '@milkdown/plugin-indent';
-import { listener } from '@milkdown/plugin-listener';
 import { commonmark } from '@milkdown/preset-commonmark';
 import { gfm } from '@milkdown/preset-gfm';
 import { prismConfig } from '@milkdown/plugin-prism';
@@ -90,6 +89,10 @@ import {
   createTaskListTransformKeymap,
   configureBlockTransformShortcuts
 } from '@/plugins/custom/block-transform';
+import {
+  cjkFriendly,
+  configureInlineEmphasisSerialization
+} from '@/plugins/custom/cjk-friendly';
 
 // 编辑器只读态原地切换事务元数据键。
 const READONLY_CHANGE_META = 'ZT_MD_READONLY_CHANGE';
@@ -98,6 +101,8 @@ const MARKDOWN_SYNC_PLUGIN_KEY = new PluginKey('ZT_MD_MARKDOWN_SYNC');
 // 需要同步 data-editable 的自定义节点选择器。
 const EDITABLE_NODE_VIEW_SELECTOR =
   '[data-type="code_block"], [data-type="image"], [data-type="math_block"], [data-type="math_inline"], [data-type="frontmatter"]';
+// IME 组字结束后延迟兜底同步时长（毫秒），等待浏览器完成选词事务落库。
+const COMPOSITION_END_SYNC_DELAY_MS = 30;
 
 /**
  * 定义 Milkdown 原生编辑器实例类型。
@@ -288,11 +293,31 @@ export const createMilkdownEditorRuntime = (
   let activeSerializer: ((doc: ProseNode) => string) | null = null;
   /** 防抖序列化调度器。 */
   let debouncedSerialize: ReturnType<typeof debounce<() => void>> | null = null;
+  /** 记录组字期间延后的文档同步需求，确保组字结束后补齐同步。 */
+  let hasPendingCompositionSync = false;
+  /** compositionend 兜底定时器。 */
+  let compositionEndTimer: ReturnType<typeof setTimeout> | null = null;
+
+  /**
+   * 清理挂起的组字结束兜底定时器。
+   */
+  const clearCompositionEndTimer = (): void => {
+    if (compositionEndTimer !== null) {
+      clearTimeout(compositionEndTimer);
+      compositionEndTimer = null;
+    }
+  };
 
   /**
    * 立即执行一次序列化并在文本变更时通知外部。
    */
   const flushMarkdownChange = (view: EditorView): void => {
+    if (view.composing) {
+      hasPendingCompositionSync = true;
+      return;
+    }
+
+    hasPendingCompositionSync = false;
     if (view.state.doc === lastSerializedDoc) {
       return;
     }
@@ -316,6 +341,18 @@ export const createMilkdownEditorRuntime = (
 
     lastEmittedMarkdown = nextMarkdown;
     options.onChange(nextMarkdown);
+  };
+
+  /**
+   * 按防抖策略调度一次 Markdown 序列化同步。
+   */
+  const scheduleMarkdownSync = (view: EditorView): void => {
+    if (currentDebounceMs <= 0 || !debouncedSerialize) {
+      flushMarkdownChange(view);
+      return;
+    }
+
+    debouncedSerialize();
   };
 
   /**
@@ -357,6 +394,42 @@ export const createMilkdownEditorRuntime = (
   const markdownSyncPlugin = $prose(() => {
     return new Plugin({
       key: MARKDOWN_SYNC_PLUGIN_KEY,
+      props: {
+        handleDOMEvents: {
+          compositionstart: () => {
+            clearCompositionEndTimer();
+            // 开始下一轮拼音输入时取消尚未落库的防抖序列化，避免在组字中途卡顿。
+            debouncedSerialize?.cancel();
+            return false;
+          },
+          compositionend: () => {
+            clearCompositionEndTimer();
+            compositionEndTimer = setTimeout(() => {
+              compositionEndTimer = null;
+              if (
+                activeView &&
+                !activeView.composing &&
+                !isApplyingExternalMarkdown &&
+                (hasPendingCompositionSync || activeView.state.doc !== lastSerializedDoc)
+              ) {
+                hasPendingCompositionSync = false;
+                scheduleMarkdownSync(activeView);
+              }
+            }, COMPOSITION_END_SYNC_DELAY_MS);
+            return false;
+          },
+          blur: (view) => {
+            if (view.composing || isApplyingExternalMarkdown) {
+              return false;
+            }
+
+            clearCompositionEndTimer();
+            debouncedSerialize?.cancel();
+            flushMarkdownChange(view);
+            return false;
+          }
+        }
+      },
       view: (initialView) => {
         activeView = initialView;
         lastSerializedDoc = initialView.state.doc;
@@ -367,22 +440,35 @@ export const createMilkdownEditorRuntime = (
             if (isApplyingExternalMarkdown) {
               lastSerializedDoc = view.state.doc;
               lastEmittedMarkdown = externalMarkdownTarget;
+              hasPendingCompositionSync = false;
+              clearCompositionEndTimer();
               debouncedSerialize?.cancel();
               return;
             }
 
-            if (previousState.doc === view.state.doc) {
+            if (view.composing) {
+              if (previousState.doc !== view.state.doc || view.state.doc !== lastSerializedDoc) {
+                hasPendingCompositionSync = true;
+              }
+              clearCompositionEndTimer();
+              debouncedSerialize?.cancel();
               return;
             }
 
-            if (currentDebounceMs <= 0 || !debouncedSerialize) {
-              flushMarkdownChange(view);
+            const docChanged = previousState.doc !== view.state.doc;
+            const shouldSyncAfterComposition =
+              hasPendingCompositionSync && view.state.doc !== lastSerializedDoc;
+            if (!docChanged && !shouldSyncAfterComposition) {
               return;
             }
 
-            debouncedSerialize();
+            hasPendingCompositionSync = false;
+            clearCompositionEndTimer();
+            scheduleMarkdownSync(view);
           },
           destroy: () => {
+            clearCompositionEndTimer();
+            hasPendingCompositionSync = false;
             debouncedSerialize?.cancel();
             activeSerializer = null;
             activeView = null;
@@ -414,12 +500,12 @@ export const createMilkdownEditorRuntime = (
   const taskListTransformKeymap = createTaskListTransformKeymap(options.shortcutMode);
   /** 预设插件导出集合。 */
   const presetPluginExports: PresetPluginExports = {
-    listener,
     commonmark,
     frontmatter,
     taskListTransformKeymap,
     inlineCodeBoundaryNavigation: inlineCodeBoundaryNavigationPlugin,
     gfm,
+    cjkFriendly,
     history,
     editorSearch: editorSearchPlugins,
     codeBlockPrism: [codeBlockPrismPlugin, prismConfig],
@@ -466,6 +552,7 @@ export const createMilkdownEditorRuntime = (
     configureCodeBlockLanguageSchema(ctx);
     ctx.set(prismConfig.key, { configureRefractor: configureCodeBlockHighlighter });
     configureImageResizableSchema(ctx, options.imageUpload?.allowedProtocols);
+    configureInlineEmphasisSerialization(ctx);
     ctx.set(rootCtx, options.root);
     ctx.set(defaultValueCtx, options.markdown);
     ctx.set(editorViewOptionsCtx, {
@@ -663,6 +750,8 @@ export const createMilkdownEditorRuntime = (
     focusEditor,
     searchController,
     setMarkdown: (markdown: string): void => {
+      clearCompositionEndTimer();
+      hasPendingCompositionSync = false;
       debouncedSerialize?.cancel();
       externalMarkdownTarget = markdown;
       isApplyingExternalMarkdown = true;

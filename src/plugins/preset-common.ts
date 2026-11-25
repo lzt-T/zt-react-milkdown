@@ -5,7 +5,7 @@ import type { EditorPluginDescriptor } from '../types/plugin';
  */
 export interface PresetPluginExports {
   /** listener 插件实例。 */
-  listener: unknown;
+  listener?: unknown;
   /** commonmark 插件实例。 */
   commonmark: unknown;
   /** frontmatter 插件实例（可为单个插件或插件数组）。 */
@@ -16,6 +16,8 @@ export interface PresetPluginExports {
   inlineCodeBoundaryNavigation: unknown;
   /** gfm 插件实例。 */
   gfm: unknown;
+  /** CJK 标点友好解析插件实例（需位于 gfm 之后注册）。 */
+  cjkFriendly: unknown | unknown[];
   /** history 插件实例。 */
   history: unknown;
   /** 编辑器搜索插件实例。 */
@@ -106,7 +108,9 @@ export const resolvePresetPlugins = (
   /** 是否包含运行时插件。 */
   const includeRuntime = options.includeRuntime ?? true;
 
-  appendPluginDescriptors(descriptors, 'listener', pluginExports.listener);
+  if (pluginExports.listener) {
+    appendPluginDescriptors(descriptors, 'listener', pluginExports.listener);
+  }
   appendPluginDescriptors(descriptors, 'commonmark', pluginExports.commonmark);
   appendPluginDescriptors(descriptors, 'frontmatter', pluginExports.frontmatter);
   appendPluginDescriptors(descriptors, 'task-list-transform-keymap', pluginExports.taskListTransformKeymap);
@@ -116,6 +120,7 @@ export const resolvePresetPlugins = (
     pluginExports.inlineCodeBoundaryNavigation
   );
   appendPluginDescriptors(descriptors, 'gfm', pluginExports.gfm);
+  appendPluginDescriptors(descriptors, 'cjk-friendly', pluginExports.cjkFriendly);
   appendPluginDescriptors(descriptors, 'history', pluginExports.history);
   appendPluginDescriptors(descriptors, 'editor-search', pluginExports.editorSearch);
   appendPluginDescriptors(descriptors, 'code-block-prism', pluginExports.codeBlockPrism);

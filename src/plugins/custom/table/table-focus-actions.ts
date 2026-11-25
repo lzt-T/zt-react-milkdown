@@ -510,6 +510,10 @@ class TableFocusActionsView {
    */
   update(view: EditorView): void {
     this.view = view;
+    // 组字期间跳过表格聚焦测量与悬浮栏重定位。
+    if (view.composing) {
+      return;
+    }
 
     if (!this.editorWrapper || !isEditorViewEditable(view) || hasNonEmptyTextSelection(view)) {
       this.detach();

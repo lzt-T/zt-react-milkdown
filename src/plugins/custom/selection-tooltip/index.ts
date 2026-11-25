@@ -298,6 +298,12 @@ const createSelectionTooltipPluginView = (
   return {
     update: (nextView, previousState) => {
       currentView = nextView as EditorView;
+      if (currentView.composing) {
+        if (tooltip.parentElement) {
+          hideSelectionTooltip();
+        }
+        return;
+      }
       if (currentView.state.selection.empty) {
         setLinkPopoverOpen(false);
         setBlockTransformPopoverOpen(false);

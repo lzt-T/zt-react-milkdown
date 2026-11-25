@@ -695,6 +695,11 @@ class CodeBlockLanguagePickerView {
    */
   update(view: EditorView): void {
     this.view = view;
+    // 组字期间跳过代码块语言选择器测量与重定位。
+    if (view.composing) {
+      return;
+    }
+
     if (!isEditorViewEditable(view) || !this.editorWrapper) {
       this.detach();
       return;
