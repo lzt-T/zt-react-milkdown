@@ -11,6 +11,7 @@ import {
 import type { EditorI18nMessages } from '../../../types/editor';
 import { Button } from '../../../components/ui/button';
 import { FloatingPortalPanel, useFloatingPortalPanel } from '../floating-portal-panel';
+import { resolveInsertTableRowBelowShortcutLabel } from '@/plugins/custom/table/table-row-shortcuts';
 
 /**
  * 表格更多菜单项配置。
@@ -20,6 +21,8 @@ interface TableMoreActionItem {
   key: string;
   /** 展示文案。 */
   label: string;
+  /** 右侧快捷键提示文案。 */
+  shortcut?: string;
   /** 左侧图标组件。 */
   icon: LucideIcon;
   /** 是否禁用。 */
@@ -75,7 +78,7 @@ export const TableMoreActions = (props: TableMoreActionsProps): ReactElement => 
     editorWrapper: props.collisionBoundary,
     horizontalAlign: 'start',
     offsetY: 10,
-    fallbackWidth: 156,
+    fallbackWidth: 188,
     fallbackHeight: 240,
     onOutside: () => setOpen(false)
   });
@@ -120,6 +123,7 @@ export const TableMoreActions = (props: TableMoreActionsProps): ReactElement => 
     {
       key: 'insert-row-below',
       label: props.messages.tableInsertRowBelowLabel,
+      shortcut: resolveInsertTableRowBelowShortcutLabel(),
       icon: ArrowDownToLine,
       onAction: props.onInsertRowBelow
     },
@@ -183,7 +187,10 @@ export const TableMoreActions = (props: TableMoreActionsProps): ReactElement => 
         className: 'zt-md-table-action-menu-item-icon',
         'aria-hidden': 'true'
       }),
-      createElement('span', { className: 'zt-md-table-action-menu-item-label' }, item.label)
+      createElement('span', { className: 'zt-md-table-action-menu-item-label' }, item.label),
+      item.shortcut
+        ? createElement('kbd', { className: 'zt-md-table-action-menu-item-shortcut' }, item.shortcut)
+        : null
     );
   };
 

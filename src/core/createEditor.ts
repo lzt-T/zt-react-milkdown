@@ -78,9 +78,11 @@ import {
   createSlashMenuPlugin
 } from '../plugins/custom/slash-menu';
 import {
+  configureTableShortcuts,
   createTableFocusActionsPlugin,
   createTableScrollNodeView,
-  tableArrowEntryPlugin
+  tableArrowEntryPlugin,
+  tableRowShortcutsPlugin
 } from '@/plugins/custom/table';
 import { syncListOrderIncrementalPlugin, taskListToggle } from '@/plugins/custom/list';
 import { tabSpaceIndentPlugin } from '../plugins/custom/indent';
@@ -355,6 +357,7 @@ export const createMilkdownEditorRuntime = (
     imageDeleteSelection: imageDeleteSelectionPlugin,
     imagePaste: imagePastePlugin,
     tableArrowEntry: tableArrowEntryPlugin,
+    tableRowShortcuts: tableRowShortcutsPlugin,
     blockBoundaryNavigation: blockBoundaryNavigationPlugin,
     headingBackspaceEmptyParagraph: headingBackspaceEmptyParagraphPlugin,
     headingFocusIndicator: headingFocusIndicatorPlugin,
@@ -389,6 +392,7 @@ export const createMilkdownEditorRuntime = (
   const editor = Editor.make();
   editor.config((ctx: any) => {
     configureBlockTransformShortcuts(ctx, options.shortcutMode);
+    configureTableShortcuts(ctx);
     configureCodeBlockLanguageSchema(ctx);
     ctx.set(prismConfig.key, { configureRefractor: configureCodeBlockHighlighter });
     configureImageResizableSchema(ctx, options.imageUpload?.allowedProtocols);

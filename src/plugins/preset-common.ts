@@ -36,6 +36,8 @@ export interface PresetPluginExports {
   imagePaste: unknown;
   /** 表格方向键进入插件实例。 */
   tableArrowEntry: unknown;
+  /** 表格行快捷键插件实例。 */
+  tableRowShortcuts: unknown;
   /** 特殊内容块边界导航插件实例。 */
   blockBoundaryNavigation: unknown;
   /** 标题前空白段落 Backspace 删除插件实例。 */
@@ -136,6 +138,7 @@ export const resolvePresetPlugins = (
   appendPluginDescriptors(descriptors, 'image-delete-selection', pluginExports.imageDeleteSelection);
   appendPluginDescriptors(descriptors, 'image-paste', pluginExports.imagePaste);
   appendPluginDescriptors(descriptors, 'table-arrow-entry', pluginExports.tableArrowEntry);
+  appendPluginDescriptors(descriptors, 'table-row-shortcuts', pluginExports.tableRowShortcuts);
   appendPluginDescriptors(descriptors, 'block-boundary-navigation', pluginExports.blockBoundaryNavigation);
   appendPluginDescriptors(
     descriptors,

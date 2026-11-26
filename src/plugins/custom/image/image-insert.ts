@@ -27,57 +27,90 @@ const createImageNode = (view: EditorView, payload: InsertImagePayload): ProseNo
   return imageType?.create(payload) ?? null;
 };
 
-/** 判断原始选区之后是否还存在真实后续内容或后续块。 */
-const hasContentAfterSelection = (selection: Selection): boolean => {
-  // 当前光标所在父块。
-  const parentNode = selection.$to.parent;
-  // 当前选区结束后在父块内是否仍有文本内容。
-  const hasTextAfterInParent = selection.$to.parentOffset < parentNode.content.size;
-  if (hasTextAfterInParent) {
-    return true;
+/** 通过事务映射范围定位刚插入的图片节点位置。 */
+const resolveInsertedImagePosition = (transaction: Transaction, imageNode: ProseNode): number | null => {
+  // 事务变更映射在当前文档中的边界起点。
+  let rangeStart = transaction.doc.content.size;
+  // 事务变更映射在当前文档中的边界终点。
+  let rangeEnd = 0;
+
+  for (let index = 0; index < transaction.mapping.maps.length; index += 1) {
+    // 当前步的位置映射。
+    const stepMap = transaction.mapping.maps[index];
+    // 后续步的组合映射，用于将当前步结果映射到最终文档。
+    const remainingMapping = transaction.mapping.slice(index + 1);
+    stepMap.forEach((_oldStart, _oldEnd, newStart, newEnd) => {
+      rangeStart = Math.min(rangeStart, remainingMapping.map(newStart, -1));
+      rangeEnd = Math.max(rangeEnd, remainingMapping.map(newEnd, 1));
+    });
   }
 
-  if (selection.$to.depth < 1) {
-    return false;
+  if (rangeStart > rangeEnd) {
+    return null;
   }
 
-  // 当前顶层块容器。
-  const blockContainer = selection.$to.node(selection.$to.depth - 1);
-  // 当前块在父容器中的索引。
-  const currentBlockIndex = selection.$to.index(selection.$to.depth - 1);
-  return currentBlockIndex < blockContainer.childCount - 1;
-};
+  // 限制在文档有效范围内的遍历起止位置。
+  const clampedStart = Math.max(0, rangeStart);
+  const clampedEnd = Math.min(transaction.doc.content.size, rangeEnd);
+  // 精确匹配当前图片节点实例的位置。
+  let exactPosition: number | null = null;
+  // 变更范围内首个图片节点的兜底位置。
+  let fallbackPosition: number | null = null;
 
-/** 解析事务文档中的真实图片节点位置。 */
-const resolveImageNodePosition = (doc: ProseNode, candidatePosition: number): number | null => {
-  // 候选位置集合，优先使用计算出的图片起点，再尝试相邻位置兜底。
-  const positionCandidates = [candidatePosition, candidatePosition - 1, candidatePosition + 1];
-
-  for (const position of positionCandidates) {
-    if (position < 0 || position > doc.content.size) {
-      continue;
+  transaction.doc.nodesBetween(clampedStart, clampedEnd, (node, position) => {
+    if (node === imageNode) {
+      exactPosition = position;
+      return false;
     }
 
-    // 当前候选位置上的节点。
-    const node = doc.nodeAt(position);
-    if (node?.type.name === 'image') {
-      return position;
+    if (fallbackPosition === null && node.type === imageNode.type) {
+      fallbackPosition = position;
+    }
+
+    return exactPosition === null;
+  });
+
+  return exactPosition ?? fallbackPosition;
+};
+
+/** 判断文档指定位置之后是否仍存在后续内容或后续块。 */
+const hasContentAfterPosition = (doc: ProseNode, position: number): boolean => {
+  // 图片结束位置在文档中的解析结果。
+  const resolvedPosition = doc.resolve(position);
+
+  for (let depth = resolvedPosition.depth; depth >= 0; depth -= 1) {
+    // 若当前层光标索引小于子节点数，说明后方仍有同级或外层后续节点。
+    if (resolvedPosition.index(depth) < resolvedPosition.node(depth).childCount) {
+      return true;
     }
   }
 
-  return null;
+  return false;
 };
 
-/** 基于真实图片节点位置创建稳定的节点选区。 */
-const createImageNodeSelection = (
+/** 在文档末尾图片后补充空段落，便于用户继续在下方输入。 */
+const insertTrailingParagraphIfNeeded = (
+  view: EditorView,
   transaction: Transaction,
-  imageNodeSize: number
-): NodeSelection | null => {
-  // replaceSelectionWith 后的选区通常位于图片节点后方。
-  const candidateImagePosition = transaction.selection.from - imageNodeSize;
-  // 事务文档中的真实图片起始位置。
-  const imagePosition = resolveImageNodePosition(transaction.doc, candidateImagePosition);
-  return imagePosition === null ? null : NodeSelection.create(transaction.doc, imagePosition);
+  imageAfterPosition: number
+): void => {
+  if (hasContentAfterPosition(transaction.doc, imageAfterPosition)) {
+    return;
+  }
+
+  // 图片后方承接空段落。
+  const trailingParagraph = createParagraphNode(view);
+  if (!trailingParagraph) {
+    return;
+  }
+
+  // 校验父容器在该位置是否允许直接插入段落节点。
+  const resolvedAfter = transaction.doc.resolve(imageAfterPosition);
+  if (!resolvedAfter.parent.canReplaceWith(resolvedAfter.index(), resolvedAfter.index(), trailingParagraph.type)) {
+    return;
+  }
+
+  transaction.insert(imageAfterPosition, trailingParagraph);
 };
 
 /** 在指定选区插入图片节点。 */
@@ -92,27 +125,24 @@ export const insertImageNode = (
     return false;
   }
 
-  // 插入前是否存在真实后续内容。
-  const shouldKeepFollowingContent = hasContentAfterSelection(selection);
   // 图片插入事务。
   const transaction = view.state.tr.setSelection(selection).replaceSelectionWith(imageNode);
-  // 图片后方位置。
-  const imageAfterPosition = transaction.selection.to;
-  if (!shouldKeepFollowingContent) {
-    // 图片后方承接空段落。
-    const trailingParagraph = createParagraphNode(view);
-    if (trailingParagraph) {
-      transaction.insert(imageAfterPosition, trailingParagraph);
-    }
-  }
-
-  // 当前图片节点选区。
-  const imageSelection = createImageNodeSelection(transaction, imageNode.nodeSize);
-  if (!imageSelection) {
+  // 事务文档中的真实图片起始位置。
+  const imagePosition = resolveInsertedImagePosition(transaction, imageNode);
+  if (imagePosition === null) {
     return false;
   }
 
-  transaction.setSelection(imageSelection).scrollIntoView();
+  // imageAfterPosition 严格大于 imagePosition，后方插段落不会偏移图片起点。
+  insertTrailingParagraphIfNeeded(view, transaction, imagePosition + imageNode.nodeSize);
+
+  // 当前已插入的图片节点实例。
+  const insertedNode = transaction.doc.nodeAt(imagePosition);
+  if (insertedNode && NodeSelection.isSelectable(insertedNode)) {
+    transaction.setSelection(NodeSelection.create(transaction.doc, imagePosition));
+  }
+
+  transaction.scrollIntoView();
   view.dispatch(transaction);
   return true;
 };

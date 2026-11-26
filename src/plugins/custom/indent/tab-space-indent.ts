@@ -1,6 +1,7 @@
 import { Plugin, PluginKey, TextSelection } from '@milkdown/prose/state';
 import type { EditorState } from '@milkdown/prose/state';
 import { liftListItem, sinkListItem } from '@milkdown/prose/schema-list';
+import { isInTable } from '@milkdown/prose/tables';
 import type { NodeType } from '@milkdown/prose/model';
 import type { EditorView } from '@milkdown/prose/view';
 import { $prose } from '@milkdown/utils';
@@ -134,6 +135,11 @@ export const tabSpaceIndentPlugin = $prose(() => {
         }
 
         if (event.altKey || event.ctrlKey || event.metaKey) {
+          return false;
+        }
+
+        // 表格内交由表格切格与追加行快捷键处理，不插入空格缩进。
+        if (isInTable(editorView.state)) {
           return false;
         }
 

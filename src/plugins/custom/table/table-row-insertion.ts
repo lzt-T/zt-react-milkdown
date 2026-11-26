@@ -1,4 +1,4 @@
-import { TextSelection } from '@milkdown/prose/state';
+import { TextSelection, type Transaction } from '@milkdown/prose/state';
 import type { EditorView } from '@milkdown/prose/view';
 import { TableMap, addColumnAfter, addColumnBefore, addRowAfter, addRowBefore, deleteColumn, deleteRow } from '@milkdown/prose/tables';
 import type { FocusedTable } from './table-selection';
@@ -54,6 +54,52 @@ const runTableCommand = (
 };
 
 /**
+ * 将事务选区定位到指定行的第一列单元格。
+ */
+const moveSelectionToRowFirstCell = (
+  transaction: Transaction,
+  tableStart: number,
+  targetRowIndex: number
+): void => {
+  // 映射插入行后的表格起始位置与节点实例。
+  const nextTableStart = transaction.mapping.map(tableStart, -1);
+  const updatedTable = transaction.doc.nodeAt(nextTableStart);
+  if (!updatedTable) {
+    return;
+  }
+
+  // 新行第一列文本起点位置。
+  const targetPosition = resolveCellTextPosition(updatedTable, nextTableStart, targetRowIndex, 0);
+  if (targetPosition === null) {
+    return;
+  }
+
+  transaction.setSelection(TextSelection.near(transaction.doc.resolve(targetPosition), 1));
+};
+
+/**
+ * 在当前聚焦行下方插入一行，并将光标定位到新行第一列。
+ */
+export const insertTableRowBelow = (view: EditorView, focusedTable: FocusedTable): boolean => {
+  if (focusedTable.rowIndex < 0 || focusedTable.columnIndex < 0) {
+    return false;
+  }
+
+  // 直接复用当前视图状态执行插入，避免额外选区事务污染撤销历史。
+  const success = addRowAfter(view.state, (transaction) => {
+    moveSelectionToRowFirstCell(transaction, focusedTable.tableStart, focusedTable.rowIndex + 1);
+    transaction.scrollIntoView();
+    view.dispatch(transaction);
+  });
+  if (!success) {
+    return false;
+  }
+
+  view.focus();
+  return true;
+};
+
+/**
  * 在目标行上下插入一行。
  */
 export const insertTableRow = (
@@ -65,11 +111,15 @@ export const insertTableRow = (
     return false;
   }
 
+  if (direction === 'below') {
+    return insertTableRowBelow(view, focusedTable);
+  }
+
   if (!focusTableCell(view, focusedTable, focusedTable.rowIndex, focusedTable.columnIndex)) {
     return false;
   }
 
-  return runTableCommand(view, direction === 'above' ? addRowBefore : addRowAfter);
+  return runTableCommand(view, addRowBefore);
 };
 
 /**

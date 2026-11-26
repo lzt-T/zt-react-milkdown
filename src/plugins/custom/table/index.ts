@@ -8,6 +8,8 @@ export * from './table-focus-actions';
 export * from './table-more-actions';
 /** 表格行列插入与删除动作导出。 */
 export * from './table-row-insertion';
+/** 表格行快捷键配置与插件导出。 */
+export * from './table-row-shortcuts';
 /** 表格选区解析工具导出。 */
 export * from './table-selection';
 /** 表格横向滚动容器 NodeView 导出。 */
