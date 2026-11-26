@@ -185,6 +185,7 @@
   .zt-md-editor .ProseMirror {
     outline: none;
     white-space: pre-wrap;
+    overflow-wrap: break-word;
     caret-color: var(--zt-accent);
   }
 

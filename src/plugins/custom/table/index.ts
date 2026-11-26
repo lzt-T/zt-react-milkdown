@@ -10,3 +10,5 @@ export * from './table-more-actions';
 export * from './table-row-insertion';
 /** 表格选区解析工具导出。 */
 export * from './table-selection';
+/** 表格横向滚动容器 NodeView 导出。 */
+export * from './table-scroll-node-view';

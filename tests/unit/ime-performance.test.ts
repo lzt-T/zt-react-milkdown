@@ -3,6 +3,7 @@ import { IME_ISOLATION_CLASS_NAME } from '@/core/ime-composition-isolation';
 import { refractor } from '@/plugins/custom/code-block/code-block-highlighter';
 import { resolveEditorMessages } from '@/local/i18n';
 import { editorViewCtx } from '@milkdown/core';
+import { TextSelection } from '@milkdown/prose/state';
 import type { EditorView } from '@milkdown/prose/view';
 import { act, fireEvent } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -362,31 +363,41 @@ describe('ime-performance', () => {
     // 1. 小文档不触发空闲预隔离。
     const { view: smallView } = await mountRuntime('第一段\n\n第二段', 160);
     vi.useFakeTimers();
-    const activeElementSpy = vi.spyOn(document, 'activeElement', 'get');
-    activeElementSpy.mockReturnValue(smallView.dom);
+    let currentActiveElement: Element | null = smallView.dom;
+    vi.spyOn(document, 'activeElement', 'get').mockImplementation(() => currentActiveElement);
     setCollapsedCaret(smallView.dom.firstElementChild?.firstChild, 0);
 
     fireEvent.focus(smallView.dom);
-    fireEvent.mouseUp(smallView.dom);
+    fireEvent.pointerUp(smallView.dom);
     fireEvent.keyUp(smallView.dom, { key: 'a' });
     await act(async () => {
       vi.advanceTimersByTime(300);
     });
     expect(smallView.dom.classList.contains(IME_ISOLATION_CLASS_NAME)).toBe(false);
 
-    // 2. 大文档（>= 30 块）单块折叠光标触发 mouseup 后自动进入预隔离，且 IME 组字与 Shift 不退出隔离。
+    // 2. 大文档（>= 30 块）单块折叠光标触发 pointerUp 后自动进入预隔离，且 IME 组字与 Shift 不退出隔离。
     const largeMarkdown = Array.from({ length: 35 }, (_, index) => `第 ${index + 1} 段正文内容`).join('\n\n');
     const { runtime, view } = await mountRuntime(largeMarkdown, 160);
     expect(view.dom.childElementCount).toBeGreaterThanOrEqual(30);
-    activeElementSpy.mockReturnValue(view.dom);
 
-    const lastParagraph = view.dom.lastElementChild;
-    setCollapsedCaret(lastParagraph?.firstChild, 0);
-    fireEvent.mouseUp(view.dom);
+    const lastParagraph = view.dom.lastElementChild as HTMLElement;
+    expect(lastParagraph).toBeTruthy();
+    const domFocusSpy = vi.spyOn(view.dom, 'focus').mockImplementation(() => {
+      currentActiveElement = view.dom;
+    });
+    const childFocusSpy = vi.spyOn(lastParagraph, 'focus').mockImplementation(() => {
+      currentActiveElement = lastParagraph;
+    });
+
+    currentActiveElement = view.dom;
+    setCollapsedCaret(lastParagraph.firstChild, 0);
+    fireEvent.pointerUp(view.dom);
     await act(async () => {
       vi.advanceTimersByTime(20);
     });
     expect(view.dom.classList.contains(IME_ISOLATION_CLASS_NAME)).toBe(true);
+    expect(childFocusSpy).toHaveBeenCalledWith({ preventScroll: true });
+    expect(currentActiveElement).toBe(lastParagraph);
 
     // 组字按键（Process/229）、compositionstart/end 及裸 Shift 均保持隔离态不断开。
     fireEvent.keyDown(view.dom, { key: 'Process', keyCode: 229 });
@@ -397,9 +408,10 @@ describe('ime-performance', () => {
     fireEvent.keyDown(view.dom, { key: 'Shift' });
     expect(view.dom.classList.contains(IME_ISOLATION_CLASS_NAME)).toBe(true);
 
-    // 3. 非 IME 按键与指针按下即时退出，并在松手后恢复预隔离；跨块选区与只读态不启用隔离。
+    // 3. 普通按键立即归还根焦点并在松手后恢复；鼠标按下拖选前归还根焦点且拖选期间不重入隔离。
     fireEvent.keyDown(view.dom, { key: 'Enter' });
     expect(view.dom.classList.contains(IME_ISOLATION_CLASS_NAME)).toBe(false);
+    expect(currentActiveElement).toBe(view.dom);
     fireEvent.keyUp(view.dom, { key: 'Enter' });
     await act(async () => {
       vi.advanceTimersByTime(20);
@@ -422,19 +434,80 @@ describe('ime-performance', () => {
     });
     expect(view.dom.classList.contains(IME_ISOLATION_CLASS_NAME)).toBe(true);
 
-    fireEvent.pointerDown(view.dom);
+    // 拖选开始（pointerDown 段落文本）应立即退出隔离并将焦点交回 view.dom。
+    domFocusSpy.mockClear();
+    currentActiveElement = lastParagraph;
+    fireEvent.pointerDown(lastParagraph);
     expect(view.dom.classList.contains(IME_ISOLATION_CLASS_NAME)).toBe(false);
-    fireEvent.mouseUp(view.dom);
+    expect(domFocusSpy).toHaveBeenCalledWith({ preventScroll: true });
+    expect(currentActiveElement).toBe(view.dom);
+
+    // 拖选尚未结束（未 pointerUp）期间，即使收到 root focus 也不会重新进入隔离。
+    fireEvent.focus(view.dom);
+    await act(async () => {
+      vi.advanceTimersByTime(20);
+    });
+    expect(view.dom.classList.contains(IME_ISOLATION_CLASS_NAME)).toBe(false);
+
+    // 单击松手（折叠光标）恢复预隔离。
+    fireEvent.pointerUp(view.dom);
     await act(async () => {
       vi.advanceTimersByTime(20);
     });
     expect(view.dom.classList.contains(IME_ISOLATION_CLASS_NAME)).toBe(true);
 
-    // 4. 内部 blur（relatedTarget 仍在 view.dom 内）保持隔离；外部 blur（含子块失焦）彻底退出。
+    // 4. 点击内部交互控件（按钮 / contenteditable="false"）退出隔离但不强抢焦点。
+    const interactiveButton = document.createElement('button');
+    interactiveButton.type = 'button';
+    view.dom.appendChild(interactiveButton);
+    domFocusSpy.mockClear();
+    currentActiveElement = lastParagraph;
+    fireEvent.pointerDown(interactiveButton);
+    expect(view.dom.classList.contains(IME_ISOLATION_CLASS_NAME)).toBe(false);
+    expect(domFocusSpy).not.toHaveBeenCalled();
+    fireEvent.pointerUp(document);
+    interactiveButton.remove();
+
+    // 5. 段内非折叠 selectionchange（如双击/拖选）触发时，即使焦点留在子段落也能立即交回根焦点，且 pointerUp 不重入。
+    currentActiveElement = view.dom;
+    setCollapsedCaret(lastParagraph.firstChild, 0);
+    fireEvent.pointerUp(view.dom);
+    await act(async () => {
+      vi.advanceTimersByTime(20);
+    });
+    expect(view.dom.classList.contains(IME_ISOLATION_CLASS_NAME)).toBe(true);
+
+    domFocusSpy.mockClear();
+    currentActiveElement = lastParagraph;
+    const sameBlockRange = document.createRange();
+    sameBlockRange.setStart(lastParagraph.firstChild!, 0);
+    sameBlockRange.setEnd(lastParagraph.firstChild!, 2);
+    const selection = window.getSelection();
+    selection?.removeAllRanges();
+    selection?.addRange(sameBlockRange);
+    fireEvent(document, new Event('selectionchange'));
+    expect(view.dom.classList.contains(IME_ISOLATION_CLASS_NAME)).toBe(false);
+    expect(domFocusSpy).toHaveBeenCalledWith({ preventScroll: true });
+    expect(currentActiveElement).toBe(view.dom);
+
+    fireEvent.pointerUp(view.dom);
+    await act(async () => {
+      vi.advanceTimersByTime(20);
+    });
+    expect(view.dom.classList.contains(IME_ISOLATION_CLASS_NAME)).toBe(false);
+
+    // 6. 内部 blur（relatedTarget 仍在 view.dom 内）保持隔离；外部 blur（含子块失焦）彻底退出。
+    setCollapsedCaret(lastParagraph.firstChild, 0);
+    fireEvent.pointerUp(view.dom);
+    await act(async () => {
+      vi.advanceTimersByTime(20);
+    });
+    expect(view.dom.classList.contains(IME_ISOLATION_CLASS_NAME)).toBe(true);
+
     fireEvent.blur(view.dom, { relatedTarget: view.dom.firstElementChild });
     expect(view.dom.classList.contains(IME_ISOLATION_CLASS_NAME)).toBe(true);
 
-    fireEvent.blur(lastParagraph!, { relatedTarget: null });
+    fireEvent.blur(lastParagraph, { relatedTarget: null });
     expect(view.dom.classList.contains(IME_ISOLATION_CLASS_NAME)).toBe(false);
 
     // 跨块非折叠选区不进入隔离。
@@ -445,11 +518,10 @@ describe('ime-performance', () => {
     const crossRange = document.createRange();
     crossRange.setStart(firstText!, 0);
     crossRange.setEnd(secondText!, 1);
-    const selection = window.getSelection();
     selection?.removeAllRanges();
     selection?.addRange(crossRange);
 
-    fireEvent.mouseUp(view.dom);
+    fireEvent.pointerUp(view.dom);
     await act(async () => {
       vi.advanceTimersByTime(20);
     });
@@ -460,10 +532,92 @@ describe('ime-performance', () => {
     act(() => {
       runtime.setReadOnly?.(true);
     });
-    fireEvent.mouseUp(view.dom);
+    fireEvent.pointerUp(view.dom);
     await act(async () => {
       vi.advanceTimersByTime(20);
     });
     expect(view.dom.classList.contains(IME_ISOLATION_CLASS_NAME)).toBe(false);
+  });
+
+  it('大文档标题中文上屏触发 id 刷新重建 DOM 节点时，自动恢复编辑器焦点并重新预隔离新标题块', async () => {
+    const paragraphs = Array.from({ length: 34 }, (_, index) => `第 ${index + 1} 段正文内容`);
+    const largeMarkdown = [...paragraphs, '# 初始标题'].join('\n\n');
+    const { view } = await mountRuntime(largeMarkdown, 160);
+    vi.useFakeTimers();
+
+    const oldHeading = view.dom.lastElementChild as HTMLElement;
+    expect(oldHeading.tagName).toBe('H1');
+
+    let currentActiveElement: Element | null = view.dom;
+    vi.spyOn(document, 'activeElement', 'get').mockImplementation(() => currentActiveElement);
+    vi.spyOn(oldHeading, 'focus').mockImplementation(() => {
+      currentActiveElement = oldHeading;
+    });
+    vi.spyOn(view.dom, 'focus').mockImplementation(() => {
+      currentActiveElement = view.dom;
+    });
+    const origViewFocus = view.focus.bind(view);
+    const viewFocusSpy = vi.spyOn(view, 'focus').mockImplementation(() => {
+      currentActiveElement = view.dom;
+      origViewFocus();
+    });
+    const rootBlurSpy = vi.fn();
+    view.dom.addEventListener('blur', rootBlurSpy);
+
+    const headingTextNode = oldHeading.firstChild;
+    expect(headingTextNode).toBeTruthy();
+    const range = document.createRange();
+    range.setStart(headingTextNode!, headingTextNode!.textContent?.length ?? 0);
+    range.collapse(true);
+    const selection = window.getSelection();
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+
+    fireEvent.pointerUp(view.dom);
+    await act(async () => {
+      vi.advanceTimersByTime(20);
+    });
+    expect(view.dom.classList.contains(IME_ISOLATION_CLASS_NAME)).toBe(true);
+    expect(currentActiveElement).toBe(oldHeading);
+
+    // 复现 Chromium NodeWillBeRemoved 时序：节点脱离 DOM 前先同步触发 blur（isConnected 仍为 true），随后文档重建替换 <h1>。
+    const headingEndPos = view.state.doc.content.size - 1;
+    await act(async () => {
+      currentActiveElement = document.body;
+      fireEvent.blur(oldHeading, { relatedTarget: null });
+      expect(oldHeading.isConnected).toBe(true);
+      const tr = view.state.tr.insertText('啊是高度压缩的', headingEndPos);
+      tr.setSelection(TextSelection.near(tr.doc.resolve(tr.doc.content.size - 1)));
+      view.dispatch(tr);
+      await Promise.resolve();
+    });
+
+    const newHeading = view.dom.lastElementChild as HTMLElement;
+    expect(newHeading).not.toBe(oldHeading);
+    expect(oldHeading.isConnected).toBe(false);
+    expect(newHeading.textContent).toContain('初始标题啊是高度压缩的');
+    expect(viewFocusSpy).toHaveBeenCalledTimes(1);
+    expect(rootBlurSpy).not.toHaveBeenCalled();
+
+    // 紧接着应在微任务/定时器窗口内重新预隔离新的 <h1>，保证连续输入不退化。
+    const newHeadingFocusSpy = vi.spyOn(newHeading, 'focus').mockImplementation(() => {
+      currentActiveElement = newHeading;
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(20);
+    });
+    expect(view.dom.classList.contains(IME_ISOLATION_CLASS_NAME)).toBe(true);
+    expect(newHeadingFocusSpy).toHaveBeenCalledWith({ preventScroll: true });
+    expect(currentActiveElement).toBe(newHeading);
+
+    // 真实外部失焦（节点仍在文档内且焦点移至 body）应在微任务后向根节点补发 blur。
+    await act(async () => {
+      currentActiveElement = document.body;
+      fireEvent.blur(newHeading, { relatedTarget: null });
+      await Promise.resolve();
+    });
+    expect(rootBlurSpy).toHaveBeenCalledTimes(1);
+
+    view.dom.removeEventListener('blur', rootBlurSpy);
   });
 });

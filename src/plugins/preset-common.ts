@@ -111,6 +111,10 @@ export const resolvePresetPlugins = (
   if (pluginExports.listener) {
     appendPluginDescriptors(descriptors, 'listener', pluginExports.listener);
   }
+  // slash 菜单需优先于边界导航与 gap-cursor 注册，确保菜单展开时优先拦截方向键和回车键。
+  if (pluginExports.slash) {
+    appendPluginDescriptors(descriptors, 'slash', pluginExports.slash);
+  }
   appendPluginDescriptors(descriptors, 'commonmark', pluginExports.commonmark);
   appendPluginDescriptors(descriptors, 'frontmatter', pluginExports.frontmatter);
   appendPluginDescriptors(descriptors, 'task-list-transform-keymap', pluginExports.taskListTransformKeymap);
@@ -151,9 +155,6 @@ export const resolvePresetPlugins = (
   appendPluginDescriptors(descriptors, 'task-list-toggle', pluginExports.taskListToggle);
   appendPluginDescriptors(descriptors, 'tab-space-indent', pluginExports.tabSpaceIndent);
   appendPluginDescriptors(descriptors, 'code-block-mod-a-select', pluginExports.codeBlockModASelect);
-  if (pluginExports.slash) {
-    appendPluginDescriptors(descriptors, 'slash', pluginExports.slash);
-  }
 
   return descriptors;
 };

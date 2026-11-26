@@ -77,7 +77,11 @@ import {
   createEditorShortcutKeyDownHandler,
   createSlashMenuPlugin
 } from '../plugins/custom/slash-menu';
-import { createTableFocusActionsPlugin, tableArrowEntryPlugin } from '../plugins/custom/table';
+import {
+  createTableFocusActionsPlugin,
+  createTableScrollNodeView,
+  tableArrowEntryPlugin
+} from '@/plugins/custom/table';
 import { syncListOrderIncrementalPlugin, taskListToggle } from '@/plugins/custom/list';
 import { tabSpaceIndentPlugin } from '../plugins/custom/indent';
 import { inlineCodeBoundaryNavigationPlugin } from '../plugins/custom/inline-code-boundary-navigation';
@@ -443,6 +447,7 @@ export const createMilkdownEditorRuntime = (
       ['math_block', createMathBlockEditableNodeView(messages)],
       ['math_inline', createMathInlineEditableNodeView(messages)],
       ['code_block', createCodeBlockEditableNodeView(messages)],
+      ['table', createTableScrollNodeView()],
       [FRONTMATTER_NODE_NAME, createFrontmatterEditableNodeView(messages)]
     ]);
 

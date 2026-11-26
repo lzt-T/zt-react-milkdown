@@ -1,4 +1,5 @@
 import { Plugin, PluginKey } from '@milkdown/prose/state';
+import type { EditorView } from '@milkdown/prose/view';
 import { $prose } from '@milkdown/utils';
 
 /** 组合输入期间挂在 `.ProseMirror` 根节点上的块级隔离样式类。 */
@@ -12,13 +13,27 @@ const LARGE_DOC_BLOCK_THRESHOLD = 30;
 const LARGE_DOC_CONTENT_SIZE_THRESHOLD = 4000;
 // 连续可打印英文字符输入后延迟恢复预隔离的时长（毫秒）。
 const TEXT_KEY_REISOLATE_DELAY_MS = 150;
+// 内部包含独立焦点的交互元素选择器，点击时不强行把焦点拉回编辑器根节点。
+const INTERACTIVE_POINTER_TARGET_SELECTOR = 'button, input, textarea, select, [contenteditable="false"]';
 
-/** 折叠光标位置快照。 */
-interface CollapsedCaret {
-  /** 光标所在的 DOM 节点。 */
-  node: Node;
-  /** 光标在节点内的偏移量。 */
-  offset: number;
+/** DOM 选区起止位置快照。 */
+interface SavedDomSelection {
+  /** 选区锚点节点。 */
+  anchorNode: Node;
+  /** 选区锚点偏移量。 */
+  anchorOffset: number;
+  /** 选区焦点节点。 */
+  focusNode: Node;
+  /** 选区焦点偏移量。 */
+  focusOffset: number;
+}
+
+/** 退出 IME 块级隔离态的可选项。 */
+interface ExitIsolationOptions {
+  /** 是否在子块持有焦点时交回给 `.ProseMirror`。 */
+  restoreFocus?: boolean;
+  /** 交回焦点前后是否保留并恢复原有 DOM 选区。 */
+  preserveSelection?: boolean;
 }
 
 /**
@@ -33,6 +48,13 @@ const isImeProcessKeyDown = (event: KeyboardEvent): boolean => {
  */
 const isPrintableAsciiKey = (event: KeyboardEvent): boolean => {
   return event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey;
+};
+
+/**
+ * 判断指针按下目标是否位于按钮、表单控件或不可编辑子块等交互区域内。
+ */
+const isInteractivePointerTarget = (target: EventTarget | null): boolean => {
+  return target instanceof Element && target.closest(INTERACTIVE_POINTER_TARGET_SELECTOR) !== null;
 };
 
 /**
@@ -64,29 +86,42 @@ const resolveCollapsedEditableBlock = (root: HTMLElement): HTMLElement | null =>
 };
 
 /**
- * 保存编辑区内的当前折叠光标位置。
+ * 保存编辑区内的当前 DOM 选区（兼容折叠光标与正反向跨节点选区）。
  */
-const saveCollapsedCaret = (root: HTMLElement): CollapsedCaret | null => {
+const saveDomSelection = (root: HTMLElement): SavedDomSelection | null => {
   const selection = root.ownerDocument.defaultView?.getSelection();
-  if (!selection || selection.rangeCount === 0 || !selection.isCollapsed || !selection.anchorNode) {
+  if (
+    !selection ||
+    selection.rangeCount === 0 ||
+    !selection.anchorNode ||
+    !selection.focusNode
+  ) {
     return null;
   }
 
-  if (!root.contains(selection.anchorNode)) {
+  if (!root.contains(selection.anchorNode) || !root.contains(selection.focusNode)) {
     return null;
   }
 
   return {
-    node: selection.anchorNode,
-    offset: selection.anchorOffset
+    anchorNode: selection.anchorNode,
+    anchorOffset: selection.anchorOffset,
+    focusNode: selection.focusNode,
+    focusOffset: selection.focusOffset
   };
 };
 
 /**
- * 在焦点切换未保留原光标时恢复折叠光标，避免多余选区变更事件。
+ * 在焦点切换未保留原选区时恢复 DOM 选区，避免多余选区变更事件。
  */
-const restoreCollapsedCaret = (root: HTMLElement, caret: CollapsedCaret | null): void => {
-  if (!caret || !caret.node.isConnected || !root.contains(caret.node)) {
+const restoreDomSelection = (root: HTMLElement, saved: SavedDomSelection | null): void => {
+  if (
+    !saved ||
+    !saved.anchorNode.isConnected ||
+    !saved.focusNode.isConnected ||
+    !root.contains(saved.anchorNode) ||
+    !root.contains(saved.focusNode)
+  ) {
     return;
   }
 
@@ -97,22 +132,38 @@ const restoreCollapsedCaret = (root: HTMLElement, caret: CollapsedCaret | null):
 
   if (
     selection.rangeCount > 0 &&
-    selection.isCollapsed &&
-    selection.anchorNode === caret.node &&
-    selection.anchorOffset === caret.offset
+    selection.anchorNode === saved.anchorNode &&
+    selection.anchorOffset === saved.anchorOffset &&
+    selection.focusNode === saved.focusNode &&
+    selection.focusOffset === saved.focusOffset
   ) {
     return;
   }
 
+  if (typeof selection.setBaseAndExtent === 'function') {
+    selection.setBaseAndExtent(
+      saved.anchorNode,
+      saved.anchorOffset,
+      saved.focusNode,
+      saved.focusOffset
+    );
+    return;
+  }
+
+  // 兜底不支持 setBaseAndExtent 的测试环境。
   const range = root.ownerDocument.createRange();
-  range.setStart(caret.node, caret.offset);
-  range.collapse(true);
+  range.setStart(saved.anchorNode, saved.anchorOffset);
+  if (saved.anchorNode === saved.focusNode && saved.anchorOffset === saved.focusOffset) {
+    range.collapse(true);
+  } else {
+    range.setEnd(saved.focusNode, saved.focusOffset);
+  }
   selection.removeAllRanges();
   selection.addRange(range);
 };
 
 /**
- * 在大文档单块空闲态提前隔离编辑边界，确保整个中文 IME 组合期间焦点宿主稳定、零丢字与零长链扫描。
+ * 在大文档单块空闲态提前隔离编辑边界，并在拖选/非空选区等场景下确保 `.ProseMirror` 及时取回焦点。
  */
 export const imeCompositionIsolationPlugin = $prose(
   () =>
@@ -120,8 +171,13 @@ export const imeCompositionIsolationPlugin = $prose(
       key: IME_COMPOSITION_ISOLATION_KEY,
       view(editorView) {
         const dom = editorView.dom;
+        const ownerDocument = dom.ownerDocument;
         let activeView = editorView;
         let isolating = false;
+        let isolatedBlock: HTMLElement | null = null;
+        let pendingDetachedBlock: HTMLElement | null = null;
+        let isPointerSelecting = false;
+        let restoringRootFocus = false;
         let scheduleTimer: ReturnType<typeof setTimeout> | null = null;
         let dispatchingSyntheticBlur = false;
 
@@ -147,15 +203,48 @@ export const imeCompositionIsolationPlugin = $prose(
         };
 
         /**
-         * 进入单块空闲预隔离态，并将浏览器焦点稳定锚定到当前直接块。
+         * 当浏览器焦点仍停留在 `.ProseMirror` 的子块内时，将焦点平滑交回 `.ProseMirror` 根节点。
          */
-        const enterIsolation = (): void => {
-          if (isolating || activeView.composing || !shouldEnableForCurrentDoc()) {
+        const restoreRootFocusIfNeeded = (preserveSelection: boolean): void => {
+          const activeElement = ownerDocument.activeElement;
+          if (!(activeElement instanceof Node) || !dom.contains(activeElement) || activeElement === dom) {
             return;
           }
 
-          const activeElement = dom.ownerDocument.activeElement;
-          if (!(activeElement instanceof Node) || !dom.contains(activeElement)) {
+          const savedSelection = preserveSelection ? saveDomSelection(dom) : null;
+          restoringRootFocus = true;
+          try {
+            dom.focus({ preventScroll: true });
+          } finally {
+            restoringRootFocus = false;
+          }
+
+          if (preserveSelection) {
+            restoreDomSelection(dom, savedSelection);
+          }
+        };
+
+        /**
+         * 进入单块空闲预隔离态，并将浏览器焦点稳定锚定到当前直接块。
+         */
+        const enterIsolation = (): void => {
+          if (
+            isolating ||
+            isPointerSelecting ||
+            activeView.composing ||
+            !activeView.state.selection.empty ||
+            !shouldEnableForCurrentDoc()
+          ) {
+            return;
+          }
+
+          const activeElement = ownerDocument.activeElement;
+          if (
+            !(activeElement instanceof Node) ||
+            !dom.contains(activeElement) ||
+            activeElement instanceof HTMLInputElement ||
+            activeElement instanceof HTMLTextAreaElement
+          ) {
             return;
           }
 
@@ -164,39 +253,54 @@ export const imeCompositionIsolationPlugin = $prose(
             return;
           }
 
-          const caret = saveCollapsedCaret(dom);
+          const savedSelection = saveDomSelection(dom);
           dom.classList.add(IME_ISOLATION_CLASS_NAME);
           isolating = true;
+          isolatedBlock = block;
 
-          if (dom.ownerDocument.activeElement !== block) {
+          if (ownerDocument.activeElement !== block) {
             block.focus({ preventScroll: true });
-            restoreCollapsedCaret(dom, caret);
+            restoreDomSelection(dom, savedSelection);
           }
         };
 
         /**
-         * 退出 IME 块级隔离态，必要时将焦点平滑交回 `.ProseMirror`。
+         * 退出 IME 块级隔离态，并按需交回 `.ProseMirror` 根节点焦点（包括隔离类已移除但子块仍持有焦点的情况）。
          */
-        const exitIsolation = (restoreFocus = false): void => {
+        const exitIsolation = (options: ExitIsolationOptions = {}): void => {
           cancelScheduledIsolation();
-          if (!isolating) {
+          if (isolating) {
+            dom.classList.remove(IME_ISOLATION_CLASS_NAME);
+            isolating = false;
+            isolatedBlock = null;
+          } else {
+            isolatedBlock = null;
+          }
+
+          if (options.restoreFocus) {
+            restoreRootFocusIfNeeded(options.preserveSelection ?? true);
+          }
+        };
+
+        /**
+         * 当前被隔离的子块因 ProseMirror 转换节点或刷新属性而脱离文档后，同步恢复根焦点与光标并按需重入预隔离。
+         */
+        const recoverFocusAfterDetachedBlock = (view: EditorView): void => {
+          pendingDetachedBlock = null;
+          exitIsolation({ restoreFocus: false });
+          if (dom.getAttribute('contenteditable') !== 'true') {
             return;
           }
 
-          const activeElement = dom.ownerDocument.activeElement;
-          const shouldRestoreFocus =
-            restoreFocus &&
-            activeElement instanceof Node &&
-            dom.contains(activeElement) &&
-            activeElement !== dom;
-          const caret = shouldRestoreFocus ? saveCollapsedCaret(dom) : null;
+          restoringRootFocus = true;
+          try {
+            view.focus();
+          } finally {
+            restoringRootFocus = false;
+          }
 
-          dom.classList.remove(IME_ISOLATION_CLASS_NAME);
-          isolating = false;
-
-          if (shouldRestoreFocus) {
-            dom.focus({ preventScroll: true });
-            restoreCollapsedCaret(dom, caret);
+          if (!view.composing && view.state.selection.empty && shouldEnableForCurrentDoc()) {
+            schedulePreIsolation(0);
           }
         };
 
@@ -205,7 +309,7 @@ export const imeCompositionIsolationPlugin = $prose(
          */
         const schedulePreIsolation = (delayMs = 0): void => {
           cancelScheduledIsolation();
-          if (isolating || activeView.composing || !shouldEnableForCurrentDoc()) {
+          if (isolating || isPointerSelecting || activeView.composing || !shouldEnableForCurrentDoc()) {
             return;
           }
 
@@ -227,7 +331,7 @@ export const imeCompositionIsolationPlugin = $prose(
             return;
           }
 
-          exitIsolation(true);
+          exitIsolation({ restoreFocus: true, preserveSelection: true });
         };
 
         const handleKeyUp = (event: KeyboardEvent): void => {
@@ -243,17 +347,56 @@ export const imeCompositionIsolationPlugin = $prose(
           schedulePreIsolation(0);
         };
 
-        const handlePointerDown = (): void => {
-          exitIsolation(false);
+        const handlePointerDown = (event: PointerEvent): void => {
+          isPointerSelecting = true;
+          if (!isInteractivePointerTarget(event.target)) {
+            // 在鼠标拖选开始前先把焦点还给 .ProseMirror，避免拖选时 view.hasFocus() 返回 false。
+            exitIsolation({ restoreFocus: true, preserveSelection: true });
+            return;
+          }
+
+          exitIsolation({ restoreFocus: false });
         };
 
-        const handleMouseUp = (): void => {
-          schedulePreIsolation(0);
+        const handlePointerEnd = (event: PointerEvent): void => {
+          isPointerSelecting = false;
+          if (event.type === 'pointerup' && event.target instanceof Node && dom.contains(event.target)) {
+            schedulePreIsolation(0);
+          }
         };
 
         const handleFocus = (event: FocusEvent): void => {
-          if (event.target === dom) {
-            schedulePreIsolation(0);
+          if (restoringRootFocus || isPointerSelecting || event.target !== dom) {
+            return;
+          }
+
+          schedulePreIsolation(0);
+        };
+
+        const handleSelectionChange = (): void => {
+          if (activeView.composing) {
+            return;
+          }
+
+          const selection = ownerDocument.defaultView?.getSelection();
+          if (
+            !selection ||
+            selection.rangeCount === 0 ||
+            selection.isCollapsed ||
+            !selection.anchorNode ||
+            !dom.contains(selection.anchorNode)
+          ) {
+            return;
+          }
+
+          const activeElement = ownerDocument.activeElement;
+          const hasChildFocus =
+            activeElement instanceof Node && dom.contains(activeElement) && activeElement !== dom;
+          if (isolating || hasChildFocus) {
+            exitIsolation({
+              restoreFocus: dom.getAttribute('contenteditable') === 'true',
+              preserveSelection: true
+            });
           }
         };
 
@@ -268,6 +411,11 @@ export const imeCompositionIsolationPlugin = $prose(
             return;
           }
 
+          // ProseMirror 更新节点属性（如标题同步 id）重建当前隔离块时，旧节点脱离 DOM 不是外部失焦，交由紧随其后的 update(view) 恢复焦点与光标。
+          if (isolating && isolatedBlock !== null && !isolatedBlock.isConnected) {
+            return;
+          }
+
           // 编辑器内部焦点在 .ProseMirror 与可编辑子块间迁移时保留聚焦态与隔离态。
           if (event.relatedTarget instanceof Node && dom.contains(event.relatedTarget)) {
             if (isolating && event.target === dom) {
@@ -277,45 +425,88 @@ export const imeCompositionIsolationPlugin = $prose(
           }
 
           const wasChildBlur = event.target !== dom;
-          exitIsolation(false);
+          const blurredBlock = wasChildBlur
+            ? (isolatedBlock ?? (event.target instanceof HTMLElement ? event.target : null))
+            : null;
+          const relatedTarget = event.relatedTarget;
+          exitIsolation({ restoreFocus: false });
 
-          // 子块真实失焦离开编辑器时，向 .ProseMirror 补发一次失焦通知以清理聚焦态并触发同步。
+          // 子块失焦后延后至微任务确认：若紧接着被 ProseMirror 从 DOM 移除则交由恢复流程，否则补发根节点 blur。
           if (wasChildBlur) {
-            dispatchingSyntheticBlur = true;
-            try {
-              dom.dispatchEvent(new FocusEvent('blur', { relatedTarget: event.relatedTarget }));
-            } finally {
-              dispatchingSyntheticBlur = false;
+            if (blurredBlock !== null) {
+              pendingDetachedBlock = blurredBlock;
             }
+            queueMicrotask(() => {
+              if (blurredBlock !== null) {
+                if (pendingDetachedBlock !== blurredBlock) {
+                  return;
+                }
+                pendingDetachedBlock = null;
+                if (!blurredBlock.isConnected) {
+                  recoverFocusAfterDetachedBlock(activeView);
+                  return;
+                }
+              }
+
+              if (
+                ownerDocument.activeElement instanceof Node &&
+                dom.contains(ownerDocument.activeElement)
+              ) {
+                return;
+              }
+
+              dispatchingSyntheticBlur = true;
+              try {
+                dom.dispatchEvent(new FocusEvent('blur', { relatedTarget }));
+              } finally {
+                dispatchingSyntheticBlur = false;
+              }
+            });
           }
         };
 
         dom.addEventListener('keydown', handleKeyDown, true);
         dom.addEventListener('keyup', handleKeyUp, true);
         dom.addEventListener('pointerdown', handlePointerDown, true);
-        dom.addEventListener('mouseup', handleMouseUp, true);
+        ownerDocument.addEventListener('pointerup', handlePointerEnd, true);
+        ownerDocument.addEventListener('pointercancel', handlePointerEnd, true);
         dom.addEventListener('focus', handleFocus, true);
+        ownerDocument.addEventListener('selectionchange', handleSelectionChange);
         dom.addEventListener('compositionend', handleCompositionEnd, false);
         dom.addEventListener('blur', handleBlur, true);
 
         return {
           update(view) {
             activeView = view;
+            const hasDetachedIsolatedBlock =
+              (isolating && isolatedBlock !== null && !isolatedBlock.isConnected) ||
+              (pendingDetachedBlock !== null && !pendingDetachedBlock.isConnected);
+            if (hasDetachedIsolatedBlock) {
+              recoverFocusAfterDetachedBlock(view);
+              return;
+            }
+
             if (
               isolating &&
               (!shouldEnableForCurrentDoc() || (!view.composing && !view.state.selection.empty))
             ) {
-              exitIsolation(false);
+              exitIsolation({
+                restoreFocus: dom.getAttribute('contenteditable') === 'true',
+                preserveSelection: true
+              });
             }
           },
           destroy() {
+            pendingDetachedBlock = null;
             cancelScheduledIsolation();
-            exitIsolation(false);
+            exitIsolation({ restoreFocus: false });
             dom.removeEventListener('keydown', handleKeyDown, true);
             dom.removeEventListener('keyup', handleKeyUp, true);
             dom.removeEventListener('pointerdown', handlePointerDown, true);
-            dom.removeEventListener('mouseup', handleMouseUp, true);
+            ownerDocument.removeEventListener('pointerup', handlePointerEnd, true);
+            ownerDocument.removeEventListener('pointercancel', handlePointerEnd, true);
             dom.removeEventListener('focus', handleFocus, true);
+            ownerDocument.removeEventListener('selectionchange', handleSelectionChange);
             dom.removeEventListener('compositionend', handleCompositionEnd, false);
             dom.removeEventListener('blur', handleBlur, true);
           }

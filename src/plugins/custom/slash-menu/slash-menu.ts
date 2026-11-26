@@ -133,7 +133,16 @@ export const createSlashMenuPlugin = (
      * 处理菜单可见态下的键盘导航。
      */
     const handleVisibleMenuKeyDown = (event: KeyboardEvent): boolean => {
-      if (event.isComposing || !NAVIGATION_KEYS.has(event.key) || !menuInteractable) {
+      if (
+        event.isComposing ||
+        event.altKey ||
+        event.ctrlKey ||
+        event.metaKey ||
+        event.shiftKey ||
+        !NAVIGATION_KEYS.has(event.key) ||
+        !menuInteractable ||
+        !menuView.isVisible()
+      ) {
         return false;
       }
       if (event.key === 'ArrowDown') {
@@ -167,6 +176,9 @@ export const createSlashMenuPlugin = (
       }
       if (event.key === 'Escape') {
         event.preventDefault();
+        // Escape 关闭菜单不触发文档事务，需主动复位可交互态以免继续拦截后续按键。
+        menuInteractable = false;
+        menuView.updatePositionContext(null);
         menuView.setVisible(false);
         return true;
       }
