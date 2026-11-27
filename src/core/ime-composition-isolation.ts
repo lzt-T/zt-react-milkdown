@@ -13,8 +13,8 @@ const LARGE_DOC_BLOCK_THRESHOLD = 30;
 const LARGE_DOC_CONTENT_SIZE_THRESHOLD = 4000;
 // 连续可打印英文字符输入后延迟恢复预隔离的时长（毫秒）。
 const TEXT_KEY_REISOLATE_DELAY_MS = 150;
-// 内部包含独立焦点的交互元素选择器，点击时不强行把焦点拉回编辑器根节点。
-const INTERACTIVE_POINTER_TARGET_SELECTOR = 'button, input, textarea, select, [contenteditable="false"]';
+// 内部包含独立焦点的交互元素选择器，交互或输入时不强行把焦点拉回编辑器根节点。
+const INTERACTIVE_TARGET_SELECTOR = 'button, input, textarea, select, [contenteditable="false"]';
 
 /** DOM 选区起止位置快照。 */
 interface SavedDomSelection {
@@ -51,10 +51,10 @@ const isPrintableAsciiKey = (event: KeyboardEvent): boolean => {
 };
 
 /**
- * 判断指针按下目标是否位于按钮、表单控件或不可编辑子块等交互区域内。
+ * 判断事件或焦点目标是否位于按钮、表单控件或不可编辑子块等交互区域内。
  */
-const isInteractivePointerTarget = (target: EventTarget | null): boolean => {
-  return target instanceof Element && target.closest(INTERACTIVE_POINTER_TARGET_SELECTOR) !== null;
+const isInteractiveTarget = (target: EventTarget | null): boolean => {
+  return target instanceof Element && target.closest(INTERACTIVE_TARGET_SELECTOR) !== null;
 };
 
 /**
@@ -207,7 +207,12 @@ export const imeCompositionIsolationPlugin = $prose(
          */
         const restoreRootFocusIfNeeded = (preserveSelection: boolean): void => {
           const activeElement = ownerDocument.activeElement;
-          if (!(activeElement instanceof Node) || !dom.contains(activeElement) || activeElement === dom) {
+          if (
+            !(activeElement instanceof Node) ||
+            !dom.contains(activeElement) ||
+            activeElement === dom ||
+            isInteractiveTarget(activeElement)
+          ) {
             return;
           }
 
@@ -242,8 +247,7 @@ export const imeCompositionIsolationPlugin = $prose(
           if (
             !(activeElement instanceof Node) ||
             !dom.contains(activeElement) ||
-            activeElement instanceof HTMLInputElement ||
-            activeElement instanceof HTMLTextAreaElement
+            isInteractiveTarget(activeElement)
           ) {
             return;
           }
@@ -320,6 +324,12 @@ export const imeCompositionIsolationPlugin = $prose(
         };
 
         const handleKeyDown = (event: KeyboardEvent): void => {
+          // 焦点位于公式块等内部交互控件时放行按键，不抢回 .ProseMirror 焦点。
+          if (isInteractiveTarget(event.target) || isInteractiveTarget(ownerDocument.activeElement)) {
+            cancelScheduledIsolation();
+            return;
+          }
+
           // 绝不在 IME 预处理或组字中途切换隔离态与焦点宿主，避免 TSF 取消首字符。
           if (isImeProcessKeyDown(event)) {
             cancelScheduledIsolation();
@@ -335,7 +345,12 @@ export const imeCompositionIsolationPlugin = $prose(
         };
 
         const handleKeyUp = (event: KeyboardEvent): void => {
-          if (isImeProcessKeyDown(event) || activeView.composing) {
+          if (
+            isInteractiveTarget(event.target) ||
+            isInteractiveTarget(ownerDocument.activeElement) ||
+            isImeProcessKeyDown(event) ||
+            activeView.composing
+          ) {
             return;
           }
 
@@ -349,7 +364,7 @@ export const imeCompositionIsolationPlugin = $prose(
 
         const handlePointerDown = (event: PointerEvent): void => {
           isPointerSelecting = true;
-          if (!isInteractivePointerTarget(event.target)) {
+          if (!isInteractiveTarget(event.target)) {
             // 在鼠标拖选开始前先把焦点还给 .ProseMirror，避免拖选时 view.hasFocus() 返回 false。
             exitIsolation({ restoreFocus: true, preserveSelection: true });
             return;
@@ -390,6 +405,11 @@ export const imeCompositionIsolationPlugin = $prose(
           }
 
           const activeElement = ownerDocument.activeElement;
+          // 内部交互控件内的选区变更不触发根节点回焦，避免打断公式编辑框内拖选。
+          if (isInteractiveTarget(activeElement)) {
+            return;
+          }
+
           const hasChildFocus =
             activeElement instanceof Node && dom.contains(activeElement) && activeElement !== dom;
           if (isolating || hasChildFocus) {

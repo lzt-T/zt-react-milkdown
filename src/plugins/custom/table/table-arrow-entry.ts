@@ -3,10 +3,12 @@ import type { Node as ProseNode, ResolvedPos } from '@milkdown/prose/model';
 import { Plugin, PluginKey, TextSelection } from '@milkdown/prose/state';
 import type { EditorView } from '@milkdown/prose/view';
 import { $prose } from '@milkdown/utils';
-import { resolveLastCellEndPosition } from '@/plugins/custom/table/table-selection';
+import {
+  resolveLastCellEndPosition,
+  resolveTrailingTableInBlock,
+  type TrailingTableMatch
+} from '@/plugins/custom/table/table-selection';
 
-// 表格节点类型名。
-const TABLE_NODE_NAME = 'table';
 // 仅处理上方向键。
 const ARROW_UP_KEY = 'ArrowUp';
 
@@ -14,33 +16,37 @@ const ARROW_UP_KEY = 'ArrowUp';
  * 判断是否应跳过本插件处理。
  */
 const shouldSkipKeydown = (event: KeyboardEvent): boolean => {
-  return event.key !== ARROW_UP_KEY || event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey;
+  return (
+    event.key !== ARROW_UP_KEY ||
+    event.isComposing ||
+    event.defaultPrevented ||
+    event.altKey ||
+    event.ctrlKey ||
+    event.metaKey
+  );
 };
 
 /**
- * 从 GapCursor 位置解析紧邻上方表格。
+ * 从 GapCursor 位置解析紧邻上方表格（支持透传引用块与列表末尾表格）。
  */
 const resolveTableFromGapCursor = (
   selectionFrom: number,
   resolvedPosition: ResolvedPos
-): { tableNode: ProseNode; tableStart: number } | null => {
+): TrailingTableMatch | null => {
   const previousNode = resolvedPosition.nodeBefore;
-  if (!previousNode || previousNode.type.name !== TABLE_NODE_NAME) {
+  if (!previousNode) {
     return null;
   }
 
-  return {
-    tableNode: previousNode,
-    tableStart: selectionFrom - previousNode.nodeSize
-  };
+  return resolveTrailingTableInBlock(previousNode, selectionFrom - previousNode.nodeSize);
 };
 
 /**
- * 从“空段落开头”位置解析紧邻上方表格。
+ * 从“空段落开头”位置解析紧邻上方表格（支持透传引用块与列表末尾表格）。
  */
 const resolveTableFromEmptyParagraphStart = (
   resolvedPosition: ResolvedPos
-): { tableNode: ProseNode; tableStart: number } | null => {
+): TrailingTableMatch | null => {
   // 仅处理空段落开头。
   if (resolvedPosition.parent.type.name !== 'paragraph' || resolvedPosition.parentOffset !== 0) {
     return null;
@@ -61,16 +67,11 @@ const resolveTableFromEmptyParagraphStart = (
   // 当前段落同级上一块节点。
   const blockContainer = resolvedPosition.node(resolvedPosition.depth - 1);
   const previousBlock = blockContainer.child(currentBlockIndex - 1);
-  if (previousBlock.type.name !== TABLE_NODE_NAME) {
-    return null;
-  }
-
   // 当前段落起始位置（节点左边界）。
   const currentBlockStart = resolvedPosition.before(resolvedPosition.depth);
-  return {
-    tableNode: previousBlock,
-    tableStart: currentBlockStart - previousBlock.nodeSize
-  };
+  // 上一块起始位置。
+  const previousBlockStart = currentBlockStart - previousBlock.nodeSize;
+  return resolveTrailingTableInBlock(previousBlock, previousBlockStart);
 };
 
 /**

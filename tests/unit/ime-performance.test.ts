@@ -3,7 +3,7 @@ import { IME_ISOLATION_CLASS_NAME } from '@/core/ime-composition-isolation';
 import { refractor } from '@/plugins/custom/code-block/code-block-highlighter';
 import { resolveEditorMessages } from '@/local/i18n';
 import { editorViewCtx } from '@milkdown/core';
-import { TextSelection } from '@milkdown/prose/state';
+import { NodeSelection, TextSelection } from '@milkdown/prose/state';
 import type { EditorView } from '@milkdown/prose/view';
 import { act, fireEvent } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -619,5 +619,67 @@ describe('ime-performance', () => {
     expect(rootBlurSpy).toHaveBeenCalledTimes(1);
 
     view.dom.removeEventListener('blur', rootBlurSpy);
+  });
+
+  it('公式块源码 textarea 聚焦时按键输入与选区变化不会被 IME 隔离插件抢回焦点', async () => {
+    const { view } = await mountRuntime('asdasdasuida\n\n$$\n\n$$');
+
+    // 定位文档中的公式块节点。
+    let mathBlockPosition = -1;
+    view.state.doc.descendants((node, pos) => {
+      if (node.type.name === 'math_block') {
+        mathBlockPosition = pos;
+        return false;
+      }
+      return true;
+    });
+    expect(mathBlockPosition).toBeGreaterThan(-1);
+
+    // 选中公式块进入编辑态并聚焦源码输入框。
+    await act(async () => {
+      view.dispatch(view.state.tr.setSelection(NodeSelection.create(view.state.doc, mathBlockPosition)));
+    });
+
+    const mathBlockElement = view.dom.querySelector('.zt-md-math-block') as HTMLElement | null;
+    const sourceTextarea = view.dom.querySelector('.zt-md-math-block-textarea') as HTMLTextAreaElement | null;
+    expect(mathBlockElement).not.toBeNull();
+    expect(sourceTextarea).not.toBeNull();
+    expect(mathBlockElement!.classList.contains('zt-md-math-block-editing')).toBe(true);
+    expect(document.activeElement).toBe(sourceTextarea);
+
+    const domFocusSpy = vi.spyOn(view.dom, 'focus');
+
+    // 在公式块输入框内依次按键并输入源码，不应将焦点抢回 .ProseMirror。
+    await act(async () => {
+      fireEvent.keyDown(sourceTextarea!, { key: 'a' });
+      fireEvent.input(sourceTextarea!, { target: { value: 'asd' } });
+      fireEvent.keyUp(sourceTextarea!, { key: 'd' });
+    });
+
+    // 在内部控件聚焦期间即便触发文档 selectionchange 也不应抢焦。
+    const firstParagraphText = view.dom.firstElementChild?.firstChild;
+    if (firstParagraphText && (firstParagraphText.textContent?.length ?? 0) >= 2) {
+      const range = document.createRange();
+      range.setStart(firstParagraphText, 0);
+      range.setEnd(firstParagraphText, 2);
+      const selection = window.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+      fireEvent(document, new Event('selectionchange'));
+    }
+
+    expect(domFocusSpy).not.toHaveBeenCalled();
+    expect(document.activeElement).toBe(sourceTextarea);
+    expect(mathBlockElement!.classList.contains('zt-md-math-block-editing')).toBe(true);
+
+    let updatedMathValue: unknown = null;
+    view.state.doc.descendants((node) => {
+      if (node.type.name === 'math_block') {
+        updatedMathValue = node.attrs.value;
+        return false;
+      }
+      return true;
+    });
+    expect(updatedMathValue).toBe('asd');
   });
 });

@@ -254,3 +254,189 @@ describe('表格下方 Backspace 行为', () => {
     expect(view.state.selection.from).toBe(selectionFromBefore);
   });
 });
+
+/**
+ * 构造可插入当前编辑器文档的示例表格节点。
+ */
+const buildSampleTableNodeForView = async (
+  targetView: ReturnType<typeof mountRuntime> extends Promise<infer T> ? T['view'] : never
+) => {
+  // 借助完整 GFM 解析器生成标准表格结构，再转换到目标视图 Schema。
+  const { view: sampleView } = await mountRuntime(SAMPLE_TABLE_MARKDOWN);
+  const tableJson = sampleView.state.doc.firstChild!.toJSON();
+  return targetView.state.schema.nodeFromJSON(tableJson);
+};
+
+/**
+ * 查找首个指定类型节点的内部末尾位置。
+ */
+const findFirstNodeInnerEnd = (
+  doc: { descendants: (fn: (node: { type: { name: string }; nodeSize: number }, pos: number) => boolean | void) => void },
+  typeName: string
+): number => {
+  let innerEnd = -1;
+  doc.descendants((node, pos) => {
+    if (node.type.name === typeName && innerEnd === -1) {
+      innerEnd = pos + node.nodeSize - 1;
+      return false;
+    }
+    return true;
+  });
+  if (innerEnd === -1) {
+    throw new Error(`未找到节点类型: ${typeName}`);
+  }
+  return innerEnd;
+};
+
+describe('嵌套在引用块与列表末尾的表格 Backspace / ArrowUp 行为', () => {
+  it('引用块末尾含表格且下方紧跟空段落时，按 Backspace 删除空段落并进入表格末格末尾', async () => {
+    const { view } = await mountRuntime('> 引用文字');
+    const tableNode = await buildSampleTableNodeForView(view);
+    const blockquoteInnerEnd = findFirstNodeInnerEnd(view.state.doc, 'blockquote');
+
+    await act(async () => {
+      const tr = view.state.tr.insert(blockquoteInnerEnd, tableNode);
+      const containerAfterPos = tr.doc.firstChild!.nodeSize;
+      const emptyParagraph = view.state.schema.nodes.paragraph.create();
+      tr.insert(containerAfterPos, emptyParagraph);
+      tr.setSelection(TextSelection.create(tr.doc, containerAfterPos + 1));
+      view.dispatch(tr);
+    });
+
+    await act(async () => {
+      fireEvent.keyDown(view.dom, { key: 'Backspace' });
+    });
+
+    expect(view.state.doc.childCount).toBe(1);
+    expect(view.state.doc.firstChild?.type.name).toBe('blockquote');
+    expect(view.state.doc.textContent).toContain('引用文字');
+    expect(view.state.selection instanceof NodeSelection).toBe(false);
+
+    const focused = resolveFocusedTable(view.state);
+    expect(focused).not.toBeNull();
+    expect(focused!.rowIndex).toBe(2);
+    expect(focused!.columnIndex).toBe(1);
+    expect(view.state.selection.$from.parent.textContent).toBe('下游异常时保护当前服务');
+    expect(view.state.selection.$from.parentOffset).toBe('下游异常时保护当前服务'.length);
+  });
+
+  it('引用块末尾含表格且下方紧跟空段落时，按 ArrowUp 直接进入表格末格末尾', async () => {
+    const { view } = await mountRuntime('> 引用文字');
+    const tableNode = await buildSampleTableNodeForView(view);
+    const blockquoteInnerEnd = findFirstNodeInnerEnd(view.state.doc, 'blockquote');
+
+    await act(async () => {
+      const tr = view.state.tr.insert(blockquoteInnerEnd, tableNode);
+      const containerAfterPos = tr.doc.firstChild!.nodeSize;
+      const emptyParagraph = view.state.schema.nodes.paragraph.create();
+      tr.insert(containerAfterPos, emptyParagraph);
+      tr.setSelection(TextSelection.create(tr.doc, containerAfterPos + 1));
+      view.dispatch(tr);
+    });
+
+    await act(async () => {
+      fireEvent.keyDown(view.dom, { key: 'ArrowUp' });
+    });
+
+    expect(view.state.doc.childCount).toBe(2);
+    expect(view.state.selection instanceof NodeSelection).toBe(false);
+    const focused = resolveFocusedTable(view.state);
+    expect(focused).not.toBeNull();
+    expect(focused!.rowIndex).toBe(2);
+    expect(focused!.columnIndex).toBe(1);
+    expect(view.state.selection.$from.parentOffset).toBe('下游异常时保护当前服务'.length);
+  });
+
+  it('有序列表末尾含表格且下方紧跟非空段落时，在行首按 Backspace 不删内容且进入表格末格末尾', async () => {
+    const { view } = await mountRuntime('1. 列表项文字\n\n保留的后续段落');
+    const tableNode = await buildSampleTableNodeForView(view);
+    const listItemInnerEnd = findFirstNodeInnerEnd(view.state.doc, 'list_item');
+
+    await act(async () => {
+      const tr = view.state.tr.insert(listItemInnerEnd, tableNode);
+      const listAfterPos = tr.doc.firstChild!.nodeSize;
+      tr.setSelection(TextSelection.create(tr.doc, listAfterPos + 1));
+      view.dispatch(tr);
+    });
+
+    await act(async () => {
+      fireEvent.keyDown(view.dom, { key: 'Backspace' });
+    });
+
+    expect(view.state.doc.childCount).toBe(2);
+    expect(view.state.doc.child(1).textContent).toBe('保留的后续段落');
+    expect(view.state.selection instanceof NodeSelection).toBe(false);
+    const focused = resolveFocusedTable(view.state);
+    expect(focused).not.toBeNull();
+    expect(focused!.rowIndex).toBe(2);
+    expect(focused!.columnIndex).toBe(1);
+    expect(view.state.selection.$from.parentOffset).toBe('下游异常时保护当前服务'.length);
+  });
+
+  it('GapCursor 位于末尾含表格的引用块后方时，按 Backspace 与 ArrowUp 均进入表格末格末尾', async () => {
+    const firstCase = await mountRuntime('> 引用文字');
+    const tableNode1 = await buildSampleTableNodeForView(firstCase.view);
+    const quoteEnd1 = findFirstNodeInnerEnd(firstCase.view.state.doc, 'blockquote');
+
+    await act(async () => {
+      const tr = firstCase.view.state.tr.insert(quoteEnd1, tableNode1);
+      const gapPos = tr.doc.firstChild!.nodeSize;
+      tr.setSelection(new GapCursor(tr.doc.resolve(gapPos)));
+      firstCase.view.dispatch(tr);
+    });
+    expect(firstCase.view.state.selection instanceof GapCursor).toBe(true);
+
+    await act(async () => {
+      fireEvent.keyDown(firstCase.view.dom, { key: 'Backspace' });
+    });
+
+    expect(firstCase.view.state.selection instanceof NodeSelection).toBe(false);
+    expect(resolveFocusedTable(firstCase.view.state)?.rowIndex).toBe(2);
+    expect(resolveFocusedTable(firstCase.view.state)?.columnIndex).toBe(1);
+
+    const secondCase = await mountRuntime('> 引用文字');
+    const tableNode2 = await buildSampleTableNodeForView(secondCase.view);
+    const quoteEnd2 = findFirstNodeInnerEnd(secondCase.view.state.doc, 'blockquote');
+
+    await act(async () => {
+      const tr = secondCase.view.state.tr.insert(quoteEnd2, tableNode2);
+      const gapPos = tr.doc.firstChild!.nodeSize;
+      tr.setSelection(new GapCursor(tr.doc.resolve(gapPos)));
+      secondCase.view.dispatch(tr);
+    });
+    expect(secondCase.view.state.selection instanceof GapCursor).toBe(true);
+
+    await act(async () => {
+      fireEvent.keyDown(secondCase.view.dom, { key: 'ArrowUp' });
+    });
+
+    expect(secondCase.view.state.selection instanceof NodeSelection).toBe(false);
+    expect(resolveFocusedTable(secondCase.view.state)?.rowIndex).toBe(2);
+    expect(resolveFocusedTable(secondCase.view.state)?.columnIndex).toBe(1);
+  });
+
+  it('引用块末尾为普通段落（无表格）时，下方空段落按 Backspace 与 ArrowUp 不误触发进入表格', async () => {
+    const { view } = await mountRuntime('> 普通引用文本');
+
+    await act(async () => {
+      const emptyParagraph = view.state.schema.nodes.paragraph.create();
+      const insertPos = view.state.doc.content.size;
+      const tr = view.state.tr.insert(insertPos, emptyParagraph);
+      tr.setSelection(TextSelection.create(tr.doc, insertPos + 1));
+      view.dispatch(tr);
+    });
+
+    await act(async () => {
+      fireEvent.keyDown(view.dom, { key: 'ArrowUp' });
+    });
+    expect(resolveFocusedTable(view.state)).toBeNull();
+
+    await act(async () => {
+      const insertPos = view.state.doc.content.size - 1;
+      view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, insertPos)));
+      fireEvent.keyDown(view.dom, { key: 'Backspace' });
+    });
+    expect(resolveFocusedTable(view.state)).toBeNull();
+    expect(view.state.selection instanceof NodeSelection).toBe(false);
+  });
+});

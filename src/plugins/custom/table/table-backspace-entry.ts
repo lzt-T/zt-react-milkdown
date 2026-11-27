@@ -3,10 +3,11 @@ import type { Node as ProseNode, ResolvedPos } from '@milkdown/prose/model';
 import { Plugin, PluginKey, TextSelection } from '@milkdown/prose/state';
 import type { EditorView } from '@milkdown/prose/view';
 import { $prose } from '@milkdown/utils';
-import { resolveLastCellEndPosition } from '@/plugins/custom/table/table-selection';
+import {
+  resolveLastCellEndPosition,
+  resolveTrailingTableInBlock
+} from '@/plugins/custom/table/table-selection';
 
-// 表格节点类型名。
-const TABLE_NODE_NAME = 'table';
 // 段落节点类型名。
 const PARAGRAPH_NODE_NAME = 'paragraph';
 // 仅处理 Backspace 按键。
@@ -52,26 +53,34 @@ const shouldSkipKeydown = (view: EditorView, event: KeyboardEvent): boolean => {
 };
 
 /**
- * 从 GapCursor 位置解析紧邻上方表格。
+ * 从 GapCursor 位置解析紧邻上方表格（支持透传引用块与列表末尾表格）。
  */
 const resolveTableFromGapCursor = (
   selectionFrom: number,
   resolvedPosition: ResolvedPos
 ): TableBackspaceTarget | null => {
   const previousNode = resolvedPosition.nodeBefore;
-  if (!previousNode || previousNode.type.name !== TABLE_NODE_NAME) {
+  if (!previousNode) {
+    return null;
+  }
+
+  // 命中的上方表格节点与起始位置。
+  const trailingTable = resolveTrailingTableInBlock(
+    previousNode,
+    selectionFrom - previousNode.nodeSize
+  );
+  if (!trailingTable) {
     return null;
   }
 
   return {
-    tableNode: previousNode,
-    tableStart: selectionFrom - previousNode.nodeSize,
+    ...trailingTable,
     deleteRange: null
   };
 };
 
 /**
- * 从段落行首位置解析紧邻上方表格，并在当前段落为空时返回待删除范围。
+ * 从段落行首位置解析紧邻上方表格（支持透传引用块与列表末尾表格），并在当前段落为空时返回待删除范围。
  */
 const resolveTableFromParagraphStart = (
   resolvedPosition: ResolvedPos
@@ -95,12 +104,16 @@ const resolveTableFromParagraphStart = (
   const blockContainer = resolvedPosition.node(resolvedPosition.depth - 1);
   // 当前段落同级上一块节点。
   const previousBlock = blockContainer.child(currentBlockIndex - 1);
-  if (previousBlock.type.name !== TABLE_NODE_NAME) {
+  // 当前段落起始位置（节点左边界）。
+  const currentBlockStart = resolvedPosition.before(resolvedPosition.depth);
+  // 上一块起始位置。
+  const previousBlockStart = currentBlockStart - previousBlock.nodeSize;
+  // 命中的上方表格节点与起始位置。
+  const trailingTable = resolveTrailingTableInBlock(previousBlock, previousBlockStart);
+  if (!trailingTable) {
     return null;
   }
 
-  // 当前段落起始位置（节点左边界）。
-  const currentBlockStart = resolvedPosition.before(resolvedPosition.depth);
   // 严格判断内容为空，避免误删包含行内图片或公式等非文本节点的段落。
   const deleteRange =
     resolvedPosition.parent.content.size === 0
@@ -111,8 +124,7 @@ const resolveTableFromParagraphStart = (
       : null;
 
   return {
-    tableNode: previousBlock,
-    tableStart: currentBlockStart - previousBlock.nodeSize,
+    ...trailingTable,
     deleteRange
   };
 };

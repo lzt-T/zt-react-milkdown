@@ -11,6 +11,21 @@ const TABLE_ROW_NODE_NAME = 'table_row';
 const TABLE_HEADER_NODE_NAME = 'table_header';
 // 普通表格单元格节点类型名。
 const TABLE_CELL_NODE_NAME = 'table_cell';
+// 可向下透传查找末尾表格的容器节点名集合。
+const TRAVERSABLE_TABLE_CONTAINER_NODE_NAMES = new Set([
+  'ordered_list',
+  'bullet_list',
+  'list_item',
+  'blockquote'
+]);
+
+/** 末尾表格匹配结果。 */
+export interface TrailingTableMatch {
+  /** 命中的表格节点。 */
+  tableNode: ProseNode;
+  /** 表格起始位置。 */
+  tableStart: number;
+}
 
 /**
  * 当前聚焦表格信息。
@@ -157,4 +172,42 @@ export const resolveLastCellEndPosition = (tableNode: ProseNode, tableStart: num
   const lastCellStart = lastRowStart + 1 + cellOffset;
   // 单元格内容末尾位置（闭标签前）。
   return lastCellStart + lastCell.nodeSize - 1;
+};
+
+/**
+ * 沿允许透传的容器末尾向下查找紧邻的表格节点与起始位置。
+ */
+export const resolveTrailingTableInBlock = (
+  blockNode: ProseNode,
+  blockStart: number
+): TrailingTableMatch | null => {
+  // 当前正在检查的节点及其起始位置。
+  let currentNode: ProseNode = blockNode;
+  let currentStart = blockStart;
+
+  while (true) {
+    if (currentNode.type.name === TABLE_NODE_NAME) {
+      return {
+        tableNode: currentNode,
+        tableStart: currentStart
+      };
+    }
+
+    if (
+      !TRAVERSABLE_TABLE_CONTAINER_NODE_NAMES.has(currentNode.type.name) ||
+      currentNode.childCount === 0
+    ) {
+      return null;
+    }
+
+    // 当前容器的最后一个子节点。
+    const lastChild = currentNode.lastChild;
+    if (!lastChild) {
+      return null;
+    }
+
+    // 减去当前容器闭标签占用的一位偏移，得到末尾子节点的精确起点。
+    currentStart = currentStart + currentNode.nodeSize - 1 - lastChild.nodeSize;
+    currentNode = lastChild;
+  }
 };
