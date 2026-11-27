@@ -8,6 +8,7 @@ import {
   orderedListKeymap,
   paragraphKeymap
 } from '@milkdown/preset-commonmark';
+import type { Command } from '@milkdown/prose/state';
 import { $useKeymap } from '@milkdown/utils';
 import type {
   BlockTransformCommand,
@@ -194,7 +195,22 @@ export const resolveBlockTransformShortcutLabels = (
 };
 
 /**
- * 覆盖 CommonMark 内置块转换与行内代码快捷键。
+ * 生成调用统一块级转换逻辑的 keymap 命令。
+ */
+const createBlockTransformKeymapCommand = (
+  command: BlockTransformCommand
+): (() => Command) => {
+  return () => (_state, _dispatch, view) => {
+    if (!view) {
+      return false;
+    }
+
+    return runBlockTransformCommand(view, command);
+  };
+};
+
+/**
+ * 清空 CommonMark 内置块转换快捷键并更新行内代码快捷键（块级转换由自定义 keymap 统一承载）。
  */
 export const configureBlockTransformShortcuts = (
   ctx: Ctx,
@@ -205,32 +221,32 @@ export const configureBlockTransformShortcuts = (
 
   ctx.update(paragraphKeymap.key, (keymap) => ({
     ...keymap,
-    TurnIntoText: { ...keymap.TurnIntoText, shortcuts: shortcuts.paragraph }
+    TurnIntoText: { ...keymap.TurnIntoText, shortcuts: [] }
   }));
   ctx.update(headingKeymap.key, (keymap) => ({
     ...keymap,
-    TurnIntoH1: { ...keymap.TurnIntoH1, shortcuts: shortcuts.heading1 },
-    TurnIntoH2: { ...keymap.TurnIntoH2, shortcuts: shortcuts.heading2 },
-    TurnIntoH3: { ...keymap.TurnIntoH3, shortcuts: shortcuts.heading3 },
-    TurnIntoH4: { ...keymap.TurnIntoH4, shortcuts: shortcuts.heading4 },
-    TurnIntoH5: { ...keymap.TurnIntoH5, shortcuts: shortcuts.heading5 },
-    TurnIntoH6: { ...keymap.TurnIntoH6, shortcuts: shortcuts.heading6 }
+    TurnIntoH1: { ...keymap.TurnIntoH1, shortcuts: [] },
+    TurnIntoH2: { ...keymap.TurnIntoH2, shortcuts: [] },
+    TurnIntoH3: { ...keymap.TurnIntoH3, shortcuts: [] },
+    TurnIntoH4: { ...keymap.TurnIntoH4, shortcuts: [] },
+    TurnIntoH5: { ...keymap.TurnIntoH5, shortcuts: [] },
+    TurnIntoH6: { ...keymap.TurnIntoH6, shortcuts: [] }
   }));
   ctx.update(bulletListKeymap.key, (keymap) => ({
     ...keymap,
-    WrapInBulletList: { ...keymap.WrapInBulletList, shortcuts: shortcuts.bulletList }
+    WrapInBulletList: { ...keymap.WrapInBulletList, shortcuts: [] }
   }));
   ctx.update(orderedListKeymap.key, (keymap) => ({
     ...keymap,
-    WrapInOrderedList: { ...keymap.WrapInOrderedList, shortcuts: shortcuts.orderedList }
+    WrapInOrderedList: { ...keymap.WrapInOrderedList, shortcuts: [] }
   }));
   ctx.update(blockquoteKeymap.key, (keymap) => ({
     ...keymap,
-    WrapInBlockquote: { ...keymap.WrapInBlockquote, shortcuts: shortcuts.blockquote }
+    WrapInBlockquote: { ...keymap.WrapInBlockquote, shortcuts: [] }
   }));
   ctx.update(codeBlockKeymap.key, (keymap) => ({
     ...keymap,
-    CreateCodeBlock: { ...keymap.CreateCodeBlock, shortcuts: shortcuts.codeBlock }
+    CreateCodeBlock: { ...keymap.CreateCodeBlock, shortcuts: [] }
   }));
   ctx.update(inlineCodeKeymap.key, (keymap) => ({
     ...keymap,
@@ -239,24 +255,59 @@ export const configureBlockTransformShortcuts = (
 };
 
 /**
- * 创建当前模式的任务列表块转换快捷键。
+ * 创建当前模式的全部块级转换快捷键（含任务列表、段落、标题、列表、引用与代码块）。
  */
 export const createTaskListTransformKeymap = (shortcutMode: EditorShortcutMode) => {
-  // 当前模式的任务列表快捷键。
-  const shortcut = resolveSlashMenuShortcutMap(shortcutMode).taskList;
-  return $useKeymap('taskListTransform', {
+  // 当前模式的块级转换快捷键映射。
+  const shortcuts = resolveBlockTransformShortcutMap(shortcutMode);
+  return $useKeymap('blockTransform', {
+    TurnIntoText: {
+      shortcuts: shortcuts.paragraph,
+      command: createBlockTransformKeymapCommand('paragraph')
+    },
+    TurnIntoH1: {
+      shortcuts: shortcuts.heading1,
+      command: createBlockTransformKeymapCommand('heading1')
+    },
+    TurnIntoH2: {
+      shortcuts: shortcuts.heading2,
+      command: createBlockTransformKeymapCommand('heading2')
+    },
+    TurnIntoH3: {
+      shortcuts: shortcuts.heading3,
+      command: createBlockTransformKeymapCommand('heading3')
+    },
+    TurnIntoH4: {
+      shortcuts: shortcuts.heading4,
+      command: createBlockTransformKeymapCommand('heading4')
+    },
+    TurnIntoH5: {
+      shortcuts: shortcuts.heading5,
+      command: createBlockTransformKeymapCommand('heading5')
+    },
+    TurnIntoH6: {
+      shortcuts: shortcuts.heading6,
+      command: createBlockTransformKeymapCommand('heading6')
+    },
+    WrapInBulletList: {
+      shortcuts: shortcuts.bulletList,
+      command: createBlockTransformKeymapCommand('bulletList')
+    },
+    WrapInOrderedList: {
+      shortcuts: shortcuts.orderedList,
+      command: createBlockTransformKeymapCommand('orderedList')
+    },
     WrapInTaskList: {
-      shortcuts: shortcut,
-      /**
-       * 创建任务列表块转换命令。
-       */
-      command: () => (_state, _dispatch, view) => {
-        if (!view) {
-          return false;
-        }
-
-        return runBlockTransformCommand(view, 'taskList');
-      }
+      shortcuts: shortcuts.taskList,
+      command: createBlockTransformKeymapCommand('taskList')
+    },
+    WrapInBlockquote: {
+      shortcuts: shortcuts.blockquote,
+      command: createBlockTransformKeymapCommand('blockquote')
+    },
+    CreateCodeBlock: {
+      shortcuts: shortcuts.codeBlock,
+      command: createBlockTransformKeymapCommand('codeBlock')
     }
   });
 };

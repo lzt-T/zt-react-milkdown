@@ -1,59 +1,24 @@
-import { setBlockType, wrapIn } from '@milkdown/prose/commands';
-import { wrapInList } from '@milkdown/prose/schema-list';
+import { lift, setBlockType, wrapIn } from '@milkdown/prose/commands';
+import type { NodeType, ResolvedPos } from '@milkdown/prose/model';
+import { liftListItem } from '@milkdown/prose/schema-list';
+import { Selection, type EditorState, type Transaction } from '@milkdown/prose/state';
 import type { EditorView } from '@milkdown/prose/view';
-import type { BlockTransformCommand } from '../../../types/editor';
+import type { BlockTransformCommand } from '@/types/editor';
+import {
+  LIST_TRANSFORM_CONFIG_MAP,
+  runListTransform,
+  type AncestorMatch,
+  type EditorCommandExecutor,
+  type ListBlockTransformCommand
+} from './block-transform-list';
+
+// 表格节点名称集合。
+const TABLE_NODE_NAMES = new Set(['table', 'table_cell', 'table_header']);
+// 脱出容器循环安全上限，防止异常结构死循环。
+const MAX_LIFT_ITERATIONS = 20;
 
 /**
- * ProseMirror 命令执行器类型。
- */
-type EditorCommandExecutor = (state: unknown, dispatch: unknown, view: unknown) => boolean;
-
-/**
- * 执行 ProseMirror 命令。
- */
-const runCommand = (command: EditorCommandExecutor, view: EditorView): boolean => {
-  return command(view.state, view.dispatch, view);
-};
-
-/**
- * 设置当前列表项的任务完成状态。
- */
-const setCurrentListItemChecked = (view: EditorView, checked: boolean): boolean => {
-  // 当前选区起点。
-  const from = view?.state?.selection?.$from;
-  if (!from || !view?.dispatch) {
-    return false;
-  }
-
-  for (let depth = from.depth; depth > 0; depth -= 1) {
-    // 当前层级节点。
-    const node = from.node(depth);
-    if (node?.type?.name !== 'list_item') {
-      continue;
-    }
-
-    // 当前列表项 attrs 定义。
-    const attrsSpec = node.type?.spec?.attrs as Record<string, unknown> | undefined;
-    if (!attrsSpec?.checked) {
-      return false;
-    }
-
-    // 当前列表项位置。
-    const itemPosition = from.before(depth);
-    view.dispatch(
-      view.state.tr.setNodeMarkup(itemPosition, undefined, {
-        ...node.attrs,
-        checked
-      })
-    );
-    return true;
-  }
-
-  return false;
-};
-
-/**
- * 构建 heading 层级映射表。
+ * 标题命令到层级映射表。
  */
 const HEADING_LEVEL_MAP: Record<
   Extract<
@@ -71,13 +36,16 @@ const HEADING_LEVEL_MAP: Record<
 };
 
 /**
- * 列表命令到 schema 节点名映射表。
+ * 标题层级到块转换命令映射表。
  */
-const LIST_TYPE_MAP: Record<Extract<BlockTransformCommand, 'bulletList' | 'orderedList'>, 'bullet_list' | 'ordered_list'> =
-  {
-    bulletList: 'bullet_list',
-    orderedList: 'ordered_list'
-  };
+const HEADING_COMMAND_BY_LEVEL: Record<number, BlockTransformCommand> = {
+  1: 'heading1',
+  2: 'heading2',
+  3: 'heading3',
+  4: 'heading4',
+  5: 'heading5',
+  6: 'heading6'
+};
 
 /**
  * 块级命令主文案优先级。
@@ -98,99 +66,222 @@ const BLOCK_TRANSFORM_COMMAND_PRIORITY: BlockTransformCommand[] = [
 ];
 
 /**
+ * 在当前累积事务基础上执行子命令并合入步骤与显式选区。
+ */
+const applyCommandToTransaction = (
+  baseState: EditorState,
+  tr: Transaction,
+  command: EditorCommandExecutor
+): boolean => {
+  // 基于当前中间事务构建临时状态。
+  const nextState = baseState.apply(tr);
+  // 子命令是否触发了事务派发。
+  let dispatched = false;
+
+  const executed = command(nextState, (subTr) => {
+    dispatched = true;
+    subTr.steps.forEach((step) => {
+      tr.step(step);
+    });
+    if (subTr.selectionSet) {
+      tr.setSelection(Selection.fromJSON(tr.doc, subTr.selection.toJSON()));
+    }
+  });
+
+  return executed && dispatched;
+};
+
+/**
+ * 查找指定解析位置向上最近的匹配祖先节点。
+ */
+const findNearestAncestor = (
+  resolvedPos: ResolvedPos,
+  names: ReadonlySet<string>
+): AncestorMatch | null => {
+  for (let depth = resolvedPos.depth; depth > 0; depth -= 1) {
+    const node = resolvedPos.node(depth);
+    if (names.has(node.type.name)) {
+      return {
+        depth,
+        node,
+        pos: resolvedPos.before(depth)
+      };
+    }
+  }
+
+  return null;
+};
+
+/**
+ * 判断选区起点或终点是否位于指定祖先节点内部。
+ */
+const hasAncestorInSelection = (state: EditorState, names: ReadonlySet<string>): boolean => {
+  const { $from, $to } = state.selection;
+  return Boolean(findNearestAncestor($from, names) || findNearestAncestor($to, names));
+};
+
+/**
+ * 脱出选区所在的列表或引用块容器。
+ */
+const liftOutOfContainers = (
+  baseState: EditorState,
+  tr: Transaction,
+  listItemType: NodeType | undefined,
+  includeBlockquote: boolean
+): void => {
+  // 允许脱出的容器节点名集合。
+  const containerNames = includeBlockquote
+    ? new Set(['list_item', 'blockquote'])
+    : new Set(['list_item']);
+
+  for (let iteration = 0; iteration < MAX_LIFT_ITERATIONS; iteration += 1) {
+    const currentState = baseState.apply(tr);
+    const { $from, $to } = currentState.selection;
+    const nearestContainer =
+      findNearestAncestor($from, containerNames) ?? findNearestAncestor($to, containerNames);
+    if (!nearestContainer) {
+      return;
+    }
+
+    // 命中列表项时优先用 liftListItem 脱出一层列表；否则对引用块执行 lift。
+    const lifted =
+      nearestContainer.node.type.name === 'list_item' && listItemType
+        ? applyCommandToTransaction(baseState, tr, liftListItem(listItemType))
+        : nearestContainer.node.type.name === 'blockquote'
+          ? applyCommandToTransaction(baseState, tr, lift)
+          : false;
+    if (!lifted) {
+      return;
+    }
+  }
+};
+
+/**
+ * 判断选区中是否存在非段落类型的文本块。
+ */
+const hasNonParagraphTextblock = (state: EditorState): boolean => {
+  const { from, to } = state.selection;
+  if (from === to) {
+    return (
+      state.selection.$from.parent.isTextblock &&
+      state.selection.$from.parent.type.name !== 'paragraph'
+    );
+  }
+
+  let foundNonParagraph = false;
+  state.doc.nodesBetween(from, to, (node) => {
+    if (node.isTextblock && node.type.name !== 'paragraph') {
+      foundNonParagraph = true;
+      return false;
+    }
+    return !foundNonParagraph;
+  });
+
+  return foundNonParagraph;
+};
+
+/**
+ * 执行正文、标题或代码块转换命令。
+ */
+const runTextblockTransform = (
+  view: EditorView,
+  targetType: NodeType,
+  targetAttrs?: Record<string, unknown>
+): boolean => {
+  const baseState = view.state;
+  const tr = baseState.tr;
+  const listItemType = baseState.schema.nodes.list_item;
+
+  liftOutOfContainers(baseState, tr, listItemType, true);
+  applyCommandToTransaction(baseState, tr, setBlockType(targetType, targetAttrs));
+
+  if (tr.docChanged) {
+    view.dispatch(tr.scrollIntoView());
+    return true;
+  }
+
+  // 光标原本已在顶层目标块类型时视为幂等成功。
+  const currentState = baseState.apply(tr);
+  return currentState.selection.$from.parent.hasMarkup(targetType, targetAttrs);
+};
+
+/**
+ * 执行引用块转换命令（列表先脱出，已在引用内不重复嵌套）。
+ */
+const runBlockquoteTransform = (view: EditorView): boolean => {
+  const baseState = view.state;
+  const nodes = baseState.schema.nodes;
+  const quoteType = nodes.blockquote;
+  const paragraphType = nodes.paragraph;
+  if (!quoteType || !paragraphType) {
+    return false;
+  }
+
+  const tr = baseState.tr;
+  if (hasAncestorInSelection(baseState, new Set(['list_item']))) {
+    liftOutOfContainers(baseState, tr, nodes.list_item, false);
+  }
+
+  const stateAfterLift = baseState.apply(tr);
+  if (hasNonParagraphTextblock(stateAfterLift)) {
+    applyCommandToTransaction(baseState, tr, setBlockType(paragraphType));
+  }
+
+  const stateBeforeWrap = baseState.apply(tr);
+  if (!hasAncestorInSelection(stateBeforeWrap, new Set(['blockquote']))) {
+    applyCommandToTransaction(baseState, tr, wrapIn(quoteType));
+  }
+
+  if (tr.docChanged) {
+    view.dispatch(tr.scrollIntoView());
+  }
+
+  return tr.docChanged || hasAncestorInSelection(baseState.apply(tr), new Set(['blockquote']));
+};
+
+/**
  * 执行块级转换命令。
  */
-export const runBlockTransformCommand = (view: EditorView, command: BlockTransformCommand): boolean => {
+export const runBlockTransformCommand = (
+  view: EditorView,
+  command: BlockTransformCommand
+): boolean => {
   if (!view?.state || !view?.dispatch) {
     return false;
   }
 
-  // 编辑器 schema 节点集合。
-  const nodes = view.state.schema.nodes as Record<string, unknown>;
+  if (hasAncestorInSelection(view.state, TABLE_NODE_NAMES)) {
+    return false;
+  }
+
+  const nodes = view.state.schema.nodes;
 
   if (command === 'paragraph') {
-    // paragraph 节点类型。
-    const paragraphType = nodes.paragraph;
-    if (!paragraphType) {
-      return false;
-    }
-
-    // paragraph 转换命令。
-    const paragraphCommand = (setBlockType as (type: unknown, attrs?: Record<string, unknown>) => EditorCommandExecutor)(
-      paragraphType
-    );
-    return runCommand(paragraphCommand, view);
+    return nodes.paragraph ? runTextblockTransform(view, nodes.paragraph) : false;
   }
 
   if (command in HEADING_LEVEL_MAP) {
-    // heading 节点类型。
-    const headingType = nodes.heading;
-    // heading 层级。
     const level = HEADING_LEVEL_MAP[command as keyof typeof HEADING_LEVEL_MAP];
-    if (!headingType || typeof level !== 'number') {
-      return false;
-    }
-
-    // heading 转换命令。
-    const headingCommand = (setBlockType as (type: unknown, attrs?: Record<string, unknown>) => EditorCommandExecutor)(
-      headingType,
-      { level }
-    );
-    return runCommand(headingCommand, view);
-  }
-
-  if (command === 'blockquote') {
-    // blockquote 节点类型。
-    const quoteType = nodes.blockquote;
-    if (!quoteType) {
-      return false;
-    }
-
-    // 引用包裹命令。
-    const quoteCommand = (wrapIn as (type: unknown, attrs?: Record<string, unknown>) => EditorCommandExecutor)(quoteType);
-    return runCommand(quoteCommand, view);
-  }
-
-  if (command === 'taskList') {
-    // 任务列表基于无序列表和 list_item checked 属性实现。
-    const listType = nodes.bullet_list;
-    if (!listType) {
-      return false;
-    }
-
-    // 无序列表包裹命令。
-    const listCommand = (wrapInList as (type: unknown, attrs?: Record<string, unknown>) => EditorCommandExecutor)(listType);
-    if (!runCommand(listCommand, view)) {
-      return false;
-    }
-    return setCurrentListItemChecked(view, false);
+    return nodes.heading ? runTextblockTransform(view, nodes.heading, { level }) : false;
   }
 
   if (command === 'codeBlock') {
-    // 代码块节点类型。
-    const codeBlockType = nodes.code_block;
-    if (!codeBlockType) {
-      return false;
-    }
-
-    // 代码块转换命令。
-    const codeBlockCommand = (setBlockType as (type: unknown, attrs?: Record<string, unknown>) => EditorCommandExecutor)(
-      codeBlockType,
-      { language: 'text' }
-    );
-    return runCommand(codeBlockCommand, view);
+    return nodes.code_block
+      ? runTextblockTransform(view, nodes.code_block, { language: 'text' })
+      : false;
   }
 
-  if (command in LIST_TYPE_MAP) {
-    // 列表节点类型。
-    const listType = nodes[LIST_TYPE_MAP[command as keyof typeof LIST_TYPE_MAP]];
-    if (!listType) {
-      return false;
-    }
+  if (command === 'blockquote') {
+    return runBlockquoteTransform(view);
+  }
 
-    // 列表包裹命令。
-    const listCommand = (wrapInList as (type: unknown, attrs?: Record<string, unknown>) => EditorCommandExecutor)(listType);
-    return runCommand(listCommand, view);
+  if (command in LIST_TRANSFORM_CONFIG_MAP) {
+    return runListTransform(view, command as ListBlockTransformCommand, {
+      applyCommandToTransaction,
+      findNearestAncestor,
+      liftOutOfContainers,
+      hasNonParagraphTextblock
+    });
   }
 
   return false;
@@ -200,13 +291,13 @@ export const runBlockTransformCommand = (view: EditorView, command: BlockTransfo
  * 解析当前光标所在块的转换命令。
  */
 export const resolveActiveBlockTransformCommands = (view: EditorView): Set<BlockTransformCommand> => {
-  // 当前选区起点。
   const from = view.state.selection.$from;
-  // 当前激活命令集合。
   const activeCommands = new Set<BlockTransformCommand>();
+  // 嵌套列表中只识别光标所在最内层列表项及其直接列表类型。
+  let hasResolvedListItem = false;
+  let hasResolvedList = false;
 
   for (let depth = from.depth; depth > 0; depth -= 1) {
-    // 当前层级节点。
     const currentNode = from.node(depth);
     const currentNodeName = currentNode.type.name;
 
@@ -222,15 +313,7 @@ export const resolveActiveBlockTransformCommands = (view: EditorView): Set<Block
 
     if (currentNodeName === 'heading') {
       const level = Number(currentNode.attrs?.level ?? 0);
-      const headingCommandMap: Record<number, BlockTransformCommand> = {
-        1: 'heading1',
-        2: 'heading2',
-        3: 'heading3',
-        4: 'heading4',
-        5: 'heading5',
-        6: 'heading6'
-      };
-      const headingCommand = headingCommandMap[level];
+      const headingCommand = HEADING_COMMAND_BY_LEVEL[level];
       if (headingCommand) {
         activeCommands.add(headingCommand);
       }
@@ -238,19 +321,28 @@ export const resolveActiveBlockTransformCommands = (view: EditorView): Set<Block
     }
 
     if (currentNodeName === 'list_item') {
-      if (typeof currentNode.attrs?.checked === 'boolean') {
-        activeCommands.add('taskList');
+      if (!hasResolvedListItem) {
+        hasResolvedListItem = true;
+        if (typeof currentNode.attrs?.checked === 'boolean') {
+          activeCommands.add('taskList');
+        }
       }
       continue;
     }
 
     if (currentNodeName === 'ordered_list') {
-      activeCommands.add('orderedList');
+      if (!hasResolvedList) {
+        hasResolvedList = true;
+        activeCommands.add('orderedList');
+      }
       continue;
     }
 
     if (currentNodeName === 'bullet_list') {
-      activeCommands.add('bulletList');
+      if (!hasResolvedList) {
+        hasResolvedList = true;
+        activeCommands.add('bulletList');
+      }
       continue;
     }
 
@@ -275,13 +367,7 @@ export const resolveActiveBlockTransformCommands = (view: EditorView): Set<Block
  * 解析当前光标所在块的主转换命令。
  */
 export const resolveCurrentBlockTransformCommand = (view: EditorView): BlockTransformCommand => {
-  // 当前激活命令集合。
   const activeCommands = resolveActiveBlockTransformCommands(view);
-  // 主命令。
   const primaryCommand = BLOCK_TRANSFORM_COMMAND_PRIORITY.find((command) => activeCommands.has(command));
-  if (primaryCommand) {
-    return primaryCommand;
-  }
-  
-  return 'paragraph';
+  return primaryCommand ?? 'paragraph';
 };
