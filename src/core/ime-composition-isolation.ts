@@ -36,6 +36,15 @@ interface ExitIsolationOptions {
   preserveSelection?: boolean;
 }
 
+/** 暴露 ProseMirror 内部 DOM 观察器刷新能力，用于在切换隔离宿主前同步挂起选区。 */
+interface EditorViewWithDomObserver extends EditorView {
+  /** ProseMirror 内部 DOM 变更与选区观察器。 */
+  domObserver?: {
+    /** 立即刷新挂起的 DOM 变更与选区状态。 */
+    flush?: () => void;
+  };
+}
+
 /**
  * 判断键盘事件是否属于 IME 预处理按键。
  */
@@ -172,6 +181,8 @@ export const imeCompositionIsolationPlugin = $prose(
       view(editorView) {
         const dom = editorView.dom;
         const ownerDocument = dom.ownerDocument;
+        const hasOwnHasFocus = Object.prototype.hasOwnProperty.call(editorView, 'hasFocus');
+        const originalHasFocus = editorView.hasFocus;
         let activeView = editorView;
         let isolating = false;
         let isolatedBlock: HTMLElement | null = null;
@@ -180,6 +191,23 @@ export const imeCompositionIsolationPlugin = $prose(
         let restoringRootFocus = false;
         let scheduleTimer: ReturnType<typeof setTimeout> | null = null;
         let dispatchingSyntheticBlur = false;
+
+        /**
+         * 判断当前浏览器焦点是否合法停留在已被隔离的可编辑直接块上。
+         */
+        const isIsolatedBlockFocused = (): boolean => {
+          return (
+            isolating &&
+            isolatedBlock !== null &&
+            isolatedBlock.isConnected &&
+            dom.getAttribute('contenteditable') === 'true' &&
+            ownerDocument.activeElement === isolatedBlock &&
+            !isInteractiveTarget(isolatedBlock)
+          );
+        };
+
+        // 隔离态下焦点位于当前直接块而非 .ProseMirror，代理 hasFocus 避免 ProseMirror 跳过选区同步与光标回写。
+        editorView.hasFocus = () => originalHasFocus.call(editorView) || isIsolatedBlockFocused();
 
         /**
          * 清理尚未触发的延迟预隔离定时器。
@@ -237,7 +265,6 @@ export const imeCompositionIsolationPlugin = $prose(
             isolating ||
             isPointerSelecting ||
             activeView.composing ||
-            !activeView.state.selection.empty ||
             !shouldEnableForCurrentDoc()
           ) {
             return;
@@ -249,6 +276,13 @@ export const imeCompositionIsolationPlugin = $prose(
             !dom.contains(activeElement) ||
             isInteractiveTarget(activeElement)
           ) {
+            return;
+          }
+
+          // 切走根焦点前先刷新挂起的 DOM 选区，避免 pointerup/keyup 抢跑于 selectionchange 导致状态选区滞后。
+          (activeView as EditorViewWithDomObserver).domObserver?.flush?.();
+
+          if (!activeView.state.selection.empty) {
             return;
           }
 
@@ -520,6 +554,11 @@ export const imeCompositionIsolationPlugin = $prose(
             pendingDetachedBlock = null;
             cancelScheduledIsolation();
             exitIsolation({ restoreFocus: false });
+            if (hasOwnHasFocus) {
+              editorView.hasFocus = originalHasFocus;
+            } else {
+              delete (editorView as Partial<EditorView>).hasFocus;
+            }
             dom.removeEventListener('keydown', handleKeyDown, true);
             dom.removeEventListener('keyup', handleKeyUp, true);
             dom.removeEventListener('pointerdown', handlePointerDown, true);

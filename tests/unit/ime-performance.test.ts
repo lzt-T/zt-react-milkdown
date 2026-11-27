@@ -682,4 +682,95 @@ describe('ime-performance', () => {
     });
     expect(updatedMathValue).toBe('asd');
   });
+
+  it('大文档隔离态下进入前刷新挂起选区、保持 hasFocus 为 true 并持续同步块内选区变更', async () => {
+    const paragraphs = Array.from({ length: 34 }, (_, index) => `第 ${index + 1} 段正文内容`);
+    const targetMarkdown =
+      '**目前 Go 微服务最干净、最主流的**就是**Gin（对外 API） + gRPC（内部 RPC） + Kubernetes（k8s）（服务发现 & 配置）**';
+    const { runtime, view } = await mountRuntime([...paragraphs, targetMarkdown].join('\n\n'), 160);
+    vi.useFakeTimers();
+
+    const targetParagraph = view.dom.lastElementChild as HTMLElement;
+    expect(targetParagraph).toBeTruthy();
+
+    let strongTextNode: Text | null = null;
+    const walker = document.createTreeWalker(targetParagraph, NodeFilter.SHOW_TEXT);
+    for (let current = walker.nextNode(); current; current = walker.nextNode()) {
+      if (current instanceof Text && current.data.includes('（服务发现 & 配置）')) {
+        strongTextNode = current;
+        break;
+      }
+    }
+    expect(strongTextNode).not.toBeNull();
+    const bracketOffset = strongTextNode!.data.indexOf('（服务发现 & 配置）');
+    expect(bracketOffset).toBeGreaterThan(0);
+
+    let currentActiveElement: Element | null = view.dom;
+    vi.spyOn(document, 'activeElement', 'get').mockImplementation(() => currentActiveElement);
+    vi.spyOn(view.dom, 'focus').mockImplementation(() => {
+      currentActiveElement = view.dom;
+    });
+    vi.spyOn(targetParagraph, 'focus').mockImplementation(() => {
+      currentActiveElement = targetParagraph;
+    });
+
+    // 先将编辑器选区留在目标段落末尾，再仅修改 DOM 光标到左括号前（模拟 selectionchange 晚于 pointerup 的竞争态）。
+    const paragraphEndPos = view.state.doc.content.size - 1;
+    await act(async () => {
+      view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, paragraphEndPos)));
+    });
+    expect(view.state.selection.from).toBe(paragraphEndPos);
+
+    const setDomCaret = (node: Text, offset: number): void => {
+      const range = document.createRange();
+      range.setStart(node, offset);
+      range.collapse(true);
+      const selection = window.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+    };
+
+    setDomCaret(strongTextNode!, bracketOffset);
+    fireEvent.pointerUp(view.dom);
+    await act(async () => {
+      vi.advanceTimersByTime(20);
+    });
+
+    expect(view.dom.classList.contains(IME_ISOLATION_CLASS_NAME)).toBe(true);
+    expect(currentActiveElement).toBe(targetParagraph);
+    expect(view.hasFocus()).toBe(true);
+    expect(view.state.selection.from).toBeLessThan(paragraphEndPos);
+    expect(
+      view.state.doc.textBetween(view.state.selection.from, view.state.selection.from + 1)
+    ).toBe('（');
+
+    // 焦点移至段落内部交互按钮或编辑器外部时，hasFocus 必须恢复为 false。
+    const innerButton = document.createElement('button');
+    innerButton.type = 'button';
+    targetParagraph.appendChild(innerButton);
+    currentActiveElement = innerButton;
+    expect(view.hasFocus()).toBe(false);
+    currentActiveElement = document.body;
+    expect(view.hasFocus()).toBe(false);
+    innerButton.remove();
+
+    // 回到被隔离段落后，隔离态内触发 selectionchange 仍能正常同步最新选区到 ProseMirror 状态。
+    currentActiveElement = targetParagraph;
+    expect(view.hasFocus()).toBe(true);
+    setDomCaret(strongTextNode!, bracketOffset + 1);
+    fireEvent(document, new Event('selectionchange'));
+    expect(
+      view.state.doc.textBetween(view.state.selection.from - 1, view.state.selection.from)
+    ).toBe('（');
+
+    // 销毁编辑器后还原原始 hasFocus，不再将子段落视为编辑器聚焦。
+    await act(async () => {
+      await runtime.editor.destroy();
+    });
+    const runtimeIndex = runtimes.indexOf(runtime);
+    if (runtimeIndex !== -1) {
+      runtimes.splice(runtimeIndex, 1);
+    }
+    expect(view.hasFocus()).toBe(false);
+  });
 });
