@@ -5,6 +5,10 @@ import { $prose } from '@milkdown/utils';
 
 // 图片节点类型名。
 const IMAGE_NODE_NAME = 'image';
+// 段落节点类型名。
+const PARAGRAPH_NODE_NAME = 'paragraph';
+// 可向下透传查找末尾图片的容器节点名集合，避免穿过表格等其他独立块。
+const TRAVERSABLE_CONTAINER_NODE_NAMES = new Set(['ordered_list', 'bullet_list', 'list_item', 'blockquote']);
 // 删除键与相邻节点方向映射。
 const DELETE_BOUNDARY_DIRECTION_MAP: Record<string, 'before' | 'after'> = {
   Backspace: 'before',
@@ -46,6 +50,7 @@ const isImageNode = (node: ProseNode | null | undefined): node is ProseNode => {
 const shouldSkipImageDeletion = (view: EditorView, event: KeyboardEvent): boolean => {
   return (
     !DELETE_BOUNDARY_DIRECTION_MAP[event.key] ||
+    event.isComposing ||
     event.defaultPrevented ||
     event.altKey ||
     event.ctrlKey ||
@@ -58,16 +63,54 @@ const shouldSkipImageDeletion = (view: EditorView, event: KeyboardEvent): boolea
 };
 
 /**
- * 解析“当前块同级上一块是否为图片节点”。
+ * 沿允许透传的容器末尾向下查找紧邻的图片节点起始位置。
+ */
+const resolveTrailingImageInBlock = (blockNode: ProseNode, blockStart: number): number | null => {
+  // 当前正在检查的节点及其起始位置。
+  let currentNode: ProseNode = blockNode;
+  let currentStart = blockStart;
+
+  while (true) {
+    if (isImageNode(currentNode)) {
+      return currentStart;
+    }
+
+    if (!TRAVERSABLE_CONTAINER_NODE_NAMES.has(currentNode.type.name) || currentNode.childCount === 0) {
+      return null;
+    }
+
+    // 当前容器的最后一个子节点。
+    const lastChild = currentNode.lastChild;
+    if (!lastChild) {
+      return null;
+    }
+
+    // 减去当前容器闭标签占用的一位偏移，得到末尾子节点的精确起点。
+    currentStart = currentStart + currentNode.nodeSize - 1 - lastChild.nodeSize;
+    currentNode = lastChild;
+  }
+};
+
+/** 上一块图片命中及当前空段落待删除范围。 */
+interface PreviousImageTarget {
+  /** 命中的图片节点起始位置。 */
+  previousImagePosition: number;
+  /** 若当前段落完全为空，记录其待删除文档范围；非空时为 null。 */
+  deleteRange: { from: number; to: number } | null;
+}
+
+/**
+ * 解析“当前段落同级上一块（含列表/引用块末尾）是否为图片节点”。
  */
 const resolvePreviousImageBlock = (
   resolvedPosition: ResolvedPos
-): { previousBlockStart: number } | null => {
-  // 仅在空段落行首触发，避免误删普通内容段落。
-  if (resolvedPosition.parent.type.name !== 'paragraph' || resolvedPosition.parentOffset !== 0) {
-    return null;
-  }
-  if (resolvedPosition.parent.textContent.length > 0 || resolvedPosition.depth < 1) {
+): PreviousImageTarget | null => {
+  // 仅在普通段落行首触发，避免拦截标题行首降级及列表/引用块首段退格。
+  if (
+    resolvedPosition.parent.type.name !== PARAGRAPH_NODE_NAME ||
+    resolvedPosition.parentOffset !== 0 ||
+    resolvedPosition.depth < 1
+  ) {
     return null;
   }
 
@@ -81,14 +124,28 @@ const resolvePreviousImageBlock = (
   const blockContainer = resolvedPosition.node(resolvedPosition.depth - 1);
   // 当前块同级上一块节点。
   const previousBlock = blockContainer.child(currentBlockIndex - 1);
-  if (!isImageNode(previousBlock)) {
+  // 当前块起始位置（节点左边界）。
+  const currentBlockStart = resolvedPosition.before(resolvedPosition.depth);
+  // 上一块起始位置。
+  const previousBlockStart = currentBlockStart - previousBlock.nodeSize;
+  // 命中的末尾图片位置。
+  const previousImagePosition = resolveTrailingImageInBlock(previousBlock, previousBlockStart);
+  if (previousImagePosition === null) {
     return null;
   }
 
-  // 当前块起始位置（节点左边界）。
-  const currentBlockStart = resolvedPosition.before(resolvedPosition.depth);
+  // 严格判断内容为空，避免误删包含行内图片或公式等非文本节点的段落。
+  const deleteRange =
+    resolvedPosition.parent.content.size === 0
+      ? {
+          from: currentBlockStart,
+          to: currentBlockStart + resolvedPosition.parent.nodeSize
+        }
+      : null;
+
   return {
-    previousBlockStart: currentBlockStart - previousBlock.nodeSize
+    previousImagePosition,
+    deleteRange
   };
 };
 
@@ -124,9 +181,9 @@ const deleteSelectedImageNode = (view: EditorView, selection: NodeSelection, eve
 };
 
 /**
- * 处理图片下方空段落行首 Backspace，删除空段落并选中上一张图片。
+ * 处理图片下方段落行首 Backspace：若为空段落则一并删除，并将上一张图片切换为选中态。
  */
-const selectImageFromTrailingEmptyParagraph = (view: EditorView, event: KeyboardEvent): boolean => {
+const selectImageFromParagraphStart = (view: EditorView, event: KeyboardEvent): boolean => {
   if (event.key !== 'Backspace') {
     return false;
   }
@@ -137,24 +194,21 @@ const selectImageFromTrailingEmptyParagraph = (view: EditorView, event: Keyboard
     return false;
   }
 
-  // 当前解析位置。
-  const resolvedPosition = selection.$from;
-  // 命中的上一张图片节点及起始位置。
-  const previousImageBlock = resolvePreviousImageBlock(resolvedPosition);
-  if (!previousImageBlock) {
+  // 命中的上一张图片节点及可选待删空段落范围。
+  const previousImageTarget = resolvePreviousImageBlock(selection.$from);
+  if (!previousImageTarget) {
     return false;
   }
 
-  // 当前空段落起始位置。
-  const currentBlockStart = resolvedPosition.before(resolvedPosition.depth);
-  // 当前空段落结束位置。
-  const currentBlockEnd = currentBlockStart + resolvedPosition.parent.nodeSize;
-
   event.preventDefault();
-  // 删除当前空段落并选中上一张图片。
+  // 删除范围位于图片之后，先删除空段落不会影响 previousImagePosition。
   const transaction = view.state.tr;
-  transaction.delete(currentBlockStart, currentBlockEnd);
-  transaction.setSelection(NodeSelection.create(transaction.doc, previousImageBlock.previousBlockStart)).scrollIntoView();
+  if (previousImageTarget.deleteRange) {
+    transaction.delete(previousImageTarget.deleteRange.from, previousImageTarget.deleteRange.to);
+  }
+  transaction
+    .setSelection(NodeSelection.create(transaction.doc, previousImageTarget.previousImagePosition))
+    .scrollIntoView();
   view.dispatch(transaction);
   view.focus();
   return true;
@@ -164,7 +218,7 @@ const selectImageFromTrailingEmptyParagraph = (view: EditorView, event: Keyboard
  * 处理光标紧贴图片边界时的第一次删除按键，将图片切换为选中态。
  */
 const selectAdjacentImageNode = (view: EditorView, event: KeyboardEvent): boolean => {
-  if (selectImageFromTrailingEmptyParagraph(view, event)) {
+  if (selectImageFromParagraphStart(view, event)) {
     return true;
   }
 
@@ -184,13 +238,22 @@ const selectAdjacentImageNode = (view: EditorView, event: KeyboardEvent): boolea
   const resolvedPosition = selection.$from;
   // 相邻节点。
   const adjacentNode = direction === 'before' ? resolvedPosition.nodeBefore : resolvedPosition.nodeAfter;
-  if (!isImageNode(adjacentNode)) {
+  if (!adjacentNode) {
+    return false;
+  }
+
+  // 待选中的相邻图片起始位置（向后退格支持透传列表与引用块末尾图片）。
+  const imagePosition =
+    direction === 'before'
+      ? resolveTrailingImageInBlock(adjacentNode, selection.from - adjacentNode.nodeSize)
+      : isImageNode(adjacentNode)
+        ? selection.from
+        : null;
+  if (imagePosition === null) {
     return false;
   }
 
   event.preventDefault();
-  // 相邻图片起始位置。
-  const imagePosition = direction === 'before' ? selection.from - adjacentNode.nodeSize : selection.from;
   view.dispatch(
     view.state.tr
       .setSelection(NodeSelection.create(view.state.doc, imagePosition))

@@ -70,15 +70,35 @@ const createBoundarySelection = (
 };
 
 /**
- * 判断目标边界的导航方向上是否已有相邻节点。
+ * 解析目标边界在导航方向上的相邻节点边界位置。
  */
-const hasAdjacentNode = (
+const resolveDirectionalNeighborBoundary = (
   resolvedPosition: ResolvedPos,
   direction: BlockBoundaryDirection
-): boolean => {
-  return direction === BLOCK_BOUNDARY_DIRECTION_UP
-    ? resolvedPosition.nodeBefore !== null
-    : resolvedPosition.nodeAfter !== null;
+): number | null => {
+  for (let depth = resolvedPosition.depth; depth >= 0; depth -= 1) {
+    // 当前层级容器节点。
+    const containerNode = resolvedPosition.node(depth);
+    // 当前层级在导航方向上是否存在相邻子节点（向下需用 indexAfter 避免祖先层 index 恒小于 childCount）。
+    const hasNeighbor =
+      direction === BLOCK_BOUNDARY_DIRECTION_UP
+        ? resolvedPosition.index(depth) > 0
+        : resolvedPosition.indexAfter(depth) < containerNode.childCount;
+    if (!hasNeighbor) {
+      continue;
+    }
+
+    if (depth === resolvedPosition.depth) {
+      return resolvedPosition.pos;
+    }
+
+    // 命中外层相邻块时跳转到当前容器外侧边界，避免停留在嵌套容器内部。
+    return direction === BLOCK_BOUNDARY_DIRECTION_UP
+      ? resolvedPosition.before(depth + 1)
+      : resolvedPosition.after(depth + 1);
+  }
+
+  return null;
 };
 
 /**
@@ -149,13 +169,16 @@ const moveSelectionFromBlockBoundary = (
 
   // 目标边界解析位置。
   const resolvedPosition = view.state.doc.resolve(targetPosition);
-  if (!hasAdjacentNode(resolvedPosition, direction) && insertBoundaryParagraph(view, targetPosition)) {
+  // 沿祖先层级向上查找导航方向上的相邻块边界位置。
+  const neighborBoundaryPosition = resolveDirectionalNeighborBoundary(resolvedPosition, direction);
+  if (neighborBoundaryPosition === null && insertBoundaryParagraph(view, targetPosition)) {
     return true;
   }
 
-  // 相邻内容存在或无法插入段落时，回退到合法边界选区。
+  // 存在相邻内容或无法插入段落时，落到对应边界的合法选区。
+  const selectionTargetPosition = neighborBoundaryPosition ?? targetPosition;
   const transaction = view.state.tr
-    .setSelection(createBoundarySelection(view, targetPosition, direction))
+    .setSelection(createBoundarySelection(view, selectionTargetPosition, direction))
     .scrollIntoView();
   view.dispatch(transaction);
   view.focus();
