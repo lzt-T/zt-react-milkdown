@@ -12,49 +12,60 @@ const PARAGRAPH_NODE_NAME = 'paragraph';
 const BACKSPACE_KEY = 'Backspace';
 
 /**
+ * 判断当前编辑器视图是否可编辑。
+ */
+const isEditorViewEditable = (view: EditorView): boolean => {
+  if (typeof view.props.editable === 'function') {
+    return view.props.editable(view.state);
+  }
+
+  return view.editable;
+};
+
+/**
  * 判断是否应跳过 Backspace 处理。
  */
-const shouldSkipKeydown = (event: KeyboardEvent): boolean => {
+const shouldSkipKeydown = (view: EditorView, event: KeyboardEvent): boolean => {
   return (
     event.key !== BACKSPACE_KEY ||
+    event.isComposing ||
     event.defaultPrevented ||
     event.altKey ||
     event.ctrlKey ||
     event.metaKey ||
-    event.shiftKey
+    event.shiftKey ||
+    !isEditorViewEditable(view)
   );
 };
 
 /**
- * 解析“当前光标是否位于引用块首段行首”。
+ * 解析“当前光标是否位于引用块直接首段行首”。
  */
 const resolveBlockquoteStartContext = (
   resolvedPosition: ResolvedPos
-): { paragraphDepth: number; blockquoteDepth: number; blockquoteType: NodeType } | null => {
-  if (resolvedPosition.parent.type.name !== PARAGRAPH_NODE_NAME || resolvedPosition.parentOffset !== 0) {
+): { blockquoteType: NodeType } | null => {
+  // 仅当段落是引用块的直接首个子节点时才触发提升，避免把嵌套列表等子结构整块抬出引用块。
+  if (
+    resolvedPosition.parent.type.name !== PARAGRAPH_NODE_NAME ||
+    resolvedPosition.parentOffset !== 0 ||
+    resolvedPosition.depth < 2
+  ) {
     return null;
   }
 
-  for (let depth = resolvedPosition.depth; depth > 0; depth -= 1) {
-    const nodeAtDepth = resolvedPosition.node(depth);
-    if (nodeAtDepth.type.name !== BLOCKQUOTE_NODE_NAME) {
-      continue;
-    }
-
-    const paragraphDepth = resolvedPosition.depth;
-    const paragraphIndexInBlockquote = resolvedPosition.index(depth);
-    if (paragraphDepth <= depth || paragraphIndexInBlockquote !== 0) {
-      return null;
-    }
-
-    return {
-      paragraphDepth,
-      blockquoteDepth: depth,
-      blockquoteType: nodeAtDepth.type
-    };
+  // 直接父节点深度与节点。
+  const blockquoteDepth = resolvedPosition.depth - 1;
+  const parentNode = resolvedPosition.node(blockquoteDepth);
+  if (
+    parentNode.type.name !== BLOCKQUOTE_NODE_NAME ||
+    resolvedPosition.index(blockquoteDepth) !== 0
+  ) {
+    return null;
   }
 
-  return null;
+  return {
+    blockquoteType: parentNode.type
+  };
 };
 
 /**
@@ -98,11 +109,12 @@ export const blockquoteBackspaceLiftPlugin = $prose(() => {
     key: new PluginKey('zt-md-blockquote-backspace-lift'),
     props: {
       handleKeyDown: (view, event) => {
-        if (shouldSkipKeydown(event)) {
+        const editorView = view as EditorView;
+        if (shouldSkipKeydown(editorView, event)) {
           return false;
         }
 
-        return handleBackspaceLiftBlockquote(view as EditorView, event);
+        return handleBackspaceLiftBlockquote(editorView, event);
       }
     }
   });

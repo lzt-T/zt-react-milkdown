@@ -82,6 +82,7 @@ import {
   createTableFocusActionsPlugin,
   createTableScrollNodeView,
   tableArrowEntryPlugin,
+  tableBackspaceEntryPlugin,
   tableRowShortcutsPlugin
 } from '@/plugins/custom/table';
 import { syncListOrderIncrementalPlugin, taskListToggle } from '@/plugins/custom/list';
@@ -357,6 +358,7 @@ export const createMilkdownEditorRuntime = (
     imageDeleteSelection: imageDeleteSelectionPlugin,
     imagePaste: imagePastePlugin,
     tableArrowEntry: tableArrowEntryPlugin,
+    tableBackspaceEntry: tableBackspaceEntryPlugin,
     tableRowShortcuts: tableRowShortcutsPlugin,
     blockBoundaryNavigation: blockBoundaryNavigationPlugin,
     headingBackspaceEmptyParagraph: headingBackspaceEmptyParagraphPlugin,
@@ -551,6 +553,11 @@ export const createMilkdownEditorRuntime = (
 
       /** 坐标解析得到的文档位置。 */
       const coordinatePosition = coordinates ? view.posAtCoords(coordinates) : null;
+      // 传了坐标但并非点击正文下方、且无法映射到文档位置时，保持当前选区不变，避免误跳文末。
+      if (coordinates !== undefined && !isBelowEditorContent && !coordinatePosition) {
+        return;
+      }
+
       /** 下一次应写入的空文本选区。 */
       const nextSelection = coordinatePosition
         ? TextSelection.near(view.state.doc.resolve(coordinatePosition.pos), 1)

@@ -2,6 +2,7 @@ import { Plugin, PluginKey, TextSelection } from '@milkdown/prose/state';
 import type { EditorState } from '@milkdown/prose/state';
 import { liftListItem, sinkListItem } from '@milkdown/prose/schema-list';
 import { isInTable } from '@milkdown/prose/tables';
+import { liftTarget } from '@milkdown/prose/transform';
 import type { NodeType } from '@milkdown/prose/model';
 import type { EditorView } from '@milkdown/prose/view';
 import { $prose } from '@milkdown/utils';
@@ -122,6 +123,30 @@ const handleShiftTabOutdent = (view: EditorView, event: KeyboardEvent): boolean 
 };
 
 /**
+ * 当选区位于多段落列表项的非首个子块时，仅将当前子块范围提升出列表项，避免连带剥离首段列表样式。
+ */
+const liftTrailingBlockInListItem = (
+  state: EditorState,
+  dispatch: EditorView['dispatch'],
+  listItemNodeType: NodeType
+): boolean => {
+  const { $from, $to } = state.selection;
+  const range = $from.blockRange($to, (node) => node.type === listItemNodeType);
+  if (!range || range.startIndex === 0) {
+    return false;
+  }
+
+  const targetDepth = liftTarget(range);
+  // 无法合法单独提升当前子块时直接拦截，避免回退到 liftListItem 误拆首段。
+  if (targetDepth === null) {
+    return true;
+  }
+
+  dispatch(state.tr.lift(range, targetDepth).scrollIntoView());
+  return true;
+};
+
+/**
  * 全局空格缩进插件：支持 Tab 增加缩进、Shift+Tab 减少缩进。
  */
 export const tabSpaceIndentPlugin = $prose(() => {
@@ -130,7 +155,12 @@ export const tabSpaceIndentPlugin = $prose(() => {
     props: {
       handleKeyDown: (view, event) => {
         const editorView = view as EditorView;
-        if (!isEditorViewEditable(editorView) || event.defaultPrevented || event.key !== TAB_KEY) {
+        if (
+          !isEditorViewEditable(editorView) ||
+          event.isComposing ||
+          event.defaultPrevented ||
+          event.key !== TAB_KEY
+        ) {
           return false;
         }
 
@@ -146,8 +176,10 @@ export const tabSpaceIndentPlugin = $prose(() => {
         // 列表项内优先使用列表层级命令，不回退到空格缩进。
         const listItemNodeType = resolveListItemNodeType(editorView.state);
         if (listItemNodeType) {
-          const listCommand = event.shiftKey ? liftListItem(listItemNodeType) : sinkListItem(listItemNodeType);
-          const handled = listCommand(editorView.state, editorView.dispatch);
+          const handled = event.shiftKey
+            ? liftTrailingBlockInListItem(editorView.state, editorView.dispatch, listItemNodeType) ||
+              liftListItem(listItemNodeType)(editorView.state, editorView.dispatch)
+            : sinkListItem(listItemNodeType)(editorView.state, editorView.dispatch);
           event.preventDefault();
           return handled || true;
         }

@@ -1,5 +1,7 @@
 /** 表格方向键进入插件导出。 */
 export * from './table-arrow-entry';
+/** 表格 Backspace 进入插件导出。 */
+export * from './table-backspace-entry';
 /** 表格删除动作导出。 */
 export * from './table-deletion-actions';
 /** 表格聚焦操作插件导出。 */

@@ -3,6 +3,7 @@ import type { Node as ProseNode, ResolvedPos } from '@milkdown/prose/model';
 import { Plugin, PluginKey, TextSelection } from '@milkdown/prose/state';
 import type { EditorView } from '@milkdown/prose/view';
 import { $prose } from '@milkdown/utils';
+import { resolveLastCellEndPosition } from '@/plugins/custom/table/table-selection';
 
 // 表格节点类型名。
 const TABLE_NODE_NAME = 'table';
@@ -70,45 +71,6 @@ const resolveTableFromEmptyParagraphStart = (
     tableNode: previousBlock,
     tableStart: currentBlockStart - previousBlock.nodeSize
   };
-};
-
-/**
- * 定位表格最后一行最后一列单元格内部的“可编辑末尾”位置。
- */
-const resolveLastCellEndPosition = (tableNode: ProseNode, tableStart: number): number | null => {
-  if (tableNode.childCount === 0) {
-    return null;
-  }
-
-  // 最后一行索引。
-  const lastRowIndex = tableNode.childCount - 1;
-  // 最后一行节点。
-  const lastRow = tableNode.child(lastRowIndex);
-  if (lastRow.childCount === 0) {
-    return null;
-  }
-
-  // 累加到最后一行前的偏移。
-  let rowOffset = 0;
-  for (let rowIndex = 0; rowIndex < lastRowIndex; rowIndex += 1) {
-    rowOffset += tableNode.child(rowIndex).nodeSize;
-  }
-
-  // 最后一列索引。
-  const lastCellIndex = lastRow.childCount - 1;
-  // 最后一格节点。
-  const lastCell = lastRow.child(lastCellIndex);
-  // 累加到最后一格前的偏移。
-  let cellOffset = 0;
-  for (let cellIndex = 0; cellIndex < lastCellIndex; cellIndex += 1) {
-    cellOffset += lastRow.child(cellIndex).nodeSize;
-  }
-
-  // table > row > cell 的节点起始位置。
-  const lastRowStart = tableStart + 1 + rowOffset;
-  const lastCellStart = lastRowStart + 1 + cellOffset;
-  // 单元格内容末尾位置（闭标签前）。
-  return lastCellStart + lastCell.nodeSize - 1;
 };
 
 /**

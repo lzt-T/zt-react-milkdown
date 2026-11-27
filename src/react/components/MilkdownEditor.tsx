@@ -238,6 +238,26 @@ export const MilkdownEditor = (props: MilkdownEditorProps): JSX.Element => {
       return;
     }
 
+    // 点击落在垂直滚动条区域时放行，避免滚动交互误触编辑器聚焦。
+    const editorRect = event.currentTarget.getBoundingClientRect();
+    if (
+      event.currentTarget.clientWidth > 0 &&
+      event.clientX >= editorRect.left + event.currentTarget.clientLeft + event.currentTarget.clientWidth
+    ) {
+      return;
+    }
+
+    // 点击位于居中版心左右外侧留白时放行，保持浏览器原生失焦行为而不跳到底部。
+    if (proseMirror === null) {
+      const rootProseMirror = event.currentTarget.querySelector('.ProseMirror');
+      if (rootProseMirror) {
+        const pmRect = rootProseMirror.getBoundingClientRect();
+        if (pmRect.width > 0 && (event.clientX < pmRect.left || event.clientX > pmRect.right)) {
+          return;
+        }
+      }
+    }
+
     event.preventDefault();
     focusEditorRef.current?.({
       left: event.clientX,
